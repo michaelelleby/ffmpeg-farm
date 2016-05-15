@@ -1,0 +1,13 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+@model IDictionary<Contract.TranscodingJob, IEnumerable<Contract.FfmpegPart>>
+
+<div>
+    @foreach (var job in Model.Keys)
+    {
+        <div class="row">
+            @job.SourceFilename
+        </div>
+    }
+</div>
