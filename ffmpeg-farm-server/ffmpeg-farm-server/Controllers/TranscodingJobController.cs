@@ -98,9 +98,9 @@ namespace ffmpeg_farm_server.Controllers
                         {
                             DestinationFormat target = job.Targets[j];
                             
-                            string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{j}_{value}.{destinationFormat}";
+                            string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{j}_{value}{destinationFormat}";
                             arguments +=
-                                $@" -s {target.Width}x{target.Height} -profile:v high -b:v {target.VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                                $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -b:v {target.VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
@@ -111,15 +111,6 @@ namespace ffmpeg_farm_server.Controllers
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
                             new
                             {jobCorrelationId, arguments, job.Needed, job.SourceFilename});
-                    }
-
-                    for (int i = 0; i < job.Targets.Length; i++)
-                    {
-                        string targetFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}.aac";
-                        string arguments = $@"-y -t {duration} -i ""{job.SourceFilename}"" -vn ""{targetFilename}""";
-                        connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
-                            new {jobCorrelationId, arguments, job.Needed, job.SourceFilename});
                     }
 
                     transaction.Commit();
@@ -164,16 +155,20 @@ namespace ffmpeg_farm_server.Controllers
                     if (updatedRows != 1)
                         throw new Exception($"Failed to update progress for job id {transcodingJob.Id}");
 
-                    if (connection.Query<int>(
-                        "SELECT COUNT(*) FROM FfmpegJobs WHERE JobCorrelationId = ? AND Done = 0;",
-                        new {jobRequest.JobCorrelationId})
-                        .Single() == 0)
+                    // TODO Implement proper detection if files are already merged
+                    FileInfo fileInfo = new FileInfo(jobRequest.DestinationFilename);
+                    if (fileInfo.Exists == false &&
+                        connection.Query<int>(
+                            "SELECT COUNT(*) FROM FfmpegJobs WHERE JobCorrelationId = ? AND Done = 0;",
+                            new {jobRequest.JobCorrelationId})
+                            .Single() == 0)
                     {
                         var chunks = connection.Query<FfmpegPart>(
                             "SELECT Filename, Number, Target, (SELECT SourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS SourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                             new {Id = transcodingJob.JobCorrelationId});
 
-                        string path = string.Format("{0}{1}{2}.list", Path.GetDirectoryName(jobRequest.DestinationFilename), Path.DirectorySeparatorChar,
+                        string path = string.Format("{0}{1}{2}.list", Path.GetDirectoryName(jobRequest.DestinationFilename),
+                            Path.DirectorySeparatorChar,
                             Path.GetFileNameWithoutExtension(jobRequest.DestinationFilename));
                         foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
                         {
@@ -184,7 +179,9 @@ namespace ffmpeg_farm_server.Controllers
                                     tw.WriteLine($"file '{part.Filename}'");
                                 }
                             }
-                            string arguments = $@"-y -f concat -safe 0 -i ""{path}"" -i ""{jobRequest.SourceFilename}"" -c:v copy {jobRequest.DestinationFilename}";
+
+                            string arguments =
+                                $@"-y -f concat -safe 0 -i ""{path}"" -i {jobRequest.SourceFilename} -c:v copy -c:a aac -map 0:0 -map 1:1 {jobRequest.DestinationFilename}";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
