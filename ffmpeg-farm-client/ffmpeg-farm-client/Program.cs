@@ -26,22 +26,32 @@ namespace ffmpeg_farm_client
                 _commandlineProcess = new Process();
                 TranscodingJob receivedJob = null;
 
-                using (var client = new HttpClient())
+                try
                 {
-                    HttpResponseMessage result = client.GetAsync(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/transcodingjob")).Result;
-                    if (result.IsSuccessStatusCode)
+                    using (var client = new HttpClient())
                     {
-                        string json = result.Content.ReadAsStringAsync().Result;
-                        receivedJob = JsonConvert.DeserializeObject<TranscodingJob>(json);
+                        HttpResponseMessage result =
+                            client.GetAsync(string.Concat(ConfigurationManager.AppSettings["ServerUrl"],
+                                "/transcodingjob")).Result;
+                        if (result.IsSuccessStatusCode)
+                        {
+                            string json = result.Content.ReadAsStringAsync().Result;
+                            receivedJob = JsonConvert.DeserializeObject<TranscodingJob>(json);
 
-                        _progress = new TimeSpan();
+                            _progress = new TimeSpan();
+                        }
                     }
-                }
 
-                if (receivedJob != null)
+                    if (receivedJob != null)
+                    {
+                        ExecuteTranscodingJob(receivedJob);
+                        continue;
+                    }
+
+                }
+                catch (Exception)
                 {
-                    ExecuteTranscodingJob(receivedJob);
-                    continue;
+                    
                 }
 
                 // Wait 5 seconds before checking for a new job

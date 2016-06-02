@@ -97,10 +97,18 @@ namespace ffmpeg_farm_server.Controllers
                         for (int j = 0; j < job.Targets.Length; j++)
                         {
                             DestinationFormat target = job.Targets[j];
-                            
+
                             string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{j}_{value}{destinationFormat}";
-                            arguments +=
-                                $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -b:v {target.VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+
+                            if (Convert.ToBoolean(ConfigurationManager.AppSettings["EnableCrf"]))
+                            {
+                                int bufSize = target.VideoBitrate / 8 * chunkDuration;
+                                arguments += $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -crf 18 -preset medium -maxrate {target.VideoBitrate}k -bufsize {bufSize}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                            }
+                            else
+                            {
+                                arguments += $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -b:v {target.VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                            }
 
                             connection.Execute(
                                 "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
@@ -155,7 +163,6 @@ namespace ffmpeg_farm_server.Controllers
                     if (updatedRows != 1)
                         throw new Exception($"Failed to update progress for job id {transcodingJob.Id}");
 
-                    // TODO Implement proper detection if files are already merged
                     FileInfo fileInfo = new FileInfo(jobRequest.DestinationFilename);
                     if (fileInfo.Exists == false &&
                         connection.Query<int>(
@@ -170,8 +177,16 @@ namespace ffmpeg_farm_server.Controllers
                         foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
                         {
                             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(jobRequest.DestinationFilename);
+                            string fileExtension = Path.GetExtension(jobRequest.DestinationFilename);
                             string outputFolder = Path.GetDirectoryName(jobRequest.DestinationFilename);
                             int targetNumber = chunk.First().Target;
+
+                            string targetFilename =
+                                $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}{fileExtension}";
+
+                            // TODO Implement proper detection if files are already merged
+                            if (File.Exists(targetFilename))
+                                continue;
 
                             string path = string.Format("{0}{1}{2}_{3}.list",
                                 outputFolder,
@@ -188,7 +203,7 @@ namespace ffmpeg_farm_server.Controllers
                             }
 
                             string arguments =
-                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{jobRequest.SourceFilename}"" -c:v copy -c:a aac -map 0:0 -map 1:1 {outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}.mp4";
+                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{jobRequest.SourceFilename}"" -c:v copy -c:a aac -map 0:0 -map 1:1 {targetFilename}";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
