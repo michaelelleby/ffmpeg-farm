@@ -41,6 +41,7 @@ namespace ffmpeg_farm_client
                 if (receivedJob != null)
                 {
                     ExecuteTranscodingJob(receivedJob);
+                    continue;
                 }
 
                 // Wait 5 seconds before checking for a new job

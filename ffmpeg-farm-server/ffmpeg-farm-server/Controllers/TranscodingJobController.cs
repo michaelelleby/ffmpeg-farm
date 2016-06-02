@@ -81,8 +81,8 @@ namespace ffmpeg_farm_server.Controllers
                     var jobCorrelationId = Guid.NewGuid();
 
                     connection.Execute(
-                        "INSERT INTO FfmpegRequest (JobCorrelationId, SourceFilename, DestinationFilename, Needed) VALUES(?, ?, ?, ?);",
-                        new {jobCorrelationId, job.SourceFilename, job.DestinationFilename, job.Needed});
+                        "INSERT INTO FfmpegRequest (JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created) VALUES(?, ?, ?, ?, ?);",
+                        new {jobCorrelationId, job.SourceFilename, job.DestinationFilename, job.Needed, DateTime.Now});
                     
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
                     {
@@ -167,11 +167,18 @@ namespace ffmpeg_farm_server.Controllers
                             "SELECT Filename, Number, Target, (SELECT SourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS SourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                             new {Id = transcodingJob.JobCorrelationId});
 
-                        string path = string.Format("{0}{1}{2}.list", Path.GetDirectoryName(jobRequest.DestinationFilename),
-                            Path.DirectorySeparatorChar,
-                            Path.GetFileNameWithoutExtension(jobRequest.DestinationFilename));
                         foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
                         {
+                            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(jobRequest.DestinationFilename);
+                            string outputFolder = Path.GetDirectoryName(jobRequest.DestinationFilename);
+                            int targetNumber = chunk.First().Target;
+
+                            string path = string.Format("{0}{1}{2}_{3}.list",
+                                outputFolder,
+                                Path.DirectorySeparatorChar,
+                                fileNameWithoutExtension,
+                                targetNumber);
+
                             using (TextWriter tw = new StreamWriter(path))
                             {
                                 foreach (FfmpegPart part in chunk)
@@ -181,7 +188,7 @@ namespace ffmpeg_farm_server.Controllers
                             }
 
                             string arguments =
-                                $@"-y -f concat -safe 0 -i ""{path}"" -i {jobRequest.SourceFilename} -c:v copy -c:a aac -map 0:0 -map 1:1 {jobRequest.DestinationFilename}";
+                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{jobRequest.SourceFilename}"" -c:v copy -c:a aac -map 0:0 -map 1:1 {outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}.mp4";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
