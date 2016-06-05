@@ -12,7 +12,7 @@ namespace Contract
 
         public int Target { get; set; }
 
-        public bool IsAudio => Filename.EndsWith(".aac", StringComparison.InvariantCultureIgnoreCase);
+        public bool IsAudio => Filename.EndsWith("_audio.mp4", StringComparison.InvariantCultureIgnoreCase);
 
         public Guid JobCorrelationId { get; set; }
     }

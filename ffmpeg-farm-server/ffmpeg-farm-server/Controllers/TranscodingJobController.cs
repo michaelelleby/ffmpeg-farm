@@ -66,7 +66,6 @@ namespace ffmpeg_farm_server.Controllers
                 throw new FileNotFoundException("SourceFilename does not exist", job.SourceFilename);
 
             int duration = GetDuration(job);
-            duration = 180;
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
             string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
@@ -130,8 +129,8 @@ namespace ffmpeg_farm_server.Controllers
                     {
                         DestinationFormat format = job.Targets[i];
 
-                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}.aac";
-                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate} -vn {chunkFilename}";
+                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
+                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
 
                         const int number = 0;
                         connection.Execute(
@@ -227,7 +226,7 @@ namespace ffmpeg_farm_server.Controllers
                             string audioSource = chunk.Single(x => x.IsAudio).Filename;
 
                             string arguments =
-                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy -bsf:v h264_mp4toannexb -bsf:a aac_adtstoasc -map 0:0 -map 1:0 {targetFilename}";
+                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
