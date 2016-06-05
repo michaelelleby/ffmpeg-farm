@@ -22,7 +22,11 @@ namespace ffmpeg_farm_server.Controllers
                 var transaction = connection.BeginTransaction();
                 try
                 {
-                    var data = connection.Query("SELECT Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE Taken = 0 ORDER BY Needed ASC LIMIT 1;")
+                    int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+                    DateTime timeout = DateTimeOffset.UtcNow.UtcDateTime.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
+                    var data = connection.Query("SELECT Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE Done = 0 AND (Taken = 0 OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
+                        new {timeout})
                             .FirstOrDefault();
                     if (data != null)
                     {
@@ -62,6 +66,7 @@ namespace ffmpeg_farm_server.Controllers
                 throw new FileNotFoundException("SourceFilename does not exist", job.SourceFilename);
 
             int duration = GetDuration(job);
+            duration = 180;
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
             string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
@@ -119,6 +124,24 @@ namespace ffmpeg_farm_server.Controllers
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
                             new
                             {jobCorrelationId, arguments, job.Needed, job.SourceFilename});
+                    }
+
+                    for(int i = 0; i < job.Targets.Length; i++)
+                    {
+                        DestinationFormat format = job.Targets[i];
+
+                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}.aac";
+                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate} -vn {chunkFilename}";
+
+                        const int number = 0;
+                        connection.Execute(
+                            "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
+                            new {jobCorrelationId, i, chunkFilename, number});
+
+                        connection.Execute(
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
+                            new
+                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename });
                     }
 
                     transaction.Commit();
@@ -196,14 +219,15 @@ namespace ffmpeg_farm_server.Controllers
 
                             using (TextWriter tw = new StreamWriter(path))
                             {
-                                foreach (FfmpegPart part in chunk)
+                                foreach (FfmpegPart part in chunk.Where(x => x.IsAudio == false))
                                 {
                                     tw.WriteLine($"file '{part.Filename}'");
                                 }
                             }
+                            string audioSource = chunk.Single(x => x.IsAudio).Filename;
 
                             string arguments =
-                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{jobRequest.SourceFilename}"" -c:v copy -c:a aac -map 0:0 -map 1:1 {targetFilename}";
+                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy -bsf:v h264_mp4toannexb -bsf:a aac_adtstoasc -map 0:0 -map 1:0 {targetFilename}";
 
                             connection.Execute(
                                 "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
