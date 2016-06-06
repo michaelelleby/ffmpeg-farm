@@ -22,3 +22,9 @@ select,
 textarea {
     max-width: 280px;
 }
+
+.progress-bar-custom {background: rgba(245, 245, 245, 1); height: 50px;}
+.progress-bar-custom .progress-bar {font-size: 36px;line-height: 50px;}
+.progress-bar-smaller {height: 20px;}
+.progress-bar-smaller .progress-bar { line-height: 20px;font-size: 15px;}
+.jobs { margin-left: 100px;}

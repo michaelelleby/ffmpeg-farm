@@ -1,13 +1,40 @@
-﻿@{
-    ViewBag.Title = "Home Page";
-}
-@model IDictionary<Contract.TranscodingJob, IEnumerable<Contract.FfmpegPart>>
+﻿@model Web.Controllers.HomeController.JobResult
 
-<div>
-    @foreach (var job in Model.Keys)
+<div id="statusbars">
+    @foreach (var request in Model.Jobs)
     {
-        <div class="row">
-            @job.SourceFilename
+        <h3>@request.DestinationFilename <span class="label label-default">@request.JobCorrelationId</span></h3>
+        <div class="progress progress-bar-custom">
+            <div class="progress-bar" role="progressbar" aria-valuenow="@request.Progress" aria-valuemin="0" aria-valuemax="100" style="width: @request.Progress%;">
+                @request.Progress %
+            </div>
+        </div>
+        <div class="jobs">
+            @foreach (var job in request.Jobs)
+            {
+                var progressInPercentage = (int) (job.Progress/job.ChunkDuration*100);
+                if (progressInPercentage > 100)
+                {
+                    progressInPercentage = 100;
+                }
+                <div class="progress progress-bar-smaller">
+                    <div class="progress-bar" role="progressbar" aria-valuenow="@progressInPercentage" aria-valuemin="0" aria-valuemax="100" style="width: @progressInPercentage%;">
+                        @progressInPercentage %
+                    </div>
+                </div>
+            }
         </div>
     }
 </div>
+<script type="text/javascript">
+    function update() {
+        $('#statusbars').load('/ #statusbars',
+                function() {
+                    setTimeout(update, 50);
+                });
+    };
+
+    $(function () {
+        update();
+    });
+</script>

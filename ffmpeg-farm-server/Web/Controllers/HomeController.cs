@@ -1,10 +1,9 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SQLite;
+using System.Net.Http;
 using System.Web.Mvc;
 using Contract;
-using Dapper;
+using Newtonsoft.Json;
 
 namespace Web.Controllers
 {
@@ -12,29 +11,20 @@ namespace Web.Controllers
     {
         public ActionResult Index()
         {
-            IDictionary<TranscodingJob, IEnumerable<FfmpegPart>> model = new ConcurrentDictionary<TranscodingJob, IEnumerable<FfmpegPart>>();
-
-            using (var connection = GetConnection())
+            dynamic requests;
+            using (HttpClient client = new HttpClient())
             {
-                connection.Open();
-
-                var jobs = connection.Query<TranscodingJob>("SELECT Id, Arguments, SourceFilename, JobCorrelationId FROM FfmpegJobs;");
-                foreach (TranscodingJob job in jobs)
-                {
-                    //var parts = connection.Query<FfmpegPart>(
-                    //    "SELECT Filename, Number, Target, (SELECT SourceFilename FROM FfmpegJobs WHERE JobCorrelationId = FfmpegParts.JobCorrelationId) AS SourceFilename, JobCorrelationId FROM FfmpegParts WHERE JobCorrelationId = ?",
-                    //    job.JobCorrelationId);
-
-                    model.Add(job, null);
-                }
+                string result = client.GetStringAsync(ConfigurationManager.AppSettings["ApiUrl"] + "/api/status").Result;
+                requests = JsonConvert.DeserializeObject<JobResult>(result);
             }
 
-            return View(model);
+            return View(requests);
         }
 
-        private static SQLiteConnection GetConnection()
+        public class JobResult
         {
-            return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
+            [JsonProperty(PropertyName = "Requests")]
+            public ICollection<JobResultModel> Jobs { get; set; }
         }
     }
 }

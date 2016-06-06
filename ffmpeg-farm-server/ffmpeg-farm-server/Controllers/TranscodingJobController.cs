@@ -103,9 +103,9 @@ namespace ffmpeg_farm_server.Controllers
                             new { jobCorrelationId, i, chunkFilename, number });
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename });
+                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration});
                     }
 
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
@@ -140,9 +140,9 @@ namespace ffmpeg_farm_server.Controllers
                         }
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename});
+                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration});
                     }
 
                     transaction.Commit();
@@ -230,14 +230,16 @@ namespace ffmpeg_farm_server.Controllers
                             string arguments =
                                 $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
+                            int duration = GetDuration(jobRequest);
                             connection.Execute(
-                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
+                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                                 new
                                 {
                                     transcodingJob.JobCorrelationId,
                                     arguments,
                                     DateTimeOffset.MaxValue,
-                                    jobRequest.SourceFilename
+                                    jobRequest.SourceFilename,
+                                    duration
                                 });
                         }
                     }
