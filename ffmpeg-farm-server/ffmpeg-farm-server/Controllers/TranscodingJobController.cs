@@ -87,7 +87,27 @@ namespace ffmpeg_farm_server.Controllers
                     connection.Execute(
                         "INSERT INTO FfmpegRequest (JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created) VALUES(?, ?, ?, ?, ?);",
                         new {jobCorrelationId, job.SourceFilename, job.DestinationFilename, job.Needed, DateTime.Now});
-                    
+
+                    // Queue audio first because it cannot be chunked and thus will take longer to transcode
+                    // and if we do it first chances are it will be ready when all the video parts are ready
+                    for (int i = 0; i < job.Targets.Length; i++)
+                    {
+                        DestinationFormat format = job.Targets[i];
+
+                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
+                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
+
+                        const int number = 0;
+                        connection.Execute(
+                            "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
+                            new { jobCorrelationId, i, chunkFilename, number });
+
+                        connection.Execute(
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
+                            new
+                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename });
+                    }
+
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
                     {
                         int value = i*chunkDuration;
@@ -123,24 +143,6 @@ namespace ffmpeg_farm_server.Controllers
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
                             new
                             {jobCorrelationId, arguments, job.Needed, job.SourceFilename});
-                    }
-
-                    for(int i = 0; i < job.Targets.Length; i++)
-                    {
-                        DestinationFormat format = job.Targets[i];
-
-                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
-                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
-
-                        const int number = 0;
-                        connection.Execute(
-                            "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
-                            new {jobCorrelationId, i, chunkFilename, number});
-
-                        connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename) VALUES(?, ?, ?, ?);",
-                            new
-                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename });
                     }
 
                     transaction.Commit();
