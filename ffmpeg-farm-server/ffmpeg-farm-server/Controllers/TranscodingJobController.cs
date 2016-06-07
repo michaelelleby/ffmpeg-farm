@@ -103,9 +103,9 @@ namespace ffmpeg_farm_server.Controllers
                             new { jobCorrelationId, i, chunkFilename, number });
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration, DateTimeOffset.MinValue});
+                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration});
                     }
 
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
@@ -140,9 +140,9 @@ namespace ffmpeg_farm_server.Controllers
                         }
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration, DateTimeOffset.MinValue});
+                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration});
                     }
 
                     transaction.Commit();
@@ -232,15 +232,14 @@ namespace ffmpeg_farm_server.Controllers
 
                             int duration = GetDuration(jobRequest.SourceFilename);
                             connection.Execute(
-                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
+                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                                 new
                                 {
                                     transcodingJob.JobCorrelationId,
                                     arguments,
                                     jobRequest.Needed,
                                     jobRequest.SourceFilename,
-                                    duration,
-                                    DateTimeOffset.MinValue
+                                    duration
                                 });
                         }
                     }
