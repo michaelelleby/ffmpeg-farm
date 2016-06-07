@@ -99,8 +99,11 @@ namespace ffmpeg_farm_client
 
         private static void TimeSinceLastUpdate_Elapsed(object sender, ElapsedEventArgs e)
         {
-            _commandlineProcess.Kill();
-            Console.WriteLine("Timed out..");
+            if (!_commandlineProcess.HasExited)
+            {
+                _commandlineProcess.Kill();
+                Console.WriteLine("Timed out..");
+            }
         }
 
         private static void Ffmpeg_ErrorDataReceived(object sender, DataReceivedEventArgs e)

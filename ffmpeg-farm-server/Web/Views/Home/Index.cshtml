@@ -9,27 +9,30 @@
                 @request.Progress %
             </div>
         </div>
-        <div class="jobs">
-            @foreach (var job in request.Jobs)
-            {
-                var progressInPercentage = (int) (job.Progress/job.ChunkDuration*100);
-                if (progressInPercentage > 100)
+        if ((int)Math.Round(request.Progress) < 100)
+        {
+            <div class="jobs">
+                @foreach (var job in request.Jobs)
                 {
-                    progressInPercentage = 100;
-                }
-                <div class="progress progress-bar-smaller">
-                    <div class="progress-bar" role="progressbar" aria-valuenow="@progressInPercentage" aria-valuemin="0" aria-valuemax="100" style="width: @progressInPercentage%;">
-                        @progressInPercentage %
+                    var progressInPercentage = (int)(job.Progress / job.ChunkDuration * 100);
+                    if (progressInPercentage > 100)
+                    {
+                        progressInPercentage = 100;
+                    }
+                    <div class="progress progress-bar-smaller">
+                        <div class="progress-bar" role="progressbar" aria-valuenow="@progressInPercentage" aria-valuemin="0" aria-valuemax="100" style="width: @progressInPercentage%;">
+                            @progressInPercentage %
+                        </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
     }
 </div>
 <script type="text/javascript">
     function update() {
         $('#statusbars').load('/ #statusbars',
-                function() {
+                function () {
                     setTimeout(update, 50);
                 });
     };

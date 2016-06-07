@@ -65,7 +65,7 @@ namespace ffmpeg_farm_server.Controllers
             if (!File.Exists(job.SourceFilename))
                 throw new FileNotFoundException("SourceFilename does not exist", job.SourceFilename);
 
-            int duration = GetDuration(job);
+            int duration = GetDuration(job.SourceFilename);
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
             string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
@@ -103,9 +103,9 @@ namespace ffmpeg_farm_server.Controllers
                             new { jobCorrelationId, i, chunkFilename, number });
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
                             new
-                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration});
+                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration, DateTimeOffset.MinValue});
                     }
 
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
@@ -140,9 +140,9 @@ namespace ffmpeg_farm_server.Controllers
                         }
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
                             new
-                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration});
+                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration, DateTimeOffset.MinValue});
                     }
 
                     transaction.Commit();
@@ -230,16 +230,17 @@ namespace ffmpeg_farm_server.Controllers
                             string arguments =
                                 $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
-                            int duration = GetDuration(jobRequest);
+                            int duration = GetDuration(jobRequest.SourceFilename);
                             connection.Execute(
-                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration, Heartbeat) VALUES(?, ?, ?, ?, ?, ?);",
                                 new
                                 {
                                     transcodingJob.JobCorrelationId,
                                     arguments,
-                                    DateTimeOffset.MaxValue,
+                                    jobRequest.Needed,
                                     jobRequest.SourceFilename,
-                                    duration
+                                    duration,
+                                    DateTimeOffset.MinValue
                                 });
                         }
                     }
@@ -260,11 +261,11 @@ namespace ffmpeg_farm_server.Controllers
             return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
         }
 
-        private static int GetDuration(JobRequest job)
+        private static int GetDuration(string sourceFilename)
         {
-            if (job == null) throw new ArgumentNullException(nameof(job));
-            if (!File.Exists(job.SourceFilename))
-                throw new FileNotFoundException("Media not found when trying to get file duration", job.SourceFilename);
+            if (string.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
+            if (!File.Exists(sourceFilename))
+                throw new FileNotFoundException("Media not found when trying to get file duration", sourceFilename);
 
             string mediaInfoPath = ConfigurationManager.AppSettings["MediaInfoPath"];
             if (!File.Exists(mediaInfoPath))
@@ -275,7 +276,7 @@ namespace ffmpeg_farm_server.Controllers
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $"--inform=\"General;%Duration%\" \"{job.SourceFilename}\"",
+                    Arguments = $"--inform=\"General;%Duration%\" \"{sourceFilename}\"",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
