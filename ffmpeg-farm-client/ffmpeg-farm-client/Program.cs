@@ -32,7 +32,7 @@ namespace ffmpeg_farm_client
                     {
                         HttpResponseMessage result =
                             client.GetAsync(string.Concat(ConfigurationManager.AppSettings["ServerUrl"],
-                                "/transcodingjob")).Result;
+                                "/transcodingjob?machinename=" + Environment.MachineName)).Result;
                         if (result.IsSuccessStatusCode)
                         {
                             string json = result.Content.ReadAsStringAsync().Result;
@@ -60,13 +60,10 @@ namespace ffmpeg_farm_client
             }
         }
 
-        private static void ExecuteTranscodingJob(TranscodingJob receivedJob)
+        private static void ExecuteTranscodingJob(TranscodingJob transcodingJob)
         {
-            TranscodingJob transcodingJob = (TranscodingJob)receivedJob;
-
-            Console.WriteLine("Got job {0}", JsonConvert.SerializeObject(transcodingJob));
-
             CurrentJob = transcodingJob;
+            CurrentJob.MachineName = Environment.MachineName;
 
             _commandlineProcess.StartInfo = new ProcessStartInfo
             {
@@ -142,10 +139,12 @@ namespace ffmpeg_farm_client
 
     public class TranscodingJob
     {
-        public string Arguments { get; set; }
         public Guid JobCorrelationId { get; set; }
+        public string SourceFilename { get; set; }
+        public string Arguments { get; set; }
         public TimeSpan Progress { get; set; }
         public int Id { get; set; }
         public bool Done { get; set; }
+        public string MachineName { get; set; }
     }
 }

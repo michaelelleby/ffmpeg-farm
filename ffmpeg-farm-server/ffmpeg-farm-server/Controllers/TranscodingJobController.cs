@@ -4,6 +4,8 @@ using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Web.Http;
 using Contract;
 using Dapper;
@@ -13,11 +15,22 @@ namespace ffmpeg_farm_server.Controllers
     public class TranscodingJobController : ApiController
     {
         [HttpGet]
-        public TranscodingJob GetNextJob()
+        public TranscodingJob GetNextJob(string machineName)
         {
+            if (string.IsNullOrWhiteSpace(machineName))
+            {
+                throw new HttpResponseException(new HttpResponseMessage
+                {
+                    ReasonPhrase = "Machinename must be specified",
+                    StatusCode = HttpStatusCode.BadRequest
+                });
+            }
+
             using (var connection = GetConnection())
             {
                 connection.Open();
+
+                InsertClientHeartbeat(machineName, connection);
 
                 var transaction = connection.BeginTransaction();
                 try
@@ -54,6 +67,12 @@ namespace ffmpeg_farm_server.Controllers
 
                 return null;
             }
+        }
+
+        private static void InsertClientHeartbeat(string machineName, SQLiteConnection connection)
+        {
+            connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
+                new {machineName, DateTimeOffset.UtcNow});
         }
 
         [HttpPost]
@@ -160,14 +179,27 @@ namespace ffmpeg_farm_server.Controllers
         public void ProgressUpdate(TranscodingJob transcodingJob)
         {
             if (transcodingJob == null) throw new ArgumentNullException(nameof(transcodingJob));
+            if (string.IsNullOrWhiteSpace(transcodingJob.MachineName))
+            {
+                throw new HttpResponseException(new HttpResponseMessage
+                {
+                    ReasonPhrase = "Machinename must be specified",
+                    StatusCode = HttpStatusCode.BadRequest
+                });
+            }
 
             using (var connection = GetConnection())
             {
                 connection.Open();
 
+                InsertClientHeartbeat(transcodingJob.MachineName, connection);
+
                 var transaction = connection.BeginTransaction();
                 try
                 {
+                    connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
+                        new {transcodingJob.MachineName, DateTimeOffset.UtcNow});
+
                     var jobRequest = connection.Query<dynamic>(
                         "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed FROM FfmpegRequest WHERE JobCorrelationId = ?",
                         new {transcodingJob.JobCorrelationId})

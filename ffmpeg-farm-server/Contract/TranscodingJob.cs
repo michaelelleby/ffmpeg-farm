@@ -10,5 +10,6 @@ namespace Contract
         public TimeSpan Progress { get; set; }
         public int Id { get; set; }
         public bool Done { get; set; }
+        public string MachineName { get; set; }
     }
 }
