@@ -59,6 +59,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientHeartbeat.cs" />
     <Compile Include="DestinationFormat.cs" />
     <Compile Include="FfmpegPart.cs" />
     <Compile Include="JobRequest.cs" />

@@ -112,6 +112,8 @@
   <ItemGroup>
     <Compile Include="App_Start\SwaggerConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\ClientController.cs" />
+    <Compile Include="Controllers\Helper.cs" />
     <Compile Include="Controllers\StatusController.cs" />
     <Compile Include="Controllers\TranscodingJobController.cs" />
     <Compile Include="Global.asax.cs">

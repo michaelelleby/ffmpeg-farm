@@ -16,7 +16,7 @@ namespace ffmpeg_farm_server.Controllers
         {
             IEnumerable<dynamic> jobs;
             IEnumerable<JobResultModel> requests;
-            using (var connection = GetConnection())
+            using (var connection = Helper.GetConnection())
             {
                 requests = connection.Query<JobResultModel>("SELECT * from FfmpegRequest").ToList();
                 jobs = connection.Query("SELECT * FROM FfmpegJobs").ToList();
@@ -31,11 +31,6 @@ namespace ffmpeg_farm_server.Controllers
             {
                 Requests = requests
             };
-        }
-
-        private static SQLiteConnection GetConnection()
-        {
-            return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
@@ -26,7 +27,7 @@ namespace ffmpeg_farm_server.Controllers
                 });
             }
 
-            using (var connection = GetConnection())
+            using (var connection = Helper.GetConnection())
             {
                 connection.Open();
 
@@ -69,10 +70,10 @@ namespace ffmpeg_farm_server.Controllers
             }
         }
 
-        private static void InsertClientHeartbeat(string machineName, SQLiteConnection connection)
+        private static void InsertClientHeartbeat(string machineName, IDbConnection connection)
         {
             connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
-                new {machineName, DateTimeOffset.UtcNow});
+                new {machineName, DateTime.UtcNow});
         }
 
         [HttpPost]
@@ -93,7 +94,7 @@ namespace ffmpeg_farm_server.Controllers
             if (!Directory.Exists(destinationFolder))
                 throw new ArgumentException($@"Destination folder {destinationFolder} does not exist.");
 
-            using (var connection = GetConnection())
+            using (var connection = Helper.GetConnection())
             {
                 connection.Open();
                 var transaction = connection.BeginTransaction();
@@ -188,7 +189,7 @@ namespace ffmpeg_farm_server.Controllers
                 });
             }
 
-            using (var connection = GetConnection())
+            using (var connection = Helper.GetConnection())
             {
                 connection.Open();
 
@@ -285,11 +286,6 @@ namespace ffmpeg_farm_server.Controllers
                     throw;
                 }
             }
-        }
-
-        private static SQLiteConnection GetConnection()
-        {
-            return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
         }
 
         private static int GetDuration(string sourceFilename)
