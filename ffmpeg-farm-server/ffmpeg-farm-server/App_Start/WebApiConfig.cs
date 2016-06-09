@@ -1,7 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SQLite;
+using System.IO;
 using System.Linq;
+using System.Web.Hosting;
 using System.Web.Http;
+using Dapper;
+using ffmpeg_farm_server.Controllers;
 
 namespace ffmpeg_farm_server
 {
@@ -19,6 +25,13 @@ namespace ffmpeg_farm_server
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+            using (var connection = Helper.GetConnection())
+            {
+                string path = HostingEnvironment.MapPath(@"/App_Data/create_database.sql");
+                string script = File.ReadAllText(path);
+                connection.Execute(script);
+            }
         }
     }
 }

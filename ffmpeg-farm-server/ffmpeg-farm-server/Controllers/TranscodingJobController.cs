@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Configuration;
 using System.Data;
-using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -80,12 +79,14 @@ namespace ffmpeg_farm_server.Controllers
         public void QueueNew(JobRequest job)
         {
             if (job == null) throw new ArgumentNullException(nameof(job));
-            if (string.IsNullOrWhiteSpace(job.SourceFilename))
-                throw new ArgumentException("SourceFilename is a required parameter.");
-            if (!File.Exists(job.SourceFilename))
-                throw new FileNotFoundException("SourceFilename does not exist", job.SourceFilename);
+            if (string.IsNullOrWhiteSpace(job.VideoSourceFilename) && string.IsNullOrWhiteSpace(job.AudioSourceFilename))
+                throw new ArgumentException("Either VideoSourceFilename or AudioSourceFilename is a required parameter.");
+            if (!string.IsNullOrWhiteSpace(job.VideoSourceFilename) && !File.Exists(job.VideoSourceFilename))
+                throw new FileNotFoundException("VideoSourceFilename does not exist", job.VideoSourceFilename);
+            if (!string.IsNullOrWhiteSpace(job.AudioSourceFilename) && !File.Exists(job.AudioSourceFilename))
+                throw new FileNotFoundException("AudioSourceFilename does not exist", job.AudioSourceFilename);
 
-            int duration = GetDuration(job.SourceFilename);
+            int duration = GetDuration(job.VideoSourceFilename);
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
             string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
@@ -105,8 +106,8 @@ namespace ffmpeg_farm_server.Controllers
                     var jobCorrelationId = Guid.NewGuid();
 
                     connection.Execute(
-                        "INSERT INTO FfmpegRequest (JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created) VALUES(?, ?, ?, ?, ?);",
-                        new {jobCorrelationId, job.SourceFilename, job.DestinationFilename, job.Needed, DateTime.Now});
+                        "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created) VALUES(?, ?, ?, ?, ?, ?);",
+                        new {jobCorrelationId, job.VideoSourceFilename, job.AudioSourceFilename, job.DestinationFilename, job.Needed, DateTime.Now});
 
                     // Queue audio first because it cannot be chunked and thus will take longer to transcode
                     // and if we do it first chances are it will be ready when all the video parts are ready
@@ -114,18 +115,24 @@ namespace ffmpeg_farm_server.Controllers
                     {
                         DestinationFormat format = job.Targets[i];
 
-                        string chunkFilename = $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
-                        string arguments = $@"-y -i ""{job.SourceFilename}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
+                        string chunkFilename =
+                            $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
+                        string source = job.HasAlternateAudio
+                            ? job.AudioSourceFilename
+                            : job.VideoSourceFilename;
+
+                        string arguments =
+                            $@"-y -i ""{source}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
 
                         const int number = 0;
                         connection.Execute(
                             "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(?, ?, ?, ?);",
-                            new { jobCorrelationId, i, chunkFilename, number });
+                            new {jobCorrelationId, i, chunkFilename, number});
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, AudioSourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            { jobCorrelationId, arguments, job.Needed, job.SourceFilename, duration});
+                            {jobCorrelationId, arguments, job.Needed, source, duration});
                     }
 
                     for (int i = 0; duration - i*chunkDuration > 0; i++)
@@ -136,7 +143,7 @@ namespace ffmpeg_farm_server.Controllers
                             value = duration;
                         }
 
-                        string arguments = $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilename}""";
+                        string arguments = $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}""";
 
                         for (int j = 0; j < job.Targets.Length; j++)
                         {
@@ -160,9 +167,9 @@ namespace ffmpeg_farm_server.Controllers
                         }
 
                         connection.Execute(
-                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                            "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, VideoSourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                             new
-                            {jobCorrelationId, arguments, job.Needed, job.SourceFilename, chunkDuration});
+                            {jobCorrelationId, arguments, job.Needed, job.VideoSourceFilename, chunkDuration});
                     }
 
                     transaction.Commit();
@@ -202,7 +209,7 @@ namespace ffmpeg_farm_server.Controllers
                         new {transcodingJob.MachineName, DateTimeOffset.UtcNow});
 
                     var jobRequest = connection.Query<dynamic>(
-                        "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed FROM FfmpegRequest WHERE JobCorrelationId = ?",
+                        "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed FROM FfmpegRequest WHERE JobCorrelationId = ?",
                         new {transcodingJob.JobCorrelationId})
                         .SingleOrDefault();
                     if (jobRequest == null)
@@ -228,7 +235,7 @@ namespace ffmpeg_farm_server.Controllers
                             .Single() == 0)
                     {
                         var chunks = connection.Query<FfmpegPart>(
-                            "SELECT Filename, Number, Target, (SELECT SourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS SourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                            "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                             new {Id = transcodingJob.JobCorrelationId});
 
                         foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
@@ -263,15 +270,15 @@ namespace ffmpeg_farm_server.Controllers
                             string arguments =
                                 $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
-                            int duration = GetDuration(jobRequest.SourceFilename);
+                            int duration = GetDuration(jobRequest.VideoSourceFilename);
                             connection.Execute(
-                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, SourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
+                                "INSERT INTO FfmpegJobs (JobCorrelationId, Arguments, Needed, VideoSourceFilename, ChunkDuration) VALUES(?, ?, ?, ?, ?);",
                                 new
                                 {
                                     transcodingJob.JobCorrelationId,
                                     arguments,
                                     jobRequest.Needed,
-                                    jobRequest.SourceFilename,
+                                    jobRequest.VideoSourceFilename,
                                     duration
                                 });
                         }

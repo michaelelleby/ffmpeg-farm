@@ -1,0 +1,10 @@
+﻿@model IEnumerable<Contract.ClientHeartbeat>
+
+<h2>Clients</h2>
+<div>
+    @foreach (var heartbeat in Model)
+    {
+        <p>@heartbeat.MachineName</p>
+        <p>@(heartbeat.LastHeartbeat < DateTime.Now.Subtract(TimeSpan.FromSeconds(30)) ? "DEAD last heard from " + heartbeat.LastHeartbeat.ToLocalTime().ToString("U") : "alive")</p>
+    }
+</div>
