@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS "FfmpegRequest" (
 	`AudioSourceFilename`	TEXT,
 	`DestinationFilename`	TEXT NOT NULL,
 	`Needed`	DATETIME NOT NULL,
-	`Created`	DATETIME
+	`Created`	DATETIME,
+	`EnableDash` BIT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "FfmpegParts" (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

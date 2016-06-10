@@ -103,7 +103,7 @@ namespace API.WindowsService.Controllers
                     var jobCorrelationId = Guid.NewGuid();
 
                     connection.Execute(
-                        "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created) VALUES(?, ?, ?, ?, ?, ?);",
+                        "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created, EnableDash) VALUES(?, ?, ?, ?, ?, ?, ?);",
                         new
                         {
                             jobCorrelationId,
@@ -111,7 +111,8 @@ namespace API.WindowsService.Controllers
                             job.AudioSourceFilename,
                             job.DestinationFilename,
                             job.Needed,
-                            DateTime.Now
+                            DateTime.Now,
+                            job.EnableDash
                         });
 
                     // Queue audio first because it cannot be chunked and thus will take longer to transcode
@@ -160,16 +161,16 @@ namespace API.WindowsService.Controllers
 
                             if (job.EnableDash)
                             {
-                                arguments +=
-                                    $@" -s {target.Width}x{target.Height} -c:v libx264 -g {framerate} -keyint_min {framerate} -profile:v high -b:v {target
-                                        .VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                                arguments += $@" -s {target.Width}x{target.Height} -c:v libx264 -g {framerate*4}";
+                                arguments += $@" -keyint_min {framerate*4} -profile:v high -b:v {target.VideoBitrate}k";
+                                arguments += $@" -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                             }
                             else
                             {
                                 if (Convert.ToBoolean(ConfigurationManager.AppSettings["EnableCrf"]))
                                 {
                                     int bufSize = target.VideoBitrate/8*chunkDuration;
-                                    arguments +=
+                                    arguments += 
                                         $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -crf 18 -preset medium -maxrate {target
                                             .VideoBitrate}k -bufsize {bufSize}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                                 }
