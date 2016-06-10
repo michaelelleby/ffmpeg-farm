@@ -1,0 +1,18 @@
+﻿using System.Collections.Generic;
+using System.Web.Http;
+using Contract;
+using Dapper;
+
+namespace API.WindowsService.Controllers
+{
+    public class ClientController : ApiController
+    {
+        public IEnumerable<ClientHeartbeat> Get()
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                return connection.Query<ClientHeartbeat>("SELECT MachineName, LastHeartbeat FROM Clients;");
+            }
+        }
+    }
+}

@@ -1,0 +1,63 @@
+﻿using System;
+using System.IO;
+using System.Reflection;
+using System.Web.Http;
+using API.WindowsService.Controllers;
+using Dapper;
+using Owin;
+using Swashbuckle.Application;
+
+namespace API.WindowsService
+{
+    public class Startup
+    {
+        public void Configuration(IAppBuilder appBuilder)
+        {
+            HttpConfiguration config = new HttpConfiguration();
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { id = RouteParameter.Optional }
+            );
+
+            InitDatabase();
+
+            config.EnableSwagger(c =>
+            {
+                c.SingleApiVersion("v1", "A title for your API");
+                c.DescribeAllEnumsAsStrings();
+                c.IncludeXmlComments(GetXmlCommentsPathForControllers());
+                c.IncludeXmlComments(GetXmlCommentsPathForContract());
+            }).EnableSwaggerUi();
+
+            appBuilder.UseWebApi(config);
+        }
+
+        private string GetXmlCommentsPathForContract()
+        {
+            var uriString = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase) + Path.DirectorySeparatorChar + "App_Data" + Path.DirectorySeparatorChar + "API.Contract.xml";
+            return new Uri(uriString).LocalPath;
+        }
+
+        private string GetXmlCommentsPathForControllers()
+        {
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            var commentsFileName = Assembly.GetExecutingAssembly().GetName().Name + ".XML";
+            var commentsFile = Path.Combine(baseDirectory, commentsFileName);
+
+            return commentsFile;
+        }
+
+        private static void InitDatabase()
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                var uriString = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase) + Path.DirectorySeparatorChar + "App_Data" + Path.DirectorySeparatorChar + "create_database.sql";
+                var path = new Uri(uriString).LocalPath;
+                string script = File.ReadAllText(path);
+                connection.Execute(script);
+            }
+        }
+    }
+}

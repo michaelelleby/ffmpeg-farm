@@ -130,7 +130,7 @@ namespace ffmpeg_farm_client
             using (var client = new HttpClient())
             {
                 return client.PutAsync(
-                    new Uri(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/transcodingjob")),
+                    new Uri(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/status")),
                     new StringContent(JsonConvert.SerializeObject(CurrentJob), Encoding.ASCII, "application/json"))
                     .Result;
             }

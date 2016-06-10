@@ -3,30 +3,44 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "ffmpeg-farm-server\API.csproj", "{62230F07-4A89-4344-A3C9-4B2823F60293}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Contract", "Contract\API.Contract.csproj", "{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Contract", "Contract\Contract.csproj", "{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.WindowsService", "API.WindowsService\API.WindowsService.csproj", "{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "Web\Web.csproj", "{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Web", "Web\API.Web.csproj", "{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{62230F07-4A89-4344-A3C9-4B2823F60293}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{62230F07-4A89-4344-A3C9-4B2823F60293}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{62230F07-4A89-4344-A3C9-4B2823F60293}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{62230F07-4A89-4344-A3C9-4B2823F60293}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Debug|x86.ActiveCfg = Debug|x86
+		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Debug|x86.Build.0 = Debug|x86
 		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Release|x86.ActiveCfg = Release|x86
+		{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}.Release|x86.Build.0 = Release|x86
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Debug|x86.Build.0 = Debug|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Release|x86.ActiveCfg = Release|Any CPU
+		{BCD11B1F-0AAA-4133-8EEC-7D00BC423087}.Release|x86.Build.0 = Release|Any CPU
 		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Debug|x86.ActiveCfg = Debug|x86
+		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Debug|x86.Build.0 = Debug|x86
 		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Release|x86.ActiveCfg = Release|x86
+		{1F7761C7-474D-4609-8B2A-3DCDB36AC91C}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

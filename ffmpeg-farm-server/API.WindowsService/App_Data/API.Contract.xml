@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Contract</name>
+    </assembly>
+    <members>
+        <member name="P:Contract.JobRequest.VideoSourceFilename">
+            <summary>
+            Video source
+            </summary>
+        </member>
+        <member name="P:Contract.JobRequest.AudioSourceFilename">
+            <summary>
+            Source for audio. This is optional and if specified, the audio from the video file
+            will be discarded and this will be the audio track in the output instead
+            </summary>
+        </member>
+        <member name="P:Contract.JobRequest.DestinationFilename">
+            <summary>
+            Output filename
+            </summary>
+        </member>
+        <member name="P:Contract.JobRequest.Needed">
+            <summary>
+            Latest timestamp when the output files are needed
+            This will be used to prioritize requests when there
+            is a queue
+            </summary>
+        </member>
+        <member name="P:Contract.JobRequest.Targets">
+            <summary>
+             One or more target resolutions and bitrates
+            </summary>
+        </member>
+        <member name="P:Contract.JobRequest.EnableDash">
+            <summary>
+            Whether the output should support MPEG DASH
+            </summary>
+        </member>
+    </members>
+</doc>
