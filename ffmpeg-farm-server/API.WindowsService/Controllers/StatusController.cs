@@ -51,19 +51,15 @@ namespace API.WindowsService.Controllers
 
                 Helper.InsertClientHeartbeat(transcodingJob.MachineName, connection);
 
+                var jobRequest = connection.Query<dynamic>(
+                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed FROM FfmpegRequest WHERE JobCorrelationId = ?",
+                    new {transcodingJob.JobCorrelationId})
+                    .SingleOrDefault();
+                if (jobRequest == null)
+                    throw new ArgumentException($@"Job with correlation id {transcodingJob.JobCorrelationId} not found");
+
                 using (var transaction = connection.BeginTransaction())
                 {
-                    connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
-                        new {transcodingJob.MachineName, DateTimeOffset.UtcNow});
-
-                    var jobRequest = connection.Query<dynamic>(
-                        "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed FROM FfmpegRequest WHERE JobCorrelationId = ?",
-                        new {transcodingJob.JobCorrelationId})
-                        .SingleOrDefault();
-                    if (jobRequest == null)
-                        throw new ArgumentException(
-                            $@"Job with correlation id {transcodingJob.JobCorrelationId} not found");
-
                     int updatedRows = connection.Execute(
                         "UPDATE FfmpegJobs SET Progress = @Progress, Heartbeat = @Heartbeat, Done = @Done WHERE Id = @Id;",
                         new
@@ -76,6 +72,12 @@ namespace API.WindowsService.Controllers
 
                     if (updatedRows != 1)
                         throw new Exception($"Failed to update progress for job id {transcodingJob.Id}");
+
+                    transaction.Commit();
+                }
+
+                using (var transaction = connection.BeginTransaction())
+                {
 
                     FileInfo fileInfo = new FileInfo(jobRequest.DestinationFilename);
                     if (fileInfo.Exists == false &&

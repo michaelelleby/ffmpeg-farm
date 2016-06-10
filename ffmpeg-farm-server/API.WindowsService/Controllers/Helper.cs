@@ -74,8 +74,13 @@ namespace API.WindowsService.Controllers
         }
         public static void InsertClientHeartbeat(string machineName, IDbConnection connection)
         {
-            connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
-                new {machineName, DateTime.UtcNow});
+            using (var transaction = connection.BeginTransaction())
+            {
+                connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
+                    new {machineName, DateTime.UtcNow});
+
+                transaction.Commit();
+            }
         }
     }
 }

@@ -36,35 +36,32 @@ namespace API.WindowsService.Controllers
 
                 Helper.InsertClientHeartbeat(machineName, connection);
 
+                int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+                DateTime timeout =
+                    DateTimeOffset.UtcNow.UtcDateTime.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
                 using ( var transaction = connection.BeginTransaction())
                 {
-                    int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
-                    DateTime timeout =
-                        DateTimeOffset.UtcNow.UtcDateTime.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+                    var data = connection.Query(
+                        "SELECT Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE Active = 1 AND Done = 0 AND (Taken = 0 OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
+                        new {timeout})
+                        .FirstOrDefault();
+                    if (data == null)
+                        return null;
 
-                    var data =
-                        connection.Query(
-                            "SELECT Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE Active = 1 AND Done = 0 AND (Taken = 0 OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
-                            new {timeout})
-                            .FirstOrDefault();
-                    if (data != null)
+                    var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET Taken = 1, HeartBeat = ? WHERE Id = ?;",
+                        new {DateTime.UtcNow, data.Id});
+                    if (rowsUpdated == 0)
+                        throw new Exception("Failed to mark row as taken");
+
+                    transaction.Commit();
+
+                    return new TranscodingJob
                     {
-                        var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET Taken = 1 WHERE Id = @Id;",
-                            new {data.Id});
-                        if (rowsUpdated == 0)
-                            throw new Exception("Failed to mark row as taken");
-
-                        transaction.Commit();
-
-                        return new TranscodingJob
-                        {
-                            Id = Convert.ToInt32(data.Id),
-                            Arguments = data.Arguments,
-                            JobCorrelationId = data.JobCorrelationId
-                        };
-                    }
-
-                    return null;
+                        Id = Convert.ToInt32(data.Id),
+                        Arguments = data.Arguments,
+                        JobCorrelationId = data.JobCorrelationId
+                    };
                 }
             }
         }
