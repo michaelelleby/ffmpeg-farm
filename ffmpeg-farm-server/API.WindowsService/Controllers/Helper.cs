@@ -72,14 +72,19 @@ namespace API.WindowsService.Controllers
 
             return Convert.ToDouble(mediaInfoProcess.StandardOutput.ReadToEnd()) / 1000;
         }
-        public static void InsertClientHeartbeat(string machineName, IDbConnection connection)
+        public static void InsertClientHeartbeat(string machineName)
         {
-            using (var transaction = connection.BeginTransaction())
+            using (var connection = GetConnection())
             {
-                connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
-                    new {machineName, DateTime.UtcNow});
+                connection.Open();
 
-                transaction.Commit();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
+                        new {machineName, DateTime.UtcNow});
+
+                    transaction.Commit();
+                }
             }
         }
     }

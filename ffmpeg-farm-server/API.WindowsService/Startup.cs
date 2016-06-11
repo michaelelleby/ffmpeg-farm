@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Web.Http;
 using API.WindowsService.Controllers;
 using Dapper;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Owin;
 using Swashbuckle.Application;
 
@@ -30,6 +33,16 @@ namespace API.WindowsService
                 c.IncludeXmlComments(GetXmlCommentsPathForControllers());
                 c.IncludeXmlComments(GetXmlCommentsPathForContract());
             }).EnableSwaggerUi();
+
+            config.Formatters.JsonFormatter.SerializerSettings = new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter>
+                {
+                    new IsoDateTimeConverter(), 
+                    new StringEnumConverter()
+                },
+                TypeNameHandling = TypeNameHandling.All
+            };
 
             appBuilder.UseWebApi(config);
         }

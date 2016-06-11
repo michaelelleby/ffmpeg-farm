@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Configuration;
-using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -19,7 +17,7 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="machineName">Client's machine name used to stamp who took the job</param>
         /// <returns><see cref="TranscodingJob"/></returns>
-        public TranscodingJob GetNextJob(string machineName)
+        public BaseJob GetNextJob(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName))
             {
@@ -30,29 +28,87 @@ namespace API.WindowsService.Controllers
                 });
             }
 
+            Helper.InsertClientHeartbeat(machineName);
+
+            Mp4boxJob dashJob = GetNextDashJob();
+            if (dashJob != null)
+                return dashJob;
+
+            return GetNextMergeJob() ?? GetTranscodingJob();
+        }
+
+        private TranscodingJob GetNextMergeJob()
+        {
             using (var connection = Helper.GetConnection())
             {
                 connection.Open();
 
-                Helper.InsertClientHeartbeat(machineName, connection);
+                using (var transaction = connection.BeginTransaction())
+                {
+                    int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+                    DateTime timeout = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-                int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
-                DateTime timeout =
-                    DateTimeOffset.UtcNow.UtcDateTime.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+                    var data = connection.Query(
+                        "SELECT Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE Active = 1 AND Done = 0 AND (Taken = 0 OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
+                        new {timeout})
+                        .FirstOrDefault();
+                    if (data == null)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
 
-                using ( var transaction = connection.BeginTransaction())
+                    var rowsUpdated =
+                        connection.Execute(
+                            "UPDATE FfmpegMergeJobs SET Taken = 1, HeartBeat = ? WHERE JobCorrelationId = ?;",
+                            new {DateTime.UtcNow, data.JobCorrelationId});
+                    if (rowsUpdated == 0)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Failed to mark row as taken");
+                    }
+
+                    transaction.Commit();
+
+                    return new MergeJob
+                    {
+                        Id = Convert.ToInt32(data.Id),
+                        Arguments = data.Arguments,
+                        JobCorrelationId = data.JobCorrelationId
+                    };
+                }
+            }
+        }
+
+        private static TranscodingJob GetTranscodingJob()
+        {
+            int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+            DateTime timeout =
+                DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
                 {
                     var data = connection.Query(
                         "SELECT Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE Active = 1 AND Done = 0 AND (Taken = 0 OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
                         new {timeout})
                         .FirstOrDefault();
                     if (data == null)
+                    {
+                        transaction.Rollback();
                         return null;
+                    }
 
                     var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET Taken = 1, HeartBeat = ? WHERE Id = ?;",
                         new {DateTime.UtcNow, data.Id});
                     if (rowsUpdated == 0)
+                    {
+                        transaction.Rollback();
                         throw new Exception("Failed to mark row as taken");
+                    }
 
                     transaction.Commit();
 
@@ -61,6 +117,42 @@ namespace API.WindowsService.Controllers
                         Id = Convert.ToInt32(data.Id),
                         Arguments = data.Arguments,
                         JobCorrelationId = data.JobCorrelationId
+                    };
+                }
+            }
+        }
+
+        private static Mp4boxJob GetNextDashJob()
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    var data = connection.Query(
+                        "SELECT JobCorrelationId, Arguments FROM Mp4boxJobs WHERE Done = 0 ORDER BY Needed ASC LIMIT 1;")
+                        .SingleOrDefault();
+                    if (data == null)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+
+                    var rowsUpdated = connection.Execute("UPDATE Mp4boxJobs SET Taken = 1 WHERE JobCorrelationId = ?;",
+                        new {data.JobCorrelationId});
+                    if (rowsUpdated != 1)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+
+                    transaction.Commit();
+
+                    return new Mp4boxJob
+                    {
+                        JobCorrelationId = data.JobCorrelationId,
+                        Arguments = data.Arguments
                     };
                 }
             }
@@ -93,6 +185,7 @@ namespace API.WindowsService.Controllers
             using (var connection = Helper.GetConnection())
             {
                 connection.Open();
+
                 using (var transaction = connection.BeginTransaction())
                 {
                     const int chunkDuration = 60;
@@ -209,6 +302,7 @@ namespace API.WindowsService.Controllers
             using (var connection = Helper.GetConnection())
             {
                 connection.Open();
+
                 using (var transaction = connection.BeginTransaction())
                 {
                     var rowsUpdated = connection.Execute(

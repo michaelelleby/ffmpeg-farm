@@ -4,6 +4,27 @@
         <name>Contract</name>
     </assembly>
     <members>
+        <member name="P:Contract.BaseJob.JobCorrelationId">
+            <summary>
+            Job id
+            </summary>
+        </member>
+        <member name="P:Contract.BaseJob.MachineName">
+            <summary>
+            Client machine name. Used when reporting progress updates
+            </summary>
+        </member>
+        <member name="P:Contract.BaseJob.Progress">
+            <summary>
+            Progress of how many seconds has been encoded
+            Used when reporting progress updates
+            </summary>
+        </member>
+        <member name="P:Contract.BaseJob.Done">
+            <summary>
+            Whether this job is done
+            </summary>
+        </member>
         <member name="P:Contract.JobRequest.VideoSourceFilename">
             <summary>
             Video source
@@ -37,11 +58,6 @@
             Whether the output should support MPEG DASH
             </summary>
         </member>
-        <member name="P:Contract.TranscodingJob.JobCorrelationId">
-            <summary>
-            Job id
-            </summary>
-        </member>
         <member name="P:Contract.TranscodingJob.SourceFilename">
             <summary>
             Source filename
@@ -50,22 +66,6 @@
         <member name="P:Contract.TranscodingJob.Arguments">
             <summary>
             Commandline arguments sent to FFmpeg
-            </summary>
-        </member>
-        <member name="P:Contract.TranscodingJob.Progress">
-            <summary>
-            Progress of how many seconds has been encoded
-            Used when reporting progress updates
-            </summary>
-        </member>
-        <member name="P:Contract.TranscodingJob.Done">
-            <summary>
-            Whether this job is done
-            </summary>
-        </member>
-        <member name="P:Contract.TranscodingJob.MachineName">
-            <summary>
-            Client machine name. Used when reporting progress updates
             </summary>
         </member>
     </members>

@@ -2,13 +2,8 @@ using System;
 
 namespace Contract
 {
-    public class TranscodingJob
+    public class TranscodingJob : BaseJob
     {
-        /// <summary>
-        /// Job id
-        /// </summary>
-        public Guid JobCorrelationId { get; set; }
-
         /// <summary>
         /// Source filename
         /// </summary>
@@ -18,23 +13,5 @@ namespace Contract
         /// Commandline arguments sent to FFmpeg
         /// </summary>
         public string Arguments { get; set; }
-
-        /// <summary>
-        /// Progress of how many seconds has been encoded
-        /// Used when reporting progress updates
-        /// </summary>
-        public TimeSpan Progress { get; set; }
-
-        public int Id { get; set; }
-
-        /// <summary>
-        /// Whether this job is done
-        /// </summary>
-        public bool Done { get; set; }
-
-        /// <summary>
-        /// Client machine name. Used when reporting progress updates
-        /// </summary>
-        public string MachineName { get; set; }
     }
 }

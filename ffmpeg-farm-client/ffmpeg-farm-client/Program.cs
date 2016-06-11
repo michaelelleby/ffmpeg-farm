@@ -1,30 +1,43 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
+using Contract;
+using Newtonsoft.Json.Converters;
 
 namespace ffmpeg_farm_client
 {
-    class Program
+    internal class Program
     {
         private static readonly System.Timers.Timer TimeSinceLastUpdate = new System.Timers.Timer(TimeSpan.FromSeconds(20).TotalMilliseconds);
         private static TimeSpan _progress = TimeSpan.Zero;
         private static Process _commandlineProcess;
-        private static TranscodingJob CurrentJob;
+        private static BaseJob CurrentJob;
+        private static JsonSerializerSettings _jsonSerializerSettings;
 
         private static void Main(string[] args)
         {
+            _jsonSerializerSettings = new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter>
+                                    {
+                                        new IsoDateTimeConverter(),
+                                        new StringEnumConverter()
+                                    },
+                TypeNameHandling = TypeNameHandling.All
+            };
+
             while (true)
             {
                 _commandlineProcess = new Process();
-                TranscodingJob receivedJob = null;
+                object receivedJob = null;
 
                 try
                 {
@@ -36,15 +49,28 @@ namespace ffmpeg_farm_client
                         if (result.IsSuccessStatusCode)
                         {
                             string json = result.Content.ReadAsStringAsync().Result;
-                            receivedJob = JsonConvert.DeserializeObject<TranscodingJob>(json);
+                            if (!string.IsNullOrWhiteSpace(json))
+                            {
+                                receivedJob = JsonConvert.DeserializeObject<BaseJob>(json,
+                                    _jsonSerializerSettings);
 
-                            _progress = new TimeSpan();
+                                _progress = new TimeSpan();
+                            }
                         }
                     }
 
                     if (receivedJob != null)
                     {
-                        ExecuteTranscodingJob(receivedJob);
+                        Type jobType = receivedJob.GetType();
+                        if (jobType == typeof(TranscodingJob) || jobType == typeof(MergeJob))
+                        {
+                            ExecuteTranscodingJob((TranscodingJob)receivedJob);
+                        }
+                        if (jobType == typeof(Mp4boxJob))
+                        {
+                            ExecuteMp4boxJob((Mp4boxJob)receivedJob);
+                        }
+
                         continue;
                     }
 
@@ -58,6 +84,44 @@ namespace ffmpeg_farm_client
                 // this will prevent a loop taking 100% cpu
                 Thread.Sleep(TimeSpan.FromSeconds(5));
             }
+        }
+
+        private static void ExecuteMp4boxJob(Mp4boxJob receivedJob)
+        {
+            string pathToMp4Box = ConfigurationManager.AppSettings["Mp4BoxPath"];
+            if (string.IsNullOrWhiteSpace(pathToMp4Box)) throw new ArgumentNullException("Mp4BoxPath");
+            if (!File.Exists(pathToMp4Box)) throw new FileNotFoundException(pathToMp4Box);
+
+            CurrentJob = receivedJob;
+            CurrentJob.MachineName = Environment.MachineName;
+
+            _commandlineProcess.StartInfo = new ProcessStartInfo
+            {
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                FileName = pathToMp4Box,
+                Arguments = receivedJob.Arguments
+            };
+
+            Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
+
+            _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+
+            TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
+
+            _commandlineProcess.Start();
+            _commandlineProcess.BeginErrorReadLine();
+
+            TimeSinceLastUpdate.Start();
+
+            _commandlineProcess.WaitForExit();
+
+            CurrentJob.Done = _commandlineProcess.ExitCode == 0;
+
+            UpdateProgress();
+
+            TimeSinceLastUpdate.Stop();
         }
 
         private static void ExecuteTranscodingJob(TranscodingJob transcodingJob)
@@ -131,20 +195,9 @@ namespace ffmpeg_farm_client
             {
                 return client.PutAsync(
                     new Uri(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/status")),
-                    new StringContent(JsonConvert.SerializeObject(CurrentJob), Encoding.ASCII, "application/json"))
+                    new StringContent(JsonConvert.SerializeObject(CurrentJob, _jsonSerializerSettings), Encoding.ASCII, "application/json"))
                     .Result;
             }
         }
-    }
-
-    public class TranscodingJob
-    {
-        public Guid JobCorrelationId { get; set; }
-        public string SourceFilename { get; set; }
-        public string Arguments { get; set; }
-        public TimeSpan Progress { get; set; }
-        public int Id { get; set; }
-        public bool Done { get; set; }
-        public string MachineName { get; set; }
     }
 }
