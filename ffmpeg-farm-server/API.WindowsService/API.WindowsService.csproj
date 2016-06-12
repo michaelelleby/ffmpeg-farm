@@ -112,6 +112,8 @@
     </Compile>
     <Compile Include="Controllers\ClientController.cs" />
     <Compile Include="Controllers\Helper.cs" />
+    <Compile Include="Controllers\PauseController.cs" />
+    <Compile Include="Controllers\ResumeController.cs" />
     <Compile Include="Controllers\StatusController.cs" />
     <Compile Include="Controllers\TranscodingJobController.cs" />
     <Compile Include="Program.cs" />

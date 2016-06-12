@@ -289,31 +289,5 @@ namespace API.WindowsService.Controllers
                 }
             }
         }
-
-        /// <summary>
-        /// Pause a job
-        /// </summary>
-        /// <param name="jobId">Job id</param>
-        /// <returns>Number of tasks paused or zero if none were found in the queued state for the requested job</returns>
-        public int PatchPause(Guid jobId)
-        {
-            if (jobId == Guid.Empty) throw new ArgumentException($@"Invalid Job Id specified: {jobId}");
-
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-
-                using (var transaction = connection.BeginTransaction())
-                {
-                    var rowsUpdated = connection.Execute(
-                        "UPDATE FfmpegJobs SET Active = 0 WHERE JobCorrelationId = ? AND Done = 0 AND Taken = 0;",
-                        new {jobId});
-
-                    transaction.Commit();
-
-                    return rowsUpdated;
-                }
-            }
-        }
     }
 }
