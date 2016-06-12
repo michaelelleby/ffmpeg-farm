@@ -37,6 +37,44 @@ namespace API.WindowsService.Controllers
             return GetNextMergeJob() ?? GetTranscodingJob();
         }
 
+        /// <summary>
+        /// Delete a job
+        /// </summary>
+        /// <param name="jobId">Job id returned when creating new job</param>
+        [HttpDelete]
+        public void Delete(Guid jobId)
+        {
+            if (jobId == Guid.Empty)
+                throw new ArgumentException("Job id must be a valid GUID.");
+
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    int rowsDeleted = connection.Execute("DELETE FROM FfmpegRequest WHERE JobCorrelationId = ?;",
+                        new { jobId });
+                    if (rowsDeleted != 1)
+                        throw new ArgumentException($@"No job with id {jobId} found.");
+
+                    connection.Execute("DELETE FROM FfmpegJobs WHERE JobCorrelationId = ?;",
+                        new { jobId });
+
+                    connection.Execute("DELETE FROM FfmpegParts WHERE JobCorrelationId = ?;",
+                        new { jobId });
+
+                    connection.Execute("DELETE FROM FfmpegMergeJobs WHERE JobCorrelationId = ?;",
+                                            new { jobId });
+
+                    connection.Execute("DELETE FROM Mp4boxJobs WHERE JobCorrelationId = ?;",
+                                                                new { jobId });
+
+                    transaction.Commit();
+                }
+            }
+        }
+
         private TranscodingJob GetNextMergeJob()
         {
             using (var connection = Helper.GetConnection())
