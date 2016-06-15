@@ -188,7 +188,7 @@ namespace ffmpeg_farm_client
                 TimeSinceLastUpdate.Start();
             }
         }
-
+        
         private static HttpResponseMessage UpdateProgress()
         {
             using (var client = new HttpClient())

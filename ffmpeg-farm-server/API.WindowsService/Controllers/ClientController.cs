@@ -11,6 +11,8 @@ namespace API.WindowsService.Controllers
         {
             using (var connection = Helper.GetConnection())
             {
+                connection.Open();
+
                 return connection.Query<ClientHeartbeat>("SELECT MachineName, LastHeartbeat FROM Clients;");
             }
         }

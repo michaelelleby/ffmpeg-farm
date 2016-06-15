@@ -66,6 +66,8 @@ namespace API.WindowsService
         {
             using (var connection = Helper.GetConnection())
             {
+                connection.Open();
+
                 var uriString = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase) + Path.DirectorySeparatorChar + "App_Data" + Path.DirectorySeparatorChar + "create_database.sql";
                 var path = new Uri(uriString).LocalPath;
                 string script = File.ReadAllText(path);
