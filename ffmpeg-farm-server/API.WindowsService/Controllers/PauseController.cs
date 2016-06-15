@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http;
+using Contract;
 using Dapper;
 
 namespace API.WindowsService.Controllers
@@ -27,8 +24,8 @@ namespace API.WindowsService.Controllers
                 using (var transaction = connection.BeginTransaction())
                 {
                     var rowsUpdated = connection.Execute(
-                        "UPDATE FfmpegJobs SET Active = 0 WHERE JobCorrelationId = ?;",
-                        new { jobId });
+                        "UPDATE FfmpegJobs SET State = @PausedState WHERE JobCorrelationId = ? AND State = @QueuedState;",
+                        new {jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
 
                     transaction.Commit();
 
