@@ -40,5 +40,8 @@ namespace Contract
 
         [JsonIgnore]
         public bool HasAlternateAudio => !string.IsNullOrWhiteSpace(AudioSourceFilename) && !string.IsNullOrWhiteSpace(VideoSourceFilename);
+
+        [JsonIgnore]
+        public Guid JobCorrelationId { get; set; }
     }
 }

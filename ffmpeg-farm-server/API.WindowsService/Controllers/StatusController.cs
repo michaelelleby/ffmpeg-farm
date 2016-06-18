@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -52,12 +53,17 @@ namespace API.WindowsService.Controllers
             {
                 connection.Open();
 
-                var jobRequest = connection.Query<dynamic>(
+                JobRequest jobRequest = connection.Query<JobRequest>(
                     "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash FROM FfmpegRequest WHERE JobCorrelationId = ?",
                     new {job.JobCorrelationId})
                     .SingleOrDefault();
                 if (jobRequest == null)
                     throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
+
+                jobRequest.Targets = connection.Query<DestinationFormat>(
+                    "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegRequestTargets WHERE JobCorrelationId = ?;",
+                    new {job.JobCorrelationId})
+                    .ToArray();
 
                 using (var transaction = connection.BeginTransaction())
                 {
@@ -95,6 +101,12 @@ namespace API.WindowsService.Controllers
 
                         if (updatedRows != 1)
                             throw new Exception($"Failed to update progress for job id {job.Id}");
+
+                        //if (jobState == TranscodingJobState.Done)
+                        //{
+                        //    FfmpegPart parts = connection.Query<FfmpegPart>(
+                        //        "SELECT Filename (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;")
+                        //}
                     }
                     else if (jobType == typeof(Mp4boxJob))
                     {
@@ -148,85 +160,102 @@ namespace API.WindowsService.Controllers
 
                     if (totalJobs.Count == 0)
                     {
-                        var chunks = connection.Query<FfmpegPart>(
-                            "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
-                            new {Id = job.JobCorrelationId});
-
-                        foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
-                        {
-                            int targetNumber = chunk.First().Target;
-
-                            string targetFilename =
-                                $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}{fileExtension}";
-
-                            // TODO Implement proper detection if files are already merged
-                            if (File.Exists(targetFilename))
-                                continue;
-
-                            string path = string.Format("{0}{1}{2}_{3}.list",
-                                outputFolder,
-                                Path.DirectorySeparatorChar,
-                                fileNameWithoutExtension,
-                                targetNumber);
-
-                            using (TextWriter tw = new StreamWriter(path))
-                            {
-                                foreach (FfmpegPart part in chunk.Where(x => x.IsAudio == false))
-                                {
-                                    tw.WriteLine($"file '{part.Filename}'");
-                                }
-                            }
-                            string audioSource = chunk.Single(x => x.IsAudio).Filename;
-
-                            string arguments =
-                                $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
-
-                            int duration = Helper.GetDuration(jobRequest.VideoSourceFilename);
-                            connection.Execute(
-                                "INSERT INTO FfmpegMergeJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
-                                new
-                                {
-                                    job.JobCorrelationId,
-                                    arguments,
-                                    jobRequest.Needed,
-                                    TranscodingJobState.Queued
-                                });
-                        }
+                        QueueMergeJob(job, connection, outputFolder, fileNameWithoutExtension, fileExtension, jobRequest);
                     }
                     else if (jobRequest.EnableDash)
                     {
-                        string destinationFolder = Path.GetDirectoryName(destinationFilename);
-                        totalJobs = connection.Query("SELECT State FROM Mp4boxJobs WHERE JobCorrelationId = ?;",
-                            new { jobRequest.JobCorrelationId })
-                            .Select(x => (TranscodingJobState)Enum.Parse(typeof(TranscodingJobState), x.State))
-                            .ToList();
-
-                        if (totalJobs.Any() == false)
-                        {
-                            string arguments =
-                                $@"-dash 4000 -rap -frag-rap -profile onDemand -out {destinationFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}.mpd";
-
-                            var chunks = connection.Query<FfmpegPart>(
-                                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
-                                new {Id = job.JobCorrelationId});
-                            foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
-                            {
-                                int targetNumber = chunk.First().Target;
-
-                                string targetFilename =
-                                    $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}{fileExtension}";
-
-                                arguments += $@" {targetFilename}";
-                            }
-
-                            connection.Execute(
-                                "INSERT INTO Mp4boxJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
-                                new {jobRequest.JobCorrelationId, arguments, jobRequest.Needed, TranscodingJobState.Queued});
-                        }
+                        QueueMpegDashMergeJob(job, destinationFilename, connection, jobRequest, fileNameWithoutExtension, outputFolder, fileExtension);
                     }
 
                     transaction.Commit();
                 }
+            }
+        }
+
+        private static void QueueMpegDashMergeJob(BaseJob job, string destinationFilename, SQLiteConnection connection,
+            JobRequest jobRequest, string fileNameWithoutExtension, string outputFolder, string fileExtension)
+        {
+            string destinationFolder = Path.GetDirectoryName(destinationFilename);
+            ICollection<TranscodingJobState> totalJobs =
+                connection.Query("SELECT State FROM Mp4boxJobs WHERE JobCorrelationId = ?;",
+                    new {jobRequest.JobCorrelationId})
+                    .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
+                    .ToList();
+
+            // One MPEG DASH merge job is already queued. Do nothing
+            if (totalJobs.Any())
+                return;
+
+            string arguments =
+                $@"-dash 4000 -rap -frag-rap -profile onDemand -out {destinationFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}.mpd";
+
+            var chunks = connection.Query<FfmpegPart>(
+                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                new {Id = job.JobCorrelationId});
+            foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
+            {
+                int targetNumber = chunk.First().Target;
+                DestinationFormat target = jobRequest.Targets[targetNumber];
+
+                string targetFilename =
+                    $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target
+                        .Height}_{target.VideoBitrate}_{target.AudioBitrate}{fileExtension}";
+
+                arguments += $@" {targetFilename}";
+            }
+
+            connection.Execute(
+                "INSERT INTO Mp4boxJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
+                new {jobRequest.JobCorrelationId, arguments, jobRequest.Needed, TranscodingJobState.Queued});
+        }
+
+        private static void QueueMergeJob(BaseJob job, SQLiteConnection connection, string outputFolder,
+            string fileNameWithoutExtension, string fileExtension, JobRequest jobRequest)
+        {
+            var chunks = connection.Query<FfmpegPart>(
+                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                new {Id = job.JobCorrelationId});
+
+            foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
+            {
+                int targetNumber = chunk.First().Target;
+                DestinationFormat target = jobRequest.Targets[targetNumber];
+
+                string targetFilename =
+                    $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target.Height}_{target.VideoBitrate}_{target.AudioBitrate}{fileExtension}";
+
+                // TODO Implement proper detection if files are already merged
+                if (File.Exists(targetFilename))
+                    continue;
+
+                string path = string.Format("{0}{1}{2}_{3}.list",
+                    outputFolder,
+                    Path.DirectorySeparatorChar,
+                    fileNameWithoutExtension,
+                    targetNumber);
+
+                using (TextWriter tw = new StreamWriter(path))
+                {
+                    foreach (FfmpegPart part in chunk.Where(x => x.IsAudio == false))
+                    {
+                        tw.WriteLine($"file '{part.Filename}'");
+                    }
+                }
+                string audioSource = chunk.Single(x => x.IsAudio).Filename;
+
+                string arguments =
+                    $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
+
+                int duration = Helper.GetDuration(jobRequest.VideoSourceFilename);
+                connection.Execute(
+                    "INSERT INTO FfmpegMergeJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
+                    new
+                    {
+                        job.JobCorrelationId,
+                        arguments,
+                        jobRequest.Needed,
+                        TranscodingJobState.Queued
+                    });
             }
         }
     }

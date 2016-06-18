@@ -90,7 +90,7 @@ namespace API.WindowsService.Controllers
                     DateTime timeout = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
                     var data = connection.Query<MergeJob>(
-                        "SELECT Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE State = ? OR (State = ? OR HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
+                        "SELECT Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE State = ? OR (State = ? AND HeartBeat < ?) ORDER BY Needed ASC LIMIT 1;",
                         new {TranscodingJobState.Queued, TranscodingJobState.InProgress, timeout})
                         .SingleOrDefault();
                     if (data == null)
@@ -99,8 +99,8 @@ namespace API.WindowsService.Controllers
                     }
 
                     var rowsUpdated = connection.Execute(
-                        "UPDATE FfmpegMergeJobs SET State = ?, HeartBeat = ? WHERE JobCorrelationId = ?;",
-                        new {TranscodingJobState.InProgress, DateTime.UtcNow, data.JobCorrelationId});
+                        "UPDATE FfmpegMergeJobs SET State = ?, HeartBeat = ? WHERE Id = ?;",
+                        new {TranscodingJobState.InProgress, DateTime.UtcNow, data.Id});
                     if (rowsUpdated == 0)
                     {
                         throw new Exception("Failed to mark row as taken");
@@ -214,6 +214,9 @@ namespace API.WindowsService.Controllers
             string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
             string destinationFilenamePrefix = Path.GetFileNameWithoutExtension(job.DestinationFilename);
 
+            if (string.IsNullOrWhiteSpace(destinationFormat))
+                throw new ArgumentException("DestinationFilename must have an extension to determine the output format.");
+
             if (!Directory.Exists(destinationFolder))
                 throw new ArgumentException($@"Destination folder {destinationFolder} does not exist.");
 
@@ -223,51 +226,49 @@ namespace API.WindowsService.Controllers
 
             // Queue audio first because it cannot be chunked and thus will take longer to transcode
             // and if we do it first chances are it will be ready when all the video parts are ready
+            string source = job.HasAlternateAudio
+                ? job.AudioSourceFilename
+                : job.VideoSourceFilename;
+
+            TranscodingJob audioJob = new TranscodingJob
+            {
+                JobCorrelationId = jobCorrelationId,
+                SourceFilename = source,
+                Needed = job.Needed,
+                State = TranscodingJobState.Queued
+            };
+            string arguments = $@"-y -i ""{source}""";
             for (int i = 0; i < job.Targets.Length; i++)
             {
                 DestinationFormat format = job.Targets[i];
 
                 string chunkFilename =
                     $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
-                string source = job.HasAlternateAudio
-                    ? job.AudioSourceFilename
-                    : job.VideoSourceFilename;
+                arguments += $@" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
 
-                string arguments =
-                    $@"-y -i ""{source}"" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
-
-                TranscodingJob audioJob = new TranscodingJob
-                {
-                    JobCorrelationId = jobCorrelationId,
-                    SourceFilename = source,
-                    Arguments = arguments,
-                    Needed = job.Needed,
-                    Chunks =
-                            {
-                                new FfmpegPart
-                                {
-                                    SourceFilename = source,
-                                    JobCorrelationId = jobCorrelationId,
-                                    Filename = chunkFilename,
-                                    Target = i,
-                                    Number = 0
-                                }
-                            },
-                    State = TranscodingJobState.Queued
-                };
-
-                transcodingJobs.Add(audioJob);
+                audioJob.Chunks.Add(
+                    new FfmpegPart
+                    {
+                        SourceFilename = source,
+                        JobCorrelationId = jobCorrelationId,
+                        Filename = chunkFilename,
+                        Target = i,
+                        Number = 0
+                    });
             }
+            audioJob.Arguments = arguments;
 
-            for (int i = 0; duration - i * chunkDuration > 0; i++)
+            transcodingJobs.Add(audioJob);
+
+            for (int i = 0; duration - i*chunkDuration > 0; i++)
             {
-                int value = i * chunkDuration;
+                int value = i*chunkDuration;
                 if (value > duration)
                 {
                     value = duration;
                 }
 
-                string arguments =
+                arguments =
                     $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}""";
 
                 var transcodingJob = new TranscodingJob
@@ -283,27 +284,29 @@ namespace API.WindowsService.Controllers
                     DestinationFormat target = job.Targets[j];
 
                     string chunkFilename =
-                        $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{j}_{value}{destinationFormat}";
+                        $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{target.Width}x{target
+                            .Height}_{target.VideoBitrate}_{target.AudioBitrate}_{value}{destinationFormat}";
 
                     if (job.EnableDash)
                     {
-                        arguments += $@" -s {target.Width}x{target.Height} -c:v libx264 -g {framerate * 4}";
-                        arguments += $@" -keyint_min {framerate * 4} -profile:v high -b:v {target.VideoBitrate}k";
+                        arguments +=
+                            $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -g {framerate*4}";
+                        arguments += $@" -keyint_min {framerate*4} -profile:v high -b:v {target.VideoBitrate}k";
                         arguments += $@" -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                     }
                     else
                     {
                         if (Convert.ToBoolean(ConfigurationManager.AppSettings["EnableCrf"]))
                         {
-                            int bufSize = target.VideoBitrate / 8 * chunkDuration;
+                            int bufSize = target.VideoBitrate/8*chunkDuration;
                             arguments +=
-                                $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -crf 18 -preset medium -maxrate {target
+                                $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -profile:v high -crf 18 -preset medium -maxrate {target
                                     .VideoBitrate}k -bufsize {bufSize}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                         }
                         else
                         {
                             arguments +=
-                                $@" -s {target.Width}x{target.Height} -c:v libx264 -profile:v high -b:v {target
+                                $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -profile:v high -b:v {target
                                     .VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                         }
                     }
@@ -350,11 +353,25 @@ namespace API.WindowsService.Controllers
                             jobCorrelationId,
                             job.VideoSourceFilename,
                             job.AudioSourceFilename,
-                            job.DestinationFilename,
+                            DestinationFilename = job.DestinationFilename,
                             job.Needed,
                             DateTime.Now,
                             job.EnableDash
                         });
+
+            foreach (DestinationFormat target in job.Targets)
+            {
+                connection.Execute(
+                    "INSERT INTO FfmpegRequestTargets (JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate) VALUES(?, ?, ?, ?, ?);",
+                    new
+                    {
+                        jobCorrelationId,
+                        target.Width,
+                        target.Height,
+                        target.VideoBitrate,
+                        target.AudioBitrate
+                    });
+            }
 
             foreach (TranscodingJob transcodingJob in jobs)
             {
