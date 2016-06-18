@@ -1,4 +1,21 @@
 BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS "Mp4boxJobs" (
+	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`JobCorrelationId`	uniqueidentifier NOT NULL,
+	`Heartbeat`	datetime,
+	`Arguments`	TEXT NOT NULL,
+	`Needed`	datetime,
+	`HeartbeatMachineName`	TEXT,
+	`State` TEXT NOT NULL
+);
+CREATE TABLE `FfmpegRequestTargets` (
+	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`JobCorrelationId`	UNIQUEIDENTIFIER NOT NULL,
+	`Width`	INTEGER NOT NULL,
+	`Height`	INTEGER NOT NULL,
+	`VideoBitrate`	INTEGER NOT NULL,
+	`AudioBitrate`	INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS "FfmpegRequest" (
 	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	`JobCorrelationId`	UNIQUEIDENTIFIER NOT NULL,
@@ -16,19 +33,6 @@ CREATE TABLE IF NOT EXISTS "FfmpegParts" (
 	`Filename`	TEXT NOT NULL,
 	`Number`	INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS "FfmpegJobs" (
-	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-	`JobCorrelationId`	uniqueidentifier NOT NULL,
-	`Progress`	REAL NOT NULL DEFAULT 0,
-	`Heartbeat`	datetime,
-	`Arguments`	TEXT NOT NULL,
-	`Needed`	datetime,
-	`VideoSourceFilename`	TEXT,
-	`AudioSourceFilename`	TEXT,
-	`ChunkDuration`	REAL NOT NULL,
-	`HeartbeatMachineName`	TEXT,
-	`State` TEXT NOT NULL
-);
 CREATE TABLE IF NOT EXISTS "FfmpegMergeJobs" (
 	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	`JobCorrelationId`	uniqueidentifier NOT NULL,
@@ -39,12 +43,16 @@ CREATE TABLE IF NOT EXISTS "FfmpegMergeJobs" (
 	`HeartbeatMachineName`	TEXT,
 	`State` TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS "Mp4boxJobs" (
+CREATE TABLE IF NOT EXISTS "FfmpegJobs" (
 	`Id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	`JobCorrelationId`	uniqueidentifier NOT NULL,
+	`Progress`	REAL NOT NULL DEFAULT 0,
 	`Heartbeat`	datetime,
 	`Arguments`	TEXT NOT NULL,
 	`Needed`	datetime,
+	`VideoSourceFilename`	TEXT,
+	`AudioSourceFilename`	TEXT,
+	`ChunkDuration`	REAL NOT NULL,
 	`HeartbeatMachineName`	TEXT,
 	`State` TEXT NOT NULL
 );
