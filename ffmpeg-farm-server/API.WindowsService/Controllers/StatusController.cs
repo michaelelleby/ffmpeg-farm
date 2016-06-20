@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Transactions;
 using System.Web.Http;
 using Contract;
 using Dapper;
@@ -54,18 +55,18 @@ namespace API.WindowsService.Controllers
                 connection.Open();
 
                 JobRequest jobRequest = connection.Query<JobRequest>(
-                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash FROM FfmpegRequest WHERE JobCorrelationId = ?",
-                    new {job.JobCorrelationId})
+                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash FROM FfmpegRequest WHERE JobCorrelationId = @Id",
+                    new {Id = job.JobCorrelationId})
                     .SingleOrDefault();
                 if (jobRequest == null)
                     throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
 
                 jobRequest.Targets = connection.Query<DestinationFormat>(
-                    "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegRequestTargets WHERE JobCorrelationId = ?;",
-                    new {job.JobCorrelationId})
+                    "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegRequestTargets WHERE JobCorrelationId = @Id;",
+                    new {Id = job.JobCorrelationId})
                     .ToArray();
 
-                using (var transaction = connection.BeginTransaction())
+                using (var scope = new TransactionScope())
                 {
                     Type jobType = job.GetType();
                     TranscodingJobState jobState = job.Done
@@ -102,11 +103,21 @@ namespace API.WindowsService.Controllers
                         if (updatedRows != 1)
                             throw new Exception($"Failed to update progress for job id {job.Id}");
 
-                        //if (jobState == TranscodingJobState.Done)
-                        //{
-                        //    FfmpegPart parts = connection.Query<FfmpegPart>(
-                        //        "SELECT Filename (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;")
-                        //}
+                        int target = connection.Query<int>("SELECT Target FROM FfmpegMergeJobs WHERE Id = @Id;",
+                            new {Id = job.Id})
+                            .Single();
+
+                        if (jobState == TranscodingJobState.Done)
+                        {
+                            IEnumerable<FfmpegPart> parts = connection.Query<FfmpegPart>(
+                                "SELECT Filename FROM FfmpegParts WHERE JobCorrelationId = @JobCorrelationId AND Target = @Target ORDER BY Target, Number;",
+                                new {JobCorrelationId = job.JobCorrelationId, Target = target});
+
+                            foreach (FfmpegPart part in parts)
+                            {
+                                File.Delete(part.Filename);
+                            }
+                        }
                     }
                     else if (jobType == typeof(Mp4boxJob))
                     {
@@ -123,14 +134,15 @@ namespace API.WindowsService.Controllers
                         if (updatedRows != 1)
                             throw new Exception($"Failed to update progress for job id {job.Id}");
                     }
-                    transaction.Commit();
+                    
+                    scope.Complete();
                 }
 
-                using (var transaction = connection.BeginTransaction())
+                using (var scope = new TransactionScope())
                 {
                     ICollection<TranscodingJobState> totalJobs = connection.Query(
-                            "SELECT State FROM FfmpegJobs WHERE JobCorrelationId = ?;",
-                            new { jobRequest.JobCorrelationId })
+                            "SELECT State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                            new { Id = jobRequest.JobCorrelationId })
                             .Select(x => (TranscodingJobState)Enum.Parse(typeof(TranscodingJobState), x.State))
                             .ToList();
 
@@ -141,8 +153,8 @@ namespace API.WindowsService.Controllers
                     }
 
                     totalJobs = connection.Query(
-                        "SELECT State FROM FfmpegMergeJobs WHERE JobCorrelationId = ?;",
-                        new {jobRequest.JobCorrelationId})
+                        "SELECT State FROM FfmpegMergeJobs WHERE JobCorrelationId = @Id;",
+                        new {Id = jobRequest.JobCorrelationId})
                         .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
                         .ToList();
 
@@ -167,18 +179,18 @@ namespace API.WindowsService.Controllers
                         QueueMpegDashMergeJob(job, destinationFilename, connection, jobRequest, fileNameWithoutExtension, outputFolder, fileExtension);
                     }
 
-                    transaction.Commit();
+                    scope.Complete();
                 }
             }
         }
 
-        private static void QueueMpegDashMergeJob(BaseJob job, string destinationFilename, SQLiteConnection connection,
+        private static void QueueMpegDashMergeJob(BaseJob job, string destinationFilename, IDbConnection connection,
             JobRequest jobRequest, string fileNameWithoutExtension, string outputFolder, string fileExtension)
         {
             string destinationFolder = Path.GetDirectoryName(destinationFilename);
             ICollection<TranscodingJobState> totalJobs =
-                connection.Query("SELECT State FROM Mp4boxJobs WHERE JobCorrelationId = ?;",
-                    new {jobRequest.JobCorrelationId})
+                connection.Query("SELECT State FROM Mp4boxJobs WHERE JobCorrelationId = @Id;",
+                    new {Id = jobRequest.JobCorrelationId})
                     .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
                     .ToList();
 
@@ -205,20 +217,27 @@ namespace API.WindowsService.Controllers
             }
 
             connection.Execute(
-                "INSERT INTO Mp4boxJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
-                new {jobRequest.JobCorrelationId, arguments, jobRequest.Needed, TranscodingJobState.Queued});
+                "INSERT INTO Mp4boxJobs (JobCorrelationId, Arguments, Needed, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @State);",
+                new
+                {
+                    JobCorrelationId = jobRequest.JobCorrelationId,
+                    Arguments = arguments,
+                    Needed = jobRequest.Needed,
+                    State = TranscodingJobState.Queued
+                });
         }
 
-        private static void QueueMergeJob(BaseJob job, SQLiteConnection connection, string outputFolder,
+        private static void QueueMergeJob(BaseJob job, IDbConnection connection, string outputFolder,
             string fileNameWithoutExtension, string fileExtension, JobRequest jobRequest)
         {
             var chunks = connection.Query<FfmpegPart>(
                 "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                 new {Id = job.JobCorrelationId});
 
-            foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
+            foreach (IEnumerable<FfmpegPart> chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
-                int targetNumber = chunk.First().Target;
+                var ffmpegParts = chunk as IList<FfmpegPart> ?? chunk.ToList();
+                int targetNumber = ffmpegParts.First().Target;
                 DestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
@@ -236,25 +255,26 @@ namespace API.WindowsService.Controllers
 
                 using (TextWriter tw = new StreamWriter(path))
                 {
-                    foreach (FfmpegPart part in chunk.Where(x => x.IsAudio == false))
+                    foreach (FfmpegPart part in ffmpegParts.Where(x => x.IsAudio == false))
                     {
                         tw.WriteLine($"file '{part.Filename}'");
                     }
                 }
-                string audioSource = chunk.Single(x => x.IsAudio).Filename;
+                string audioSource = ffmpegParts.Single(x => x.IsAudio).Filename;
 
                 string arguments =
                     $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
                 int duration = Helper.GetDuration(jobRequest.VideoSourceFilename);
                 connection.Execute(
-                    "INSERT INTO FfmpegMergeJobs (JobCorrelationId, Arguments, Needed, State) VALUES(?, ?, ?, ?);",
+                    "INSERT INTO FfmpegMergeJobs (JobCorrelationId, Arguments, Needed, State, Target) VALUES(@JobCorrelationId, @Arguments, @Needed, @State, @Target);",
                     new
                     {
-                        job.JobCorrelationId,
-                        arguments,
-                        jobRequest.Needed,
-                        TranscodingJobState.Queued
+                        JobCorrelationId = job.JobCorrelationId,
+                        Arguments = arguments,
+                        Needed = jobRequest.Needed,
+                        State = TranscodingJobState.Queued,
+                        Target = targetNumber
                     });
             }
         }

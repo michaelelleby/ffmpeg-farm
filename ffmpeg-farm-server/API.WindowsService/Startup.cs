@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
 using System.Web.Http;
@@ -24,7 +25,10 @@ namespace API.WindowsService
                 defaults: new { id = RouteParameter.Optional }
             );
 
-            InitDatabase();
+            if (bool.Parse(ConfigurationManager.AppSettings["CreateDatabaseOnStartup"]))
+            {
+                InitDatabase();
+            }
 
             config.EnableSwagger(c =>
             {

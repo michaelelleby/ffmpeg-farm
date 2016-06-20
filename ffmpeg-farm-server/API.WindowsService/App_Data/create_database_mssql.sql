@@ -1,4 +1,4 @@
-/****** Object:  Table [dbo].[Clients]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[Clients]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -14,7 +14,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -42,7 +42,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -58,6 +58,7 @@ CREATE TABLE [dbo].[FfmpegMergeJobs](
 	[Needed] [datetime] NULL,
 	[HeartbeatMachineName] [nvarchar](max) NULL,
 	[State] [varchar](50) NOT NULL,
+	[Target] [int] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -67,7 +68,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -85,7 +86,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -106,7 +107,26 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 16-06-2016 06:58:48 ******/
+/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 20-06-2016 18:21:23 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FfmpegRequestTargets](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[JobCorrelationId] [uniqueidentifier] NOT NULL,
+	[Width] [int] NOT NULL,
+	[Height] [int] NOT NULL,
+	[VideoBitrate] [int] NOT NULL,
+	[AudioBitrate] [int] NOT NULL,
+ CONSTRAINT [PK_FfmpegRequestTargets] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 20-06-2016 18:21:23 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

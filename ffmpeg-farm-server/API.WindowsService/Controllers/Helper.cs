@@ -1,18 +1,43 @@
 using System;
 using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Policy;
+using System.Transactions;
 using Dapper;
 
 namespace API.WindowsService.Controllers
 {
     public class Helper
     {
-        public static SQLiteConnection GetConnection()
+        public static IDbConnection GetConnection()
+        {
+            string databaseProvider = ConfigurationManager.AppSettings["DatabaseProvider"];
+            if (string.IsNullOrWhiteSpace(databaseProvider))
+                throw new ConfigurationErrorsException("Missing setting DatabaseProvider");
+
+            switch (databaseProvider.ToLowerInvariant())
+            {
+                case "mssql":
+                    return GetMssqlConnection();
+                case "sqlite":
+                    return GetSqliteConnection();
+                default:
+                    throw new Exception($@"Unsupported database provider: {databaseProvider}");
+            }
+        }
+
+        private static SQLiteConnection GetSqliteConnection()
         {
             return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
+        }
+
+        private static SqlConnection GetMssqlConnection()
+        {
+            return new SqlConnection(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
         }
 
         public static int GetDuration(string sourceFilename)
@@ -78,12 +103,20 @@ namespace API.WindowsService.Controllers
             {
                 connection.Open();
 
-                using (var transaction = connection.BeginTransaction())
+                using (var scope = new TransactionScope())
                 {
-                    connection.Execute("INSERT OR REPLACE INTO Clients (MachineName, LastHeartbeat) VALUES(?, ?);",
-                        new {machineName, DateTime.UtcNow});
+                    var updatedRows = connection.Execute(
+                        "UPDATE Clients SET LastHeartbeat = @Heartbeat WHERE MachineName = @MachineName;",
+                        new {MachineName = machineName, HeartBeat = DateTime.UtcNow});
 
-                    transaction.Commit();
+                    if (updatedRows == 0)
+                    {
+                        connection.Execute(
+                            "INSERT INTO Clients (MachineName, LastHeartbeat) VALUES(@MachineName, @Heartbeat);",
+                            new {MachineName = machineName, Heartbeat = DateTime.UtcNow});
+                    }
+
+                    scope.Complete();
                 }
             }
         }

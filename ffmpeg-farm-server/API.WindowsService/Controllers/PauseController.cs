@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Transactions;
 using System.Web.Http;
 using Contract;
 using Dapper;
@@ -21,13 +22,13 @@ namespace API.WindowsService.Controllers
             {
                 connection.Open();
 
-                using (var transaction = connection.BeginTransaction())
+                using (var scope = new TransactionScope())
                 {
                     var rowsUpdated = connection.Execute(
-                        "UPDATE FfmpegJobs SET State = @PausedState WHERE JobCorrelationId = ? AND State = @QueuedState;",
-                        new {jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
+                        "UPDATE FfmpegJobs SET State = @PausedState WHERE JobCorrelationId = @Id AND State = @QueuedState;",
+                        new {Id = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
 
-                    transaction.Commit();
+                    scope.Complete();
 
                     return rowsUpdated;
                 }
