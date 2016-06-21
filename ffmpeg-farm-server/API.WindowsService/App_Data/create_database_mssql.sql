@@ -33,6 +33,7 @@ CREATE TABLE [dbo].[FfmpegJobs](
 	[ChunkDuration] [float] NOT NULL,
 	[HeartbeatMachineName] [nvarchar](max) NULL,
 	[State] [varchar](50) NOT NULL,
+	[Started] [datetime] NOT NULL
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC

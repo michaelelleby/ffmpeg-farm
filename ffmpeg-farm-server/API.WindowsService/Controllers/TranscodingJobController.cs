@@ -135,7 +135,7 @@ namespace API.WindowsService.Controllers
                         return null;
                     }
 
-                    var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET State = @State, HeartBeat = @Heartbeat WHERE Id = @Id;",
+                    var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
                         new {State = TranscodingJobState.InProgress, Heartbeat = DateTime.UtcNow, Id = data.Id});
                     if (rowsUpdated == 0)
                     {
@@ -351,7 +351,7 @@ namespace API.WindowsService.Controllers
                             AudioSourceFilename = job.AudioSourceFilename,
                             DestinationFilename = job.DestinationFilename,
                             Needed = job.Needed,
-                            Created = DateTime.Now,
+                            Created = DateTime.UtcNow,
                             EnableDash = job.EnableDash
                         });
 
