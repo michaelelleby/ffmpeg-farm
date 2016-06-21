@@ -76,13 +76,14 @@ namespace API.WindowsService.Controllers
                     if (jobType == typeof(TranscodingJob))
                     {
                         int updatedRows = connection.Execute(
-                            "UPDATE FfmpegJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State WHERE Id = @Id;",
+                            "UPDATE FfmpegJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
                             new
                             {
                                 Id = job.Id,
                                 Progress = job.Progress.TotalSeconds,
                                 Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState
+                                State = jobState,
+                                MachineName = job.MachineName
                             });
 
                         if (updatedRows != 1)
@@ -91,13 +92,14 @@ namespace API.WindowsService.Controllers
                     else if (jobType == typeof(MergeJob))
                     {
                         int updatedRows = connection.Execute(
-                            "UPDATE FfmpegMergeJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State WHERE Id = @Id;",
+                            "UPDATE FfmpegMergeJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
                             new
                             {
                                 Id = job.Id,
                                 Progress = job.Progress.TotalSeconds,
                                 Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState
+                                State = jobState,
+                                MachineName = job.MachineName
                             });
 
                         if (updatedRows != 1)
@@ -122,13 +124,14 @@ namespace API.WindowsService.Controllers
                     else if (jobType == typeof(Mp4boxJob))
                     {
                         int updatedRows = connection.Execute(
-                            "UPDATE Mp4boxJobs SET Heartbeat = @Heartbeat, State = @State WHERE JobCorrelationId = @Id;",
+                            "UPDATE Mp4boxJobs SET Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE JobCorrelationId = @Id;",
                             new
                             {
                                 Id = job.JobCorrelationId,
                                 Progress = job.Progress.TotalSeconds,
                                 Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState
+                                State = jobState,
+                                MachineName = job.MachineName
                             });
 
                         if (updatedRows != 1)

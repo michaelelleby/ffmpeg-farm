@@ -4,8 +4,6 @@ using System.Configuration;
 using System.IO;
 using System.Reflection;
 using System.Web.Http;
-using API.WindowsService.Controllers;
-using Dapper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Owin;
@@ -24,11 +22,6 @@ namespace API.WindowsService
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
-
-            if (bool.Parse(ConfigurationManager.AppSettings["CreateDatabaseOnStartup"]))
-            {
-                InitDatabase();
-            }
 
             config.EnableSwagger(c =>
             {
@@ -64,19 +57,6 @@ namespace API.WindowsService
             var commentsFile = Path.Combine(baseDirectory, commentsFileName);
 
             return commentsFile;
-        }
-
-        private static void InitDatabase()
-        {
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-
-                var uriString = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase) + Path.DirectorySeparatorChar + "App_Data" + Path.DirectorySeparatorChar + "create_database.sql";
-                var path = new Uri(uriString).LocalPath;
-                string script = File.ReadAllText(path);
-                connection.Execute(script);
-            }
         }
     }
 }

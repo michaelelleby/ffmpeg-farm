@@ -2,7 +2,6 @@ using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Policy;
@@ -14,28 +13,6 @@ namespace API.WindowsService.Controllers
     public class Helper
     {
         public static IDbConnection GetConnection()
-        {
-            string databaseProvider = ConfigurationManager.AppSettings["DatabaseProvider"];
-            if (string.IsNullOrWhiteSpace(databaseProvider))
-                throw new ConfigurationErrorsException("Missing setting DatabaseProvider");
-
-            switch (databaseProvider.ToLowerInvariant())
-            {
-                case "mssql":
-                    return GetMssqlConnection();
-                case "sqlite":
-                    return GetSqliteConnection();
-                default:
-                    throw new Exception($@"Unsupported database provider: {databaseProvider}");
-            }
-        }
-
-        private static SQLiteConnection GetSqliteConnection()
-        {
-            return new SQLiteConnection(ConfigurationManager.ConnectionStrings["sqlite"].ConnectionString);
-        }
-
-        private static SqlConnection GetMssqlConnection()
         {
             return new SqlConnection(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
         }
