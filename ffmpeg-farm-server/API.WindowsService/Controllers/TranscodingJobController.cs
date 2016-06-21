@@ -86,7 +86,7 @@ namespace API.WindowsService.Controllers
                     DateTime timeout = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
                     var data = connection.Query<MergeJob>(
-                        "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC;",
+                        "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
                         new {QueuedState = TranscodingJobState.Queued, InProgressState = TranscodingJobState.InProgress, Heartbeat = timeout})
                         .SingleOrDefault();
                     if (data == null)
@@ -127,7 +127,7 @@ namespace API.WindowsService.Controllers
                 using (var scope = new TransactionScope())
                 {
                     var data = connection.Query<TranscodingJob>(
-                        "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC;",
+                        "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
                         new { QueuedState = TranscodingJobState.Queued, InProgressState = TranscodingJobState.InProgress, Heartbeat = timeout })
                         .SingleOrDefault();
                     if (data == null)
@@ -163,7 +163,7 @@ namespace API.WindowsService.Controllers
                 using (var scope = new TransactionScope())
                 {
                     var data = connection.Query<Mp4boxJob>(
-                        "SELECT TOP 1 JobCorrelationId, Arguments FROM Mp4boxJobs WHERE State = @State ORDER BY Needed ASC;",
+                        "SELECT TOP 1 JobCorrelationId, Arguments FROM Mp4boxJobs WHERE State = @State ORDER BY Needed ASC, Id ASC;",
                         new {State = TranscodingJobState.Queued})
                         .SingleOrDefault();
                     if (data == null)
