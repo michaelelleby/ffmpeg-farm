@@ -286,25 +286,15 @@ namespace API.WindowsService.Controllers
                     if (job.EnableDash)
                     {
                         arguments +=
-                            $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -g {framerate*4}";
+                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -g {framerate*4}";
                         arguments += $@" -keyint_min {framerate*4} -profile:v high -b:v {target.VideoBitrate}k";
                         arguments += $@" -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                     }
                     else
                     {
-                        if (Convert.ToBoolean(ConfigurationManager.AppSettings["EnableCrf"]))
-                        {
-                            int bufSize = target.VideoBitrate/8*chunkDuration;
-                            arguments +=
-                                $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -profile:v high -crf 18 -preset medium -maxrate {target
-                                    .VideoBitrate}k -bufsize {bufSize}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
-                        }
-                        else
-                        {
-                            arguments +=
-                                $@" -vf scale={target.Width}x{target.Height} -sws_flags lanczos -c:v libx264 -profile:v high -b:v {target
-                                    .VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
-                        }
+                        arguments +=
+                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -profile:v high -b:v {target
+                                .VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
                     }
 
                     transcodingJob.Chunks.Add(new FfmpegPart
