@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using Contract;
 using Newtonsoft.Json.Converters;
@@ -19,7 +20,7 @@ namespace ffmpeg_farm_client
         private static readonly System.Timers.Timer TimeSinceLastUpdate = new System.Timers.Timer(TimeSpan.FromSeconds(20).TotalMilliseconds);
         private static TimeSpan _progress = TimeSpan.Zero;
         private static Process _commandlineProcess;
-        private static BaseJob CurrentJob;
+        private static BaseJob _currentJob;
         private static JsonSerializerSettings _jsonSerializerSettings;
 
         private static void Main(string[] args)
@@ -92,8 +93,8 @@ namespace ffmpeg_farm_client
             if (string.IsNullOrWhiteSpace(pathToMp4Box)) throw new ArgumentNullException("Mp4BoxPath");
             if (!File.Exists(pathToMp4Box)) throw new FileNotFoundException(pathToMp4Box);
 
-            CurrentJob = receivedJob;
-            CurrentJob.MachineName = Environment.MachineName;
+            _currentJob = receivedJob;
+            _currentJob.MachineName = Environment.MachineName;
 
             _commandlineProcess.StartInfo = new ProcessStartInfo
             {
@@ -117,17 +118,17 @@ namespace ffmpeg_farm_client
 
             _commandlineProcess.WaitForExit();
 
-            CurrentJob.Done = _commandlineProcess.ExitCode == 0;
+            _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
-            UpdateProgress();
+            UpdateProgress().Wait();
 
             TimeSinceLastUpdate.Stop();
         }
 
         private static void ExecuteTranscodingJob(TranscodingJob transcodingJob)
         {
-            CurrentJob = transcodingJob;
-            CurrentJob.MachineName = Environment.MachineName;
+            _currentJob = transcodingJob;
+            _currentJob.MachineName = Environment.MachineName;
 
             _commandlineProcess.StartInfo = new ProcessStartInfo
             {
@@ -151,20 +152,20 @@ namespace ffmpeg_farm_client
 
             _commandlineProcess.WaitForExit();
 
-            CurrentJob.Done = _commandlineProcess.ExitCode == 0;
+            _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
-            UpdateProgress();
+            UpdateProgress().Wait();
 
             TimeSinceLastUpdate.Stop();
         }
 
         private static void TimeSinceLastUpdate_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if (!_commandlineProcess.HasExited)
-            {
-                _commandlineProcess.Kill();
-                Console.WriteLine("Timed out..");
-            }
+            if (_commandlineProcess.HasExited)
+                return;
+
+            _commandlineProcess.Kill();
+            Console.WriteLine("Timed out..");
         }
 
         private static void Ffmpeg_ErrorDataReceived(object sender, DataReceivedEventArgs e)
@@ -173,30 +174,36 @@ namespace ffmpeg_farm_client
                 return;
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
-            if (match.Success)
-            {
-                // Restart timer
-                TimeSinceLastUpdate.Stop();
+            if (!match.Success)
+                return;
 
-                _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value), Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value), Convert.ToInt32(match.Groups[4].Value) * 25);
+            // Restart timer
+            TimeSinceLastUpdate.Stop();
 
-                CurrentJob.Progress = _progress;
-                UpdateProgress();
+            _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value), Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value), Convert.ToInt32(match.Groups[4].Value) * 25);
 
-                Console.WriteLine(_progress);
+            _currentJob.Progress = _progress;
+            UpdateProgress().Wait();
 
-                TimeSinceLastUpdate.Start();
-            }
+            Console.WriteLine(_progress);
+
+            TimeSinceLastUpdate.Start();
         }
         
-        private static HttpResponseMessage UpdateProgress()
+        private static async Task UpdateProgress()
         {
-            using (var client = new HttpClient())
+            try
             {
-                return client.PutAsync(
-                    new Uri(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/status")),
-                    new StringContent(JsonConvert.SerializeObject(CurrentJob, _jsonSerializerSettings), Encoding.ASCII, "application/json"))
-                    .Result;
+                using (var client = new HttpClient())
+                {
+                    await client.PutAsync(new Uri(string.Concat(ConfigurationManager.AppSettings["ServerUrl"], "/status")),
+                        new StringContent(JsonConvert.SerializeObject(_currentJob, _jsonSerializerSettings),
+                            Encoding.ASCII, "application/json"));
+                }
+            }
+            catch
+            {
+                
             }
         }
     }
