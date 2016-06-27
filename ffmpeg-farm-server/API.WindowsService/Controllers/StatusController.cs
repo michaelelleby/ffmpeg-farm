@@ -112,14 +112,10 @@ namespace API.WindowsService.Controllers
 
                         if (jobState == TranscodingJobState.Done)
                         {
-                            IEnumerable<FfmpegPart> parts = connection.Query<FfmpegPart>(
-                                "SELECT Filename FROM FfmpegParts WHERE JobCorrelationId = @JobCorrelationId AND Target = @Target ORDER BY Target, Number;",
-                                new {JobCorrelationId = job.JobCorrelationId, Target = target});
+                            string tempFolder = string.Concat(Path.GetDirectoryName(jobRequest.DestinationFilename),
+                                Path.DirectorySeparatorChar, jobRequest.JobCorrelationId.ToString("N"));
 
-                            foreach (FfmpegPart part in parts)
-                            {
-                                File.Delete(part.Filename);
-                            }
+                            Directory.Delete(tempFolder, true);
                         }
                     }
                     else if (jobType == typeof(Mp4boxJob))
@@ -299,11 +295,8 @@ namespace API.WindowsService.Controllers
                 if (File.Exists(targetFilename))
                     continue;
 
-                string path = string.Format("{0}{1}{2}_{3}.list",
-                    outputFolder,
-                    Path.DirectorySeparatorChar,
-                    fileNameWithoutExtension,
-                    targetNumber);
+                string path =
+                    $"{outputFolder}{Path.DirectorySeparatorChar}{job.JobCorrelationId.ToString("N")}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{targetNumber}.list";
 
                 using (TextWriter tw = new StreamWriter(path))
                 {

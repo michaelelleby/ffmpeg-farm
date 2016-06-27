@@ -205,10 +205,13 @@ namespace API.WindowsService.Controllers
 
             int duration = Helper.GetDuration(job.VideoSourceFilename);
             double framerate = Helper.GetFramerate(job.VideoSourceFilename);
+            Guid jobCorrelationId = Guid.NewGuid();
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
-            string destinationFolder = Path.GetDirectoryName(job.DestinationFilename);
+            string destinationFolder = string.Concat(Path.GetDirectoryName(job.DestinationFilename), Path.DirectorySeparatorChar, jobCorrelationId.ToString("N"));
             string destinationFilenamePrefix = Path.GetFileNameWithoutExtension(job.DestinationFilename);
+
+            Directory.CreateDirectory(destinationFolder);
 
             if (string.IsNullOrWhiteSpace(destinationFormat))
                 throw new ArgumentException("DestinationFilename must have an extension to determine the output format.");
@@ -218,7 +221,6 @@ namespace API.WindowsService.Controllers
 
             ICollection<TranscodingJob> transcodingJobs = new List<TranscodingJob>();
             const int chunkDuration = 60;
-            Guid jobCorrelationId = Guid.NewGuid();
 
             // Queue audio first because it cannot be chunked and thus will take longer to transcode
             // and if we do it first chances are it will be ready when all the video parts are ready

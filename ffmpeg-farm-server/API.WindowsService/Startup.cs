@@ -37,7 +37,7 @@ namespace API.WindowsService
                 {
                     new StringEnumConverter()
                 },
-                // TypeNameHandling = TypeNameHandling.All
+                TypeNameHandling = TypeNameHandling.All
             };
 
             appBuilder.UseWebApi(config);
