@@ -8,32 +8,33 @@ using System.Net.Http;
 using System.Transactions;
 using System.Web.Http;
 using Contract;
+using Contract.Dto;
+using Contract.Models;
 using Dapper;
 
 namespace API.WindowsService.Controllers
 {
     public class StatusController : ApiController
     {
-        public JobResult GetStatus()
+        public JobStatusModel GetStatus()
         {
-            IEnumerable<dynamic> jobs;
-            IEnumerable<JobResultModel> requests;
-            using (var connection = Helper.GetConnection())
+            return new JobStatusModel
             {
-                connection.Open();
-                requests = connection.Query<JobResultModel>("SELECT * from FfmpegRequest").ToList();
-                jobs = connection.Query<TranscodingJob>("SELECT * FROM FfmpegJobs").ToList();
-            }
-
-            foreach (dynamic request in requests)
-            {
-                request.Jobs = jobs.Where(x => x.JobCorrelationId == request.JobCorrelationId);
-            }
-
-            return new JobResult
-            {
-                Requests = requests
+                Requests = GetJobStatuses()
             };
+        }
+
+        public JobStatusModel GetStatusForSpecificJob(Guid id)
+        {
+            if (id == Guid.Empty)
+                throw new HttpResponseException(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.PreconditionFailed,
+                    ReasonPhrase = "JobCorrelationId must be a valid GUID"
+                });
+
+            return
+                null;
         }
 
         public void PutProgressUpdate(BaseJob job)
@@ -185,6 +186,54 @@ namespace API.WindowsService.Controllers
                     scope.Complete();
                 }
             }
+        }
+
+        private static IEnumerable<JobRequestModel> GetJobStatuses(Guid jobCorrelationId = default(Guid))
+        {
+            IEnumerable<TranscodingJobDto> jobs;
+            IEnumerable<JobRequestDto> requests;
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                if (jobCorrelationId != default(Guid))
+                {
+                    requests =
+                        connection.Query<JobRequestDto>("SELECT * from FfmpegRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                            new {JobCorrelationId = jobCorrelationId})
+                            .ToList();
+                    jobs =
+                        connection.Query<TranscodingJobDto>(
+                            "SELECT * FROM FfmpegJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                            new {JobCorrelationId = jobCorrelationId})
+                            .ToList();
+                }
+                else
+                {
+                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegRequest").ToList();
+                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegJobs").ToList();
+                }
+            }
+
+            IEnumerable<JobRequestModel> requestModels = requests.Select(m => new JobRequestModel
+            {
+                JobCorrelationId = m.JobCorrelationId,
+                VideoSourceFilename = m.VideoSourceFilename,
+                AudioSourceFilename = m.AudioSourceFilename,
+                DestinationFilename = m.DestinationFilename,
+                Needed = m.Needed,
+                Created = m.Created,
+                MpegDash = m.EnableDash,
+                Jobs = jobs.Where(x => x.JobCorrelationId == m.JobCorrelationId).Select(j => new TranscodingJobModel
+                {
+                    Progress = j.Progress,
+                    Heartbeat = j.Heartbeat,
+                    HeartbeatMachine = j.HeartBeatMachineName,
+                    State = j.State,
+                    ChunkDuration = j.ChunkDuration
+                })
+            });
+
+            return requestModels;
         }
 
         private static void QueueMpegDashMergeJob(BaseJob job, string destinationFilename, IDbConnection connection,

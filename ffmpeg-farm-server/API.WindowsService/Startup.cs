@@ -35,10 +35,9 @@ namespace API.WindowsService
             {
                 Converters = new List<JsonConverter>
                 {
-                    new IsoDateTimeConverter(), 
                     new StringEnumConverter()
                 },
-                TypeNameHandling = TypeNameHandling.All
+                // TypeNameHandling = TypeNameHandling.All
             };
 
             appBuilder.UseWebApi(config);

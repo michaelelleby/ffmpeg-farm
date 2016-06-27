@@ -19,7 +19,7 @@ namespace API.WindowsService.Controllers
 
         public static int GetDuration(string sourceFilename)
         {
-            if (String.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
+            if (string.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
             if (!File.Exists(sourceFilename))
                 throw new FileNotFoundException("Media not found when trying to get file duration", sourceFilename);
 

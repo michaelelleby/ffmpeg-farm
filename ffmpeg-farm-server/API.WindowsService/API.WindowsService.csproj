@@ -108,7 +108,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Controllers\ClientController.cs" />
-    <Compile Include="Controllers\Helper.cs" />
     <Compile Include="Controllers\PauseController.cs" />
     <Compile Include="Controllers\ResumeController.cs" />
     <Compile Include="Controllers\StatusController.cs" />
@@ -124,6 +123,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Service\API.Service.csproj">
+      <Project>{A015F759-529F-4B76-BD1D-94831FE886DF}</Project>
+      <Name>API.Service</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Contract\API.Contract.csproj">
       <Project>{c5ab7e69-27b9-4071-a0d1-6a6e22df7d8c}</Project>
       <Name>API.Contract</Name>

@@ -287,14 +287,14 @@ namespace API.WindowsService.Controllers
                     {
                         arguments +=
                             $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -g {framerate*4}";
-                        arguments += $@" -keyint_min {framerate*4} -profile:v high -b:v {target.VideoBitrate}k";
-                        arguments += $@" -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                        arguments += $@" -keyint_min {framerate*4} -profile:v {target.Profile.ToString().ToLowerInvariant()} -b:v {target.VideoBitrate}k";
+                        arguments += $@" -level {target.Level} -pix_fmt yuv420p -an ""{chunkFilename}""";
                     }
                     else
                     {
                         arguments +=
-                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -profile:v high -b:v {target
-                                .VideoBitrate}k -level 4.1 -pix_fmt yuv420p -an ""{chunkFilename}""";
+                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -profile:v {target.Profile.ToString().ToLowerInvariant()} -b:v {target
+                                .VideoBitrate}k -level {target.Level} -pix_fmt yuv420p -an ""{chunkFilename}""";
                     }
 
                     transcodingJob.Chunks.Add(new FfmpegPart
@@ -327,7 +327,7 @@ namespace API.WindowsService.Controllers
             }
         }
 
-        private static void SaveJobs(JobRequest job, IEnumerable<TranscodingJob> jobs, IDbConnection connection, Guid jobCorrelationId, int chunkDuration)
+        private static void SaveJobs(JobRequest job, ICollection<TranscodingJob> jobs, IDbConnection connection, Guid jobCorrelationId, int chunkDuration)
         {
             if (jobs.Any(x => x.State == TranscodingJobState.Unknown))
                 throw new ArgumentException("One or more jobs have state TranscodingJobState.Unknown. A valid state must be set before saving to database");
@@ -348,14 +348,16 @@ namespace API.WindowsService.Controllers
             foreach (DestinationFormat target in job.Targets)
             {
                 connection.Execute(
-                    "INSERT INTO FfmpegRequestTargets (JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate) VALUES(@JobCorrelationId, @Width, @Height, @VideoBitrate, @AudioBitrate);",
+                    "INSERT INTO FfmpegRequestTargets (JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate, H264Level, H264Profile) VALUES(@JobCorrelationId, @Width, @Height, @VideoBitrate, @AudioBitrate, @Level, @Profile);",
                     new
                     {
                         JobCorrelationId = jobCorrelationId,
                         Width = target.Width,
                         Height = target.Height,
                         VideoBitrate = target.VideoBitrate,
-                        AudioBitrate = target.AudioBitrate
+                        AudioBitrate = target.AudioBitrate,
+                        Level = target.Level,
+                        Profile = target.Profile
                     });
             }
 

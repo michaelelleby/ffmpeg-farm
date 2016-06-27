@@ -6,5 +6,7 @@ namespace Contract
         public int Height { get; set; }
         public int VideoBitrate { get; set; }
         public int AudioBitrate { get; set; }
+        public H264Profile Profile { get; set; }
+        public string Level { get; set; }
     }
 }

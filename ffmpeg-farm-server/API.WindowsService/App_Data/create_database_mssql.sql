@@ -33,7 +33,7 @@ CREATE TABLE [dbo].[FfmpegJobs](
 	[ChunkDuration] [float] NOT NULL,
 	[HeartbeatMachineName] [nvarchar](max) NULL,
 	[State] [varchar](50) NOT NULL,
-	[Started] [datetime] NOT NULL
+	[Started] [datetime] NULL
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -100,7 +100,7 @@ CREATE TABLE [dbo].[FfmpegRequest](
 	[DestinationFilename] [nvarchar](max) NOT NULL,
 	[Needed] [datetime] NOT NULL,
 	[Created] [datetime] NULL,
-	[EnableDash] [bit] NOT NULL,
+	[EnableDash] [bit] NOT NULL
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -120,6 +120,8 @@ CREATE TABLE [dbo].[FfmpegRequestTargets](
 	[Height] [int] NOT NULL,
 	[VideoBitrate] [int] NOT NULL,
 	[AudioBitrate] [int] NOT NULL,
+	[H264Profile] [varchar](255) NOT NULL,
+	[H264Level] [varchar](3) NOT NULL
  CONSTRAINT [PK_FfmpegRequestTargets] PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
