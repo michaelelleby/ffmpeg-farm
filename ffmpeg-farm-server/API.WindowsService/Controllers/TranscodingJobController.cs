@@ -266,7 +266,11 @@ namespace API.WindowsService.Controllers
                 {
                     Width = x.Key.Width,
                     Height = x.Key.Height,
-                    Bitrates = x.Select(format => format.VideoBitrate).ToList()
+                    Bitrates = x.Select(format => new BitrateSet
+                    {
+                        VideoBitrate = format.VideoBitrate,
+                        AudioBitrate = format.AudioBitrate
+                    })
                 }).ToList();
 
             arguments.Clear();
@@ -289,9 +293,9 @@ namespace API.WindowsService.Controllers
 
                 for (int j = 0; j < resolutions.Count; j++)
                 {
-                    arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count}");
+                    arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count()}");
 
-                    for (int k = 0; k < resolutions[j].Bitrates.Count; k++)
+                    for (int k = 0; k < resolutions[j].Bitrates.Count(); k++)
                     {
                         arguments.Append($"[out{j}_{k}]");
                     }
@@ -311,13 +315,14 @@ namespace API.WindowsService.Controllers
                 for (int j = 0; j < resolutions.Count; j++)
                 {
                     Resolution resolution = resolutions[j];
-                    for (int k = 0; k < resolution.Bitrates.Count; k++)
+                    for (int k = 0; k < resolution.Bitrates.Count(); k++)
                     {
+                        BitrateSet bitrate = resolution.Bitrates.ToList()[k];
                         string chunkFilename =
                             $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-                                .Width}x{resolution.Height}_{resolution.Bitrates[k]}_{value}{destinationFormat}";
+                                .Width}x{resolution.Height}_{bitrate.VideoBitrate}_{bitrate.AudioBitrate}_{value}{destinationFormat}";
 
-                        arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {resolution.Bitrates[k]}k ""{chunkFilename}""");
+                        arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {bitrate.VideoBitrate}k ""{chunkFilename}""");
                         
                         transcodingJob.Chunks.Add(new FfmpegPart
                         {
@@ -418,6 +423,13 @@ namespace API.WindowsService.Controllers
     {
         public int Width { get; set; }
         public int Height { get; set; }
-        public IList<int> Bitrates { get; set; }
+        public IEnumerable<BitrateSet> Bitrates { get; set; }
+    }
+
+    public class BitrateSet
+    {
+        public int VideoBitrate { get; set; }
+
+        public int AudioBitrate { get; set; }
     }
 }
