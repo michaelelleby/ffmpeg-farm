@@ -53,6 +53,12 @@
              One or more target resolutions and bitrates
             </summary>
         </member>
+        <member name="P:Contract.JobRequest.X264Preset">
+            <summary>
+            Preset for X264. One of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo.
+            See http://dev.beandog.org/x264_preset_reference.html for description
+            </summary>
+        </member>
         <member name="P:Contract.JobRequest.EnableDash">
             <summary>
             Whether the output should support MPEG DASH

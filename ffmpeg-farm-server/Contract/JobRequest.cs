@@ -34,6 +34,12 @@ namespace Contract
         public DestinationFormat[] Targets { get; set; }
 
         /// <summary>
+        /// Preset for X264. One of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo.
+        /// See http://dev.beandog.org/x264_preset_reference.html for description
+        /// </summary>
+        public string X264Preset { get; set; }
+
+        /// <summary>
         /// Whether the output should support MPEG DASH
         /// </summary>
         public bool EnableDash { get; set; }

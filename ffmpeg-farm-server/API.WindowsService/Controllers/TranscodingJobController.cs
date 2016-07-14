@@ -284,8 +284,8 @@ namespace API.WindowsService.Controllers
                     {
                         VideoBitrate = format.VideoBitrate,
                         AudioBitrate = format.AudioBitrate,
-                        Level = format.Level,
-                        Profile = format.Profile
+                        Level = string.IsNullOrWhiteSpace(format.Level) ? "3.1" : format.Level.Trim(),
+                        Profile = format.Profile,
                     })
                 }).ToList();
 
@@ -311,7 +311,7 @@ namespace API.WindowsService.Controllers
                 for (int j = 0; j < resolutions.Count; j++)
                 {
                     arguments.Append(
-                        $"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count()}");
+                        $"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height}:sws_flags=lanczos,split={resolutions[j].Bitrates.Count()}");
 
                     for (int k = 0; k < resolutions[j].Bitrates.Count(); k++)
                     {
@@ -331,6 +331,8 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued
                 };
 
+                string x264Preset = string.IsNullOrWhiteSpace(job.X264Preset) ? "medium" : job.X264Preset.Trim();
+
                 for (int j = 0; j < resolutions.Count; j++)
                 {
                     Resolution resolution = resolutions[j];
@@ -342,7 +344,7 @@ namespace API.WindowsService.Controllers
                                 .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{destinationFormat}";
 
                         arguments.Append(
-                            $@" -map [out{j}_{k}] -an -c:v libx264 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} ""{chunkFilename}""");
+                            $@" -map [out{j}_{k}] -an -c:v libx264 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset} ""{chunkFilename}""");
 
                         transcodingJob.Chunks.Add(new FfmpegPart
                         {
@@ -439,23 +441,5 @@ namespace API.WindowsService.Controllers
                 }
             }
         }
-    }
-
-    public class Resolution
-    {
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public IEnumerable<Quality> Bitrates { get; set; }
-    }
-
-    public class Quality
-    {
-        public int VideoBitrate { get; set; }
-
-        public int AudioBitrate { get; set; }
-
-        public H264Profile Profile { get; set; }
-
-        public string Level { get; set; }
     }
 }
