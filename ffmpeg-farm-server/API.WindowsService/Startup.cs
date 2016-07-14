@@ -27,8 +27,8 @@ namespace API.WindowsService
             {
                 c.SingleApiVersion("v1", "A title for your API");
                 c.DescribeAllEnumsAsStrings();
-                c.IncludeXmlComments(GetXmlCommentsPathForControllers());
-                c.IncludeXmlComments(GetXmlCommentsPathForContract());
+                //c.IncludeXmlComments(GetXmlCommentsPathForControllers());
+                //c.IncludeXmlComments(GetXmlCommentsPathForContract());
             }).EnableSwaggerUi();
 
             config.Formatters.JsonFormatter.SerializerSettings = new JsonSerializerSettings

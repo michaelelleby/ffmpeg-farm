@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -6,8 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Transactions;
 using System.Web.Http;
+using API.Service;
 using Contract;
 using Dapper;
 
@@ -235,14 +238,14 @@ namespace API.WindowsService.Controllers
                 Needed = job.Needed,
                 State = TranscodingJobState.Queued
             };
-            string arguments = $@"-y -i ""{source}""";
+            StringBuilder arguments = new StringBuilder($@"-y -i ""{source}""");
             for (int i = 0; i < job.Targets.Length; i++)
             {
                 DestinationFormat format = job.Targets[i];
 
                 string chunkFilename =
                     $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
-                arguments += $@" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""";
+                arguments.Append($@" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""");
 
                 audioJob.Chunks.Add(
                     new FfmpegPart
@@ -254,10 +257,19 @@ namespace API.WindowsService.Controllers
                         Number = 0
                     });
             }
-            audioJob.Arguments = arguments;
+            audioJob.Arguments = arguments.ToString();
 
             transcodingJobs.Add(audioJob);
 
+            IList<Resolution> resolutions =
+                job.Targets.GroupBy(x => new {x.Width, x.Height}).Select(x => new Resolution
+                {
+                    Width = x.Key.Width,
+                    Height = x.Key.Height,
+                    Bitrates = x.Select(format => format.VideoBitrate).ToList()
+                }).ToList();
+
+            arguments.Clear();
             for (int i = 0; duration - i*chunkDuration > 0; i++)
             {
                 int value = i*chunkDuration;
@@ -266,8 +278,27 @@ namespace API.WindowsService.Controllers
                     value = duration;
                 }
 
-                arguments =
-                    $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}""";
+                arguments.Append($@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+
+                arguments.Append($"split={resolutions.Count}");
+                for (int j = 0; j < resolutions.Count; j++)
+                {
+                    arguments.Append($"[in{j}]");
+                }
+                arguments.Append(";");
+
+                for (int j = 0; j < resolutions.Count; j++)
+                {
+                    arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count}");
+
+                    for (int k = 0; k < resolutions[j].Bitrates.Count; k++)
+                    {
+                        arguments.Append($"[out{j}_{k}]");
+                    }
+                    arguments.Append(";");
+                }
+                arguments = arguments.Remove(arguments.Length - 1, 1); // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
+                arguments.Append(@"""");
 
                 var transcodingJob = new TranscodingJob
                 {
@@ -277,39 +308,29 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued
                 };
 
-                for (int j = 0; j < job.Targets.Length; j++)
+                for (int j = 0; j < resolutions.Count; j++)
                 {
-                    DestinationFormat target = job.Targets[j];
-
-                    string chunkFilename =
-                        $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{target.Width}x{target
-                            .Height}_{target.VideoBitrate}_{target.AudioBitrate}_{value}{destinationFormat}";
-
-                    if (job.EnableDash)
+                    Resolution resolution = resolutions[j];
+                    for (int k = 0; k < resolution.Bitrates.Count; k++)
                     {
-                        arguments +=
-                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -g {framerate*4}";
-                        arguments += $@" -keyint_min {framerate*4} -profile:v {target.Profile.ToString().ToLowerInvariant()} -b:v {target.VideoBitrate}k";
-                        arguments += $@" -level {target.Level} -pix_fmt yuv420p -an ""{chunkFilename}""";
+                        string chunkFilename =
+                            $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
+                                .Width}x{resolution.Height}_{resolution.Bitrates[k]}_{value}{destinationFormat}";
+
+                        arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {resolution.Bitrates[k]}k ""{chunkFilename}""");
+                        
+                        transcodingJob.Chunks.Add(new FfmpegPart
+                        {
+                            JobCorrelationId = jobCorrelationId,
+                            SourceFilename = job.VideoSourceFilename,
+                            Filename = chunkFilename,
+                            Target = j,
+                            Number = i
+                        });
                     }
-                    else
-                    {
-                        arguments +=
-                            $@" -vf scale={target.Width}x{target.Height} -sws_flags spline -c:v libx264 -profile:v {target.Profile.ToString().ToLowerInvariant()} -b:v {target
-                                .VideoBitrate}k -level {target.Level} -pix_fmt yuv420p -an ""{chunkFilename}""";
-                    }
-
-                    transcodingJob.Chunks.Add(new FfmpegPart
-                    {
-                        JobCorrelationId = jobCorrelationId,
-                        SourceFilename = job.VideoSourceFilename,
-                        Filename = chunkFilename,
-                        Target = j,
-                        Number = i
-                    });
                 }
 
-                transcodingJob.Arguments = arguments;
+                transcodingJob.Arguments = arguments.ToString();
 
                 transcodingJobs.Add(transcodingJob);
             }
@@ -391,5 +412,12 @@ namespace API.WindowsService.Controllers
                 }
             }
         }
+    }
+
+    public class Resolution
+    {
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public IList<int> Bitrates { get; set; }
     }
 }

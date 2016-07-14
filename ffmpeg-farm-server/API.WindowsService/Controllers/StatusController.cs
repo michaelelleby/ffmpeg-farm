@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Transactions;
 using System.Web.Http;
+using API.Service;
 using Contract;
 using Contract.Dto;
 using Contract.Models;

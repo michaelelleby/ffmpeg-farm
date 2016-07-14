@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Transactions;
-using API.WindowsService.Controllers;
 using Contract;
 using Dapper;
 
