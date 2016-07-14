@@ -60,7 +60,7 @@ namespace API.WindowsService.Controllers
                 using (var scope = new TransactionScope())
                 {
                     int rowsDeleted = connection.Execute("DELETE FROM FfmpegRequest WHERE JobCorrelationId = @Id;",
-                        new { Id = jobId });
+                        new {Id = jobId});
                     if (rowsDeleted != 1)
                         throw new ArgumentException($@"No job with id {jobId} found.");
 
@@ -90,7 +90,12 @@ namespace API.WindowsService.Controllers
 
                     var data = connection.Query<MergeJob>(
                         "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegMergeJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
-                        new {QueuedState = TranscodingJobState.Queued, InProgressState = TranscodingJobState.InProgress, Heartbeat = timeout})
+                        new
+                        {
+                            QueuedState = TranscodingJobState.Queued,
+                            InProgressState = TranscodingJobState.InProgress,
+                            Heartbeat = timeout
+                        })
                         .SingleOrDefault();
                     if (data == null)
                     {
@@ -131,15 +136,22 @@ namespace API.WindowsService.Controllers
                 {
                     var data = connection.Query<TranscodingJob>(
                         "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
-                        new { QueuedState = TranscodingJobState.Queued, InProgressState = TranscodingJobState.InProgress, Heartbeat = timeout })
+                        new
+                        {
+                            QueuedState = TranscodingJobState.Queued,
+                            InProgressState = TranscodingJobState.InProgress,
+                            Heartbeat = timeout
+                        })
                         .SingleOrDefault();
                     if (data == null)
                     {
                         return null;
                     }
 
-                    var rowsUpdated = connection.Execute("UPDATE FfmpegJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
-                        new {State = TranscodingJobState.InProgress, Heartbeat = DateTime.UtcNow, Id = data.Id});
+                    var rowsUpdated =
+                        connection.Execute(
+                            "UPDATE FfmpegJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
+                            new {State = TranscodingJobState.InProgress, Heartbeat = DateTime.UtcNow, Id = data.Id});
                     if (rowsUpdated == 0)
                     {
                         throw new Exception("Failed to mark row as taken");
@@ -174,8 +186,9 @@ namespace API.WindowsService.Controllers
                         return null;
                     }
 
-                    var rowsUpdated = connection.Execute("UPDATE Mp4boxJobs SET State = @State WHERE JobCorrelationId = @Id;",
-                        new {State = TranscodingJobState.InProgress, Id = data.JobCorrelationId});
+                    var rowsUpdated =
+                        connection.Execute("UPDATE Mp4boxJobs SET State = @State WHERE JobCorrelationId = @Id;",
+                            new {State = TranscodingJobState.InProgress, Id = data.JobCorrelationId});
                     if (rowsUpdated != 1)
                     {
                         return null;
@@ -211,7 +224,8 @@ namespace API.WindowsService.Controllers
             Guid jobCorrelationId = Guid.NewGuid();
 
             string destinationFormat = Path.GetExtension(job.DestinationFilename);
-            string destinationFolder = string.Concat(Path.GetDirectoryName(job.DestinationFilename), Path.DirectorySeparatorChar, jobCorrelationId.ToString("N"));
+            string destinationFolder = string.Concat(Path.GetDirectoryName(job.DestinationFilename),
+                Path.DirectorySeparatorChar, jobCorrelationId.ToString("N"));
             string destinationFilenamePrefix = Path.GetFileNameWithoutExtension(job.DestinationFilename);
 
             Directory.CreateDirectory(destinationFolder);
@@ -266,10 +280,12 @@ namespace API.WindowsService.Controllers
                 {
                     Width = x.Key.Width,
                     Height = x.Key.Height,
-                    Bitrates = x.Select(format => new BitrateSet
+                    Bitrates = x.Select(format => new Quality
                     {
                         VideoBitrate = format.VideoBitrate,
-                        AudioBitrate = format.AudioBitrate
+                        AudioBitrate = format.AudioBitrate,
+                        Level = format.Level,
+                        Profile = format.Profile
                     })
                 }).ToList();
 
@@ -282,7 +298,8 @@ namespace API.WindowsService.Controllers
                     value = duration;
                 }
 
-                arguments.Append($@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+                arguments.Append(
+                    $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
                 arguments.Append($"split={resolutions.Count}");
                 for (int j = 0; j < resolutions.Count; j++)
@@ -293,7 +310,8 @@ namespace API.WindowsService.Controllers
 
                 for (int j = 0; j < resolutions.Count; j++)
                 {
-                    arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count()}");
+                    arguments.Append(
+                        $"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height},split={resolutions[j].Bitrates.Count()}");
 
                     for (int k = 0; k < resolutions[j].Bitrates.Count(); k++)
                     {
@@ -301,7 +319,8 @@ namespace API.WindowsService.Controllers
                     }
                     arguments.Append(";");
                 }
-                arguments = arguments.Remove(arguments.Length - 1, 1); // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
+                arguments = arguments.Remove(arguments.Length - 1, 1);
+                    // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
                 arguments.Append(@"""");
 
                 var transcodingJob = new TranscodingJob
@@ -317,13 +336,14 @@ namespace API.WindowsService.Controllers
                     Resolution resolution = resolutions[j];
                     for (int k = 0; k < resolution.Bitrates.Count(); k++)
                     {
-                        BitrateSet bitrate = resolution.Bitrates.ToList()[k];
+                        Quality quality = resolution.Bitrates.ToList()[k];
                         string chunkFilename =
                             $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-                                .Width}x{resolution.Height}_{bitrate.VideoBitrate}_{bitrate.AudioBitrate}_{value}{destinationFormat}";
+                                .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{destinationFormat}";
 
-                        arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {bitrate.VideoBitrate}k ""{chunkFilename}""");
-                        
+                        arguments.Append(
+                            $@" -map [out{j}_{k}] -an -c:v libx264 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} ""{chunkFilename}""");
+
                         transcodingJob.Chunks.Add(new FfmpegPart
                         {
                             JobCorrelationId = jobCorrelationId,
@@ -355,23 +375,25 @@ namespace API.WindowsService.Controllers
             }
         }
 
-        private static void SaveJobs(JobRequest job, ICollection<TranscodingJob> jobs, IDbConnection connection, Guid jobCorrelationId, int chunkDuration)
+        private static void SaveJobs(JobRequest job, ICollection<TranscodingJob> jobs, IDbConnection connection,
+            Guid jobCorrelationId, int chunkDuration)
         {
             if (jobs.Any(x => x.State == TranscodingJobState.Unknown))
-                throw new ArgumentException("One or more jobs have state TranscodingJobState.Unknown. A valid state must be set before saving to database");
+                throw new ArgumentException(
+                    "One or more jobs have state TranscodingJobState.Unknown. A valid state must be set before saving to database");
 
             connection.Execute(
-                        "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created, EnableDash) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @Needed, @Created, @EnableDash);",
-                        new
-                        {
-                            JobCorrelationId = jobCorrelationId,
-                            VideoSourceFilename = job.VideoSourceFilename,
-                            AudioSourceFilename = job.AudioSourceFilename,
-                            DestinationFilename = job.DestinationFilename,
-                            Needed = job.Needed,
-                            Created = DateTime.UtcNow,
-                            EnableDash = job.EnableDash
-                        });
+                "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created, EnableDash) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @Needed, @Created, @EnableDash);",
+                new
+                {
+                    JobCorrelationId = jobCorrelationId,
+                    VideoSourceFilename = job.VideoSourceFilename,
+                    AudioSourceFilename = job.AudioSourceFilename,
+                    DestinationFilename = job.DestinationFilename,
+                    Needed = job.Needed,
+                    Created = DateTime.UtcNow,
+                    EnableDash = job.EnableDash
+                });
 
             foreach (DestinationFormat target in job.Targets)
             {
@@ -423,13 +445,17 @@ namespace API.WindowsService.Controllers
     {
         public int Width { get; set; }
         public int Height { get; set; }
-        public IEnumerable<BitrateSet> Bitrates { get; set; }
+        public IEnumerable<Quality> Bitrates { get; set; }
     }
 
-    public class BitrateSet
+    public class Quality
     {
         public int VideoBitrate { get; set; }
 
         public int AudioBitrate { get; set; }
+
+        public H264Profile Profile { get; set; }
+
+        public string Level { get; set; }
     }
 }

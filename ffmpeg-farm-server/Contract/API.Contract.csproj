@@ -70,6 +70,7 @@
     <Compile Include="Dto\JobRequestDto.cs" />
     <Compile Include="Dto\TranscodingJobDto.cs" />
     <Compile Include="FfmpegPart.cs" />
+    <Compile Include="H264Level.cs" />
     <Compile Include="H264Profile.cs" />
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobStatusModel.cs" />
