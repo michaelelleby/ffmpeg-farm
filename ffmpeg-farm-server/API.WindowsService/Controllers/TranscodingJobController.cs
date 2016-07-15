@@ -289,7 +289,6 @@ namespace API.WindowsService.Controllers
                     })
                 }).ToList();
 
-            arguments.Clear();
             for (int i = 0; duration - i*chunkDuration > 0; i++)
             {
                 int value = i*chunkDuration;
@@ -298,6 +297,7 @@ namespace API.WindowsService.Controllers
                     value = duration;
                 }
 
+                arguments.Clear();
                 arguments.Append(
                     $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
