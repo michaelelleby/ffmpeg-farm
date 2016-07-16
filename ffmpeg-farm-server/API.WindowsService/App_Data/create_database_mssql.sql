@@ -1,4 +1,6 @@
-/****** Object:  Table [dbo].[Clients]    Script Date: 20-06-2016 18:21:23 ******/
+USE [ffmpegfarm]
+GO
+/****** Object:  Table [dbo].[Clients]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -14,7 +16,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 20-06-2016 18:21:23 ******/
+/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -33,7 +35,7 @@ CREATE TABLE [dbo].[FfmpegJobs](
 	[ChunkDuration] [float] NOT NULL,
 	[HeartbeatMachineName] [nvarchar](max) NULL,
 	[State] [varchar](50) NOT NULL,
-	[Started] [datetime] NULL
+	[Started] [datetime] NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -43,7 +45,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 20-06-2016 18:21:23 ******/
+/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -69,7 +71,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 20-06-2016 18:21:23 ******/
+/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -87,7 +89,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 20-06-2016 18:21:23 ******/
+/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -100,18 +102,24 @@ CREATE TABLE [dbo].[FfmpegRequest](
 	[DestinationFilename] [nvarchar](max) NOT NULL,
 	[Needed] [datetime] NOT NULL,
 	[Created] [datetime] NULL,
-	[EnableDash] [bit] NOT NULL
+	[EnableDash] [bit] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY],
+ CONSTRAINT [IX_FfmpegRequest] UNIQUE NONCLUSTERED 
+(
+	[JobCorrelationId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 20-06-2016 18:21:23 ******/
+/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING OFF
 GO
 CREATE TABLE [dbo].[FfmpegRequestTargets](
 	[id] [int] IDENTITY(1,1) NOT NULL,
@@ -121,7 +129,7 @@ CREATE TABLE [dbo].[FfmpegRequestTargets](
 	[VideoBitrate] [int] NOT NULL,
 	[AudioBitrate] [int] NOT NULL,
 	[H264Profile] [varchar](255) NOT NULL,
-	[H264Level] [varchar](3) NOT NULL
+	[H264Level] [varchar](3) NOT NULL,
  CONSTRAINT [PK_FfmpegRequestTargets] PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -129,7 +137,9 @@ CREATE TABLE [dbo].[FfmpegRequestTargets](
 ) ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 20-06-2016 18:21:23 ******/
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 16-07-2016 07:28:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -171,6 +181,11 @@ ALTER TABLE [dbo].[FfmpegParts]  WITH CHECK ADD  CONSTRAINT [FK_FfmpegParts_Ffmp
 REFERENCES [dbo].[FfmpegRequest] ([JobCorrelationId])
 GO
 ALTER TABLE [dbo].[FfmpegParts] CHECK CONSTRAINT [FK_FfmpegParts_FfmpegRequest]
+GO
+ALTER TABLE [dbo].[FfmpegRequestTargets]  WITH CHECK ADD  CONSTRAINT [FK_FfmpegRequestTargets_FfmpegRequest] FOREIGN KEY([JobCorrelationId])
+REFERENCES [dbo].[FfmpegRequest] ([JobCorrelationId])
+GO
+ALTER TABLE [dbo].[FfmpegRequestTargets] CHECK CONSTRAINT [FK_FfmpegRequestTargets_FfmpegRequest]
 GO
 ALTER TABLE [dbo].[Mp4boxJobs]  WITH CHECK ADD  CONSTRAINT [FK_Mp4boxJobs_FfmpegRequest] FOREIGN KEY([JobCorrelationId])
 REFERENCES [dbo].[FfmpegRequest] ([JobCorrelationId])
