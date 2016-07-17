@@ -44,6 +44,11 @@ namespace Contract
         /// </summary>
         public bool EnableDash { get; set; }
 
+        /// <summary>
+        /// Whether FFmpeg should use 2 pass encoding
+        /// </summary>
+        public bool EnableTwoPass { get; set; }
+
         [JsonIgnore]
         public bool HasAlternateAudio => !string.IsNullOrWhiteSpace(AudioSourceFilename) && !string.IsNullOrWhiteSpace(VideoSourceFilename);
 

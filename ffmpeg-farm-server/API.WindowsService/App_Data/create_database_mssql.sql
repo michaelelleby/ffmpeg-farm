@@ -103,6 +103,7 @@ CREATE TABLE [dbo].[FfmpegRequest](
 	[Needed] [datetime] NOT NULL,
 	[Created] [datetime] NULL,
 	[EnableDash] [bit] NOT NULL,
+	[EnableTwoPass] [bit] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC

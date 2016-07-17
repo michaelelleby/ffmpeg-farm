@@ -64,6 +64,11 @@
             Whether the output should support MPEG DASH
             </summary>
         </member>
+        <member name="P:Contract.JobRequest.EnableTwoPass">
+            <summary>
+            Whether FFmpeg should use 2 pass encoding
+            </summary>
+        </member>
         <member name="P:Contract.TranscodingJob.SourceFilename">
             <summary>
             Source filename

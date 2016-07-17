@@ -25,6 +25,11 @@ namespace ffmpeg_farm_client
 
         private static void Main(string[] args)
         {
+            if (string.IsNullOrWhiteSpace(ConfigurationManager.AppSettings["FfmpegPath"]))
+                throw new ConfigurationErrorsException("No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
+            if (!File.Exists(ConfigurationManager.AppSettings["FfmpegPath"]))
+                throw new FileNotFoundException(ConfigurationManager.AppSettings["FfmpegPath"]);
+
             _jsonSerializerSettings = new JsonSerializerSettings
             {
                 Converters = new List<JsonConverter>
@@ -37,7 +42,6 @@ namespace ffmpeg_farm_client
 
             while (true)
             {
-                _commandlineProcess = new Process();
                 object receivedJob = null;
 
                 try
@@ -96,33 +100,36 @@ namespace ffmpeg_farm_client
             _currentJob = receivedJob;
             _currentJob.MachineName = Environment.MachineName;
 
-            _commandlineProcess.StartInfo = new ProcessStartInfo
+            using (_commandlineProcess = new Process())
             {
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                FileName = pathToMp4Box,
-                Arguments = receivedJob.Arguments
-            };
+                _commandlineProcess.StartInfo = new ProcessStartInfo
+                {
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    FileName = pathToMp4Box,
+                    Arguments = receivedJob.Arguments
+                };
 
-            Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
+                Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
 
-            _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+                _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
 
-            TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
+                TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
-            _commandlineProcess.Start();
-            _commandlineProcess.BeginErrorReadLine();
+                _commandlineProcess.Start();
+                _commandlineProcess.BeginErrorReadLine();
 
-            TimeSinceLastUpdate.Start();
+                TimeSinceLastUpdate.Start();
 
-            _commandlineProcess.WaitForExit();
+                _commandlineProcess.WaitForExit();
 
-            _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
-            UpdateProgress().Wait();
+                UpdateProgress().Wait();
 
-            TimeSinceLastUpdate.Stop();
+                TimeSinceLastUpdate.Stop();
+            }
         }
 
         private static void ExecuteTranscodingJob(TranscodingJob transcodingJob)
@@ -130,33 +137,39 @@ namespace ffmpeg_farm_client
             _currentJob = transcodingJob;
             _currentJob.MachineName = Environment.MachineName;
 
-            _commandlineProcess.StartInfo = new ProcessStartInfo
+            foreach (string arguments in transcodingJob.Arguments)
             {
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                FileName = ConfigurationManager.AppSettings["FfmpegPath"],
-                Arguments = transcodingJob.Arguments
-            };
+                using (_commandlineProcess = new Process())
+                {
+                    _commandlineProcess.StartInfo = new ProcessStartInfo
+                    {
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        FileName = ConfigurationManager.AppSettings["FfmpegPath"],
+                        Arguments = arguments
+                    };
 
-            Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
+                    Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
 
-            _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+                    _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
 
-            TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
+                    TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
-            _commandlineProcess.Start();
-            _commandlineProcess.BeginErrorReadLine();
+                    _commandlineProcess.Start();
+                    _commandlineProcess.BeginErrorReadLine();
 
-            TimeSinceLastUpdate.Start();
+                    TimeSinceLastUpdate.Start();
 
-            _commandlineProcess.WaitForExit();
+                    _commandlineProcess.WaitForExit();
 
-            _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                    _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
-            UpdateProgress().Wait();
+                    UpdateProgress().Wait();
 
-            TimeSinceLastUpdate.Stop();
+                    TimeSinceLastUpdate.Stop();
+                }
+            }
         }
 
         private static void TimeSinceLastUpdate_Elapsed(object sender, ElapsedEventArgs e)

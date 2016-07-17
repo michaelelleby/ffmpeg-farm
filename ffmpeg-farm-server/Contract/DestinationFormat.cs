@@ -1,3 +1,6 @@
+using System;
+using Newtonsoft.Json;
+
 namespace Contract
 {
     public class DestinationFormat
@@ -13,5 +16,8 @@ namespace Contract
         public H264Profile Profile { get; set; }
 
         public string Level { get; set; }
+
+        [JsonIgnore]
+        public int Target { get; set; }
     }
 }

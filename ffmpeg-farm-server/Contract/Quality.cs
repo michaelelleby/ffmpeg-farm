@@ -9,5 +9,6 @@
         public H264Profile Profile { get; set; }
 
         public string Level { get; set; }
+        public int Target { get; set; }
     }
 }

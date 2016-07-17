@@ -15,7 +15,7 @@ namespace Contract
         /// <summary>
         /// Commandline arguments sent to FFmpeg
         /// </summary>
-        public string Arguments { get; set; }
+        public string[] Arguments { get; set; }
 
         public ICollection<FfmpegPart> Chunks { get; set; }
         public DateTime Needed { get; set; }

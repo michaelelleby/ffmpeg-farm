@@ -3,9 +3,10 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Transactions;
-using System.Xml;
+using Contract;
 using Dapper;
 
 namespace API.Service
@@ -32,7 +33,7 @@ namespace API.Service
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $@"--output=XML ""{sourceFilename}""",
+                    Arguments = $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -43,18 +44,15 @@ namespace API.Service
             if (mediaInfoProcess.ExitCode != 0)
                 throw new Exception($@"MediaInfo returned non-zero exit code: {mediaInfoProcess.ExitCode}");
 
-            XmlDocument data = new XmlDocument();
-            data.LoadXml(mediaInfoProcess.StandardOutput.ReadToEnd());
-
-            string duration = data.SelectSingleNode(@"/MediaInfo/File/Track[@type=""General""]/Duration[matches(., ""^\d.+?"")]")?.Value;
-            string framerate = data.SelectSingleNode(@"/MediaInfo/File/Track[@type=""General""]/Frame_rate[matches(., ""^[\d\.]+$"")]")?.Value;
-            bool interlaced = data.SelectSingleNode(@"/MediaInfo/File/Track[@type=""Video""]/Scan_Type")?.Value == "Interlaced";
+            string[] output = mediaInfoProcess.StandardOutput.ReadToEnd().Split('|');
 
             return new Mediainfo
             {
-                Duration = Convert.ToInt32(duration),
-                Framerate = Convert.ToDouble(framerate),
-                Interlaced = interlaced
+                Duration = Convert.ToInt32(output[0])/1000, // Duration is reported in milliseconds
+                Framerate = float.Parse(output[1], NumberFormatInfo.InvariantInfo),
+                Width = Convert.ToInt32(output[2]),
+                Height = Convert.ToInt32(output[3]),
+                Interlaced = output[4].ToUpperInvariant() == "INTERLACED"
             };
         }
 
@@ -73,7 +71,7 @@ namespace API.Service
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $@"--inform=General;%Duration% ""{sourceFilename}""",
+                    Arguments = $@"--inform=Video;%Duration% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -87,34 +85,6 @@ namespace API.Service
             return Convert.ToInt32(mediaInfoProcess.StandardOutput.ReadToEnd())/1000;
         }
 
-        public static double GetFramerate(string sourceFilename)
-        {
-            if (String.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
-            if (!File.Exists(sourceFilename))
-                throw new FileNotFoundException("Media not found when trying to get file duration", sourceFilename);
-
-            string mediaInfoPath = ConfigurationManager.AppSettings["MediaInfoPath"];
-            if (!File.Exists(mediaInfoPath))
-                throw new FileNotFoundException("MediaInfo.exe was not found", mediaInfoPath);
-
-            var mediaInfoProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    UseShellExecute = false,
-                    Arguments = $@"--inform=Video;%FrameRate% ""{sourceFilename}""",
-                    RedirectStandardOutput = true,
-                    FileName = mediaInfoPath
-                }
-            };
-            mediaInfoProcess.Start();
-            mediaInfoProcess.WaitForExit();
-
-            if (mediaInfoProcess.ExitCode != 0)
-                throw new Exception($@"MediaInfo returned non-zero exit code: {mediaInfoProcess.ExitCode}");
-
-            return Convert.ToDouble(mediaInfoProcess.StandardOutput.ReadToEnd()) / 1000;
-        }
         public static void InsertClientHeartbeat(string machineName)
         {
             using (var connection = GetConnection())
@@ -138,14 +108,5 @@ namespace API.Service
                 }
             }
         }
-    }
-
-    public class Mediainfo
-    {
-        public bool Interlaced { get; set; }
-
-        public double Framerate { get; set; }
-
-        public int Duration { get; set; }
     }
 }
