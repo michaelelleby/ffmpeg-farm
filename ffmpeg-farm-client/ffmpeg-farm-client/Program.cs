@@ -113,7 +113,7 @@ namespace ffmpeg_farm_client
 
                 Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
 
-                _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+                _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
 
                 TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
@@ -152,7 +152,8 @@ namespace ffmpeg_farm_client
 
                     Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
 
-                    _commandlineProcess.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+                    _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                    _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
 
                     TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
@@ -181,19 +182,25 @@ namespace ffmpeg_farm_client
             Console.WriteLine("Timed out..");
         }
 
-        private static void Ffmpeg_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        private static void Ffmpeg_DataReceived(object sender, DataReceivedEventArgs e)
         {
             if (e.Data == null)
                 return;
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
             if (!match.Success)
+            {
+                using (var sw = new StreamWriter(@"d:\temp\ffmpeg.log", true))
+                {
+                    sw.WriteLine(e.Data);
+                }
                 return;
-
-            // Restart timer
+            }
             TimeSinceLastUpdate.Stop();
 
-            _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value), Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value), Convert.ToInt32(match.Groups[4].Value) * 25);
+            _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
+                Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
+                Convert.ToInt32(match.Groups[4].Value)*25);
 
             _currentJob.Progress = _progress;
             UpdateProgress().Wait();
@@ -201,6 +208,8 @@ namespace ffmpeg_farm_client
             Console.WriteLine(_progress);
 
             TimeSinceLastUpdate.Start();
+
+            // Restart timer
         }
         
         private static async Task UpdateProgress()

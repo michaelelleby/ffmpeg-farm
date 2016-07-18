@@ -367,7 +367,7 @@ namespace API.WindowsService.Controllers
                             .Width}x{resolution.Height}_{value}.stats";
 
                     arguments.Append(
-                        $@" -map [out{j}] -pass 1 -profile {resolution.Bitrates.First().Profile} -passlogfile ""{chunkPassFilename}"" -an -c:v libx264 -refs {refs} -preset {x264Preset} -f mp4 NUL");
+                        $@" -map [out{j}] -pass 1 -profile {resolution.Bitrates.First().Profile} -passlogfile ""{chunkPassFilename}"" -an -c:v libx264 -refs {refs} -me_method tesa -me_range 16 -preset {x264Preset} -aspect 1:1 -f mp4 NUL");
                 }
 
                 argumentList.Add(arguments.ToString());
@@ -408,13 +408,13 @@ namespace API.WindowsService.Controllers
                         $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
                             .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{destinationFormat}";
 
-                    arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -refs {refs} -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset}");
+                    arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -refs {refs} -me_method tesa -me_range 16 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset} -aspect 1:1 ");
                     if (job.EnableTwoPass)
                     {
                         string chunkPassFilename =
                         $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
                             .Width}x{resolution.Height}_{value}.stats";
-                        arguments.Append($@" -pass 2 -passlogfile ""{chunkPassFilename}"" ");
+                        arguments.Append($@"-pass 2 -passlogfile ""{chunkPassFilename}"" ");
                     }
 
                     arguments.Append($@"""{chunkFilename}""");
