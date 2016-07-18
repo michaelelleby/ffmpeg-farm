@@ -107,11 +107,13 @@ namespace API.WindowsService.Controllers
                         if (updatedRows != 1)
                             throw new Exception($"Failed to update progress for job id {job.Id}");
 
-                        int target = connection.Query<int>("SELECT Target FROM FfmpegMergeJobs WHERE Id = @Id;",
-                            new {Id = job.Id})
-                            .Single();
+                        var states = connection.Query<string>(
+                            "SELECT State FROM FfmpegMergeJobs WHERE JobCorrelationId = @Id;",
+                            new {Id = job.JobCorrelationId})
+                            .Select(value => Enum.Parse(typeof(TranscodingJobState), value))
+                            .Cast<TranscodingJobState>();
 
-                        if (jobState == TranscodingJobState.Done)
+                        if (states.All(x => x == TranscodingJobState.Done))
                         {
                             string tempFolder = string.Concat(Path.GetDirectoryName(jobRequest.DestinationFilename),
                                 Path.DirectorySeparatorChar, jobRequest.JobCorrelationId.ToString("N"));
