@@ -186,9 +186,10 @@ namespace ffmpeg_farm_client
                                 parts[i].Psnr = Convert.ToSingle(matches[i].Groups[1].Value, NumberFormatInfo.InvariantInfo);
                             }
 
+                            _output.Clear();
+
                             TimeSinceLastUpdate.Start();
                         }
-
                     }
 
                     UpdateProgress().Wait();
