@@ -59,18 +59,21 @@ namespace API.WindowsService.Controllers
 
                 using (var scope = new TransactionScope())
                 {
-                    int rowsDeleted = connection.Execute("DELETE FROM FfmpegRequest WHERE JobCorrelationId = @Id;",
-                        new {Id = jobId});
-                    if (rowsDeleted != 1)
-                        throw new ArgumentException($@"No job with id {jobId} found.");
-
-                    connection.Execute("DELETE FROM FfmpegJobs WHERE JobCorrelationId = @Id;", new {Id = jobId});
+                    connection.Execute("DELETE FROM FfmpegJobs WHERE JobCorrelationId = @Id;", new { Id = jobId });
 
                     connection.Execute("DELETE FROM FfmpegParts WHERE JobCorrelationId = @Id;", new {Id = jobId});
 
                     connection.Execute("DELETE FROM FfmpegMergeJobs WHERE JobCorrelationId = @Id;", new {Id = jobId});
 
                     connection.Execute("DELETE FROM Mp4boxJobs WHERE JobCorrelationId = @Id;", new {Id = jobId});
+
+                    connection.Execute("DELETE FROM FFmpegRequestTargets WHERE JobCorrelationId = @Id;",
+                        new {Id = jobId});
+
+                    int rowsDeleted = connection.Execute("DELETE FROM FfmpegRequest WHERE JobCorrelationId = @Id;",
+                        new { Id = jobId });
+                    if (rowsDeleted != 1)
+                        throw new ArgumentException($@"No job with id {jobId} found.");
 
                     scope.Complete();
                 }
@@ -148,6 +151,9 @@ namespace API.WindowsService.Controllers
                         return null;
                     }
 
+                    var parts = connection.Query<dynamic>("SELECT Id, JobCorrelationId, Filename, Number, Target, PSNR FROM FfmpegParts WHERE FfmpegJobs_Id = @JobId;",
+                        new {JobId = data.Id});
+                    
                     var rowsUpdated =
                         connection.Execute(
                             "UPDATE FfmpegJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
@@ -159,12 +165,23 @@ namespace API.WindowsService.Controllers
 
                     scope.Complete();
 
-                    return new TranscodingJob
+                    var job = new TranscodingJob
                     {
                         Id = Convert.ToInt32(data.Id),
                         Arguments = data.Arguments.Split('|'),
-                        JobCorrelationId = data.JobCorrelationId
+                        JobCorrelationId = data.JobCorrelationId,
+                        Chunks = parts.Select(x => new FfmpegPart
+                        {
+                            Id = x.Id,
+                            JobCorrelationId = x.JobCorrelationId,
+                            Psnr = x.PSNR,
+                            Target = x.Target,
+                            Number = x.Number,
+                            SourceFilename = x.SourceFilename,
+                            Filename = x.Filename,
+                        }).ToList()
                     };
+                    return job;
                 }
             }
         }
@@ -417,6 +434,11 @@ namespace API.WindowsService.Controllers
                         arguments.Append($@"-pass 2 -passlogfile ""{chunkPassFilename}"" ");
                     }
 
+                    if (job.EnablePsnr)
+                    {
+                        arguments.Append("-psnr ");
+                    }
+
                     arguments.Append($@"""{chunkFilename}""");
 
                     transcodingJob.Chunks.Add(new FfmpegPart
@@ -445,7 +467,7 @@ namespace API.WindowsService.Controllers
                     "One or more jobs have state TranscodingJobState.Unknown. A valid state must be set before saving to database");
 
             connection.Execute(
-                "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created, EnableDash, EnableTwoPass) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @Needed, @Created, @EnableDash, @EnableTwoPass);",
+                "INSERT INTO FfmpegRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, Created, EnableDash, EnableTwoPass, EnablePsnr) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @Needed, @Created, @EnableDash, @EnableTwoPass, @EnablePsnr);",
                 new
                 {
                     JobCorrelationId = jobCorrelationId,
@@ -455,7 +477,7 @@ namespace API.WindowsService.Controllers
                     job.Needed,
                     Created = DateTime.UtcNow,
                     job.EnableDash,
-                    job.EnableTwoPass
+                    job.EnableTwoPass, job.EnablePsnr
                 });
 
             foreach (DestinationFormat target in job.Targets)
@@ -488,16 +510,20 @@ namespace API.WindowsService.Controllers
                         State = transcodingJob.State
                     });
 
+                int jobId = connection.Query<int>("SELECT @@IDENTITY;")
+                    .Single();
+
                 foreach (FfmpegPart part in transcodingJob.Chunks)
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number) VALUES(@JobCorrelationId, @Target, @Filename, @Number);",
+                        "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number, FfmpegJobs_Id) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegJobsId);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             Target = part.Target,
                             Filename = part.Filename,
-                            Number = part.Number
+                            Number = part.Number,
+                            FfmpegJobsId = jobId
                         });
                 }
             }

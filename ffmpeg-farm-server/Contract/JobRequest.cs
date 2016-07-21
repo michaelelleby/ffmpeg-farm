@@ -49,6 +49,11 @@ namespace Contract
         /// </summary>
         public bool EnableTwoPass { get; set; }
 
+        /// <summary>
+        /// Whether to calculate PSNR values for each output file
+        /// </summary>
+        public bool EnablePsnr { get; set; }
+
         [JsonIgnore]
         public bool HasAlternateAudio => !string.IsNullOrWhiteSpace(AudioSourceFilename) && !string.IsNullOrWhiteSpace(VideoSourceFilename);
 

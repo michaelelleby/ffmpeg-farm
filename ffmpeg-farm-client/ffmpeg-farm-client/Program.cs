@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,6 +24,7 @@ namespace ffmpeg_farm_client
         private static Process _commandlineProcess;
         private static BaseJob _currentJob;
         private static JsonSerializerSettings _jsonSerializerSettings;
+        private static StringBuilder _output;
 
         private static void Main(string[] args)
         {
@@ -39,6 +42,7 @@ namespace ffmpeg_farm_client
                                     },
                 TypeNameHandling = TypeNameHandling.All
             };
+            _output = new StringBuilder();
 
             while (true)
             {
@@ -166,6 +170,27 @@ namespace ffmpeg_farm_client
 
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
+                    if (_currentJob.Done)
+                    {
+                        var matches = Regex.Matches(_output.ToString(), @"^\[libx264 @ \w+?\] PSNR Mean.+Avg:([\d\.]+)",
+                            RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
+                        if (matches.Count > 0)
+                        {
+                            TimeSinceLastUpdate.Stop();
+
+                            var job = (TranscodingJob)_currentJob;
+                            List<FfmpegPart> parts = job.Chunks.ToList();
+
+                            for (int i = 0; i < matches.Count; i++)
+                            {
+                                parts[i].Psnr = Convert.ToSingle(matches[i].Groups[1].Value, NumberFormatInfo.InvariantInfo);
+                            }
+
+                            TimeSinceLastUpdate.Start();
+                        }
+
+                    }
+
                     UpdateProgress().Wait();
 
                     TimeSinceLastUpdate.Stop();
@@ -188,28 +213,30 @@ namespace ffmpeg_farm_client
                 return;
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
-            if (!match.Success)
+            if (match.Success)
             {
+                TimeSinceLastUpdate.Stop();
+
+                _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
+                    Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
+                    Convert.ToInt32(match.Groups[4].Value)*25);
+
+                _currentJob.Progress = _progress;
+                UpdateProgress().Wait();
+
+                Console.WriteLine(_progress);
+
+                TimeSinceLastUpdate.Start();
+            }
+            else
+            {
+                _output.AppendLine(e.Data);
+
                 using (var sw = new StreamWriter(@"d:\temp\ffmpeg.log", true))
                 {
                     sw.WriteLine(e.Data);
                 }
-                return;
             }
-            TimeSinceLastUpdate.Stop();
-
-            _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
-                Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
-                Convert.ToInt32(match.Groups[4].Value)*25);
-
-            _currentJob.Progress = _progress;
-            UpdateProgress().Wait();
-
-            Console.WriteLine(_progress);
-
-            TimeSinceLastUpdate.Start();
-
-            // Restart timer
         }
         
         private static async Task UpdateProgress()

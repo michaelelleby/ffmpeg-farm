@@ -57,7 +57,7 @@ namespace API.WindowsService.Controllers
                 connection.Open();
 
                 JobRequest jobRequest = connection.Query<JobRequest>(
-                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash FROM FfmpegRequest WHERE JobCorrelationId = @Id",
+                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash, EnablePsnr FROM FfmpegRequest WHERE JobCorrelationId = @Id",
                     new {Id = job.JobCorrelationId})
                     .SingleOrDefault();
                 if (jobRequest == null)
@@ -85,11 +85,21 @@ namespace API.WindowsService.Controllers
                                 Progress = job.Progress.TotalSeconds,
                                 Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                                 State = jobState,
-                                MachineName = job.MachineName
+                                MachineName = job.MachineName,
                             });
 
                         if (updatedRows != 1)
                             throw new Exception($"Failed to update progress for job id {job.Id}");
+
+                        if (jobRequest.EnablePsnr)
+                        {
+                            foreach (FfmpegPart chunk in ((TranscodingJob)job).Chunks)
+                            {
+                                connection.Execute(
+                                    "UPDATE FFmpegParts SET PSNR = @Psnr WHERE Id = @Id;",
+                                    new {Id = chunk.Id, Psnr = chunk.Psnr});
+                            }
+                        }
                     }
                     else if (jobType == typeof(MergeJob))
                     {

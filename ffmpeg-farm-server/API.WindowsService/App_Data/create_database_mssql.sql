@@ -1,6 +1,4 @@
-USE [ffmpegfarm]
-GO
-/****** Object:  Table [dbo].[Clients]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[Clients]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -16,7 +14,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -45,7 +43,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -71,7 +69,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -79,9 +77,11 @@ GO
 CREATE TABLE [dbo].[FfmpegParts](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[JobCorrelationId] [uniqueidentifier] NOT NULL,
-	[Target] [int] NOT NULL,
 	[Filename] [nvarchar](max) NOT NULL,
 	[Number] [int] NOT NULL,
+	[Target] [int] NOT NULL,
+	[FfmpegJobs_Id] [int] NOT NULL,
+	[PSNR] [float] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -89,7 +89,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -104,6 +104,7 @@ CREATE TABLE [dbo].[FfmpegRequest](
 	[Created] [datetime] NULL,
 	[EnableDash] [bit] NOT NULL,
 	[EnableTwoPass] [bit] NOT NULL,
+	[EnablePsnr] [bit] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -115,7 +116,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -140,7 +141,7 @@ CREATE TABLE [dbo].[FfmpegRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 16-07-2016 07:28:16 ******/
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 21-07-2016 22:33:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -167,6 +168,8 @@ GO
 ALTER TABLE [dbo].[FfmpegJobs] ADD  DEFAULT ((0)) FOR [Progress]
 GO
 ALTER TABLE [dbo].[FfmpegMergeJobs] ADD  DEFAULT ((0)) FOR [Progress]
+GO
+ALTER TABLE [dbo].[FfmpegParts] ADD  DEFAULT ((0)) FOR [PSNR]
 GO
 ALTER TABLE [dbo].[FfmpegJobs]  WITH CHECK ADD  CONSTRAINT [FK_FfmpegJobs_FfmpegRequest] FOREIGN KEY([JobCorrelationId])
 REFERENCES [dbo].[FfmpegRequest] ([JobCorrelationId])

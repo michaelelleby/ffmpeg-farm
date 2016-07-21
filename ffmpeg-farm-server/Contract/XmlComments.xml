@@ -69,6 +69,11 @@
             Whether FFmpeg should use 2 pass encoding
             </summary>
         </member>
+        <member name="P:Contract.JobRequest.EnablePsnr">
+            <summary>
+            Whether to calculate PSNR values for each output file
+            </summary>
+        </member>
         <member name="P:Contract.TranscodingJob.SourceFilename">
             <summary>
             Source filename
