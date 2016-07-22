@@ -70,6 +70,7 @@ namespace ffmpeg_farm_client
 
                     if (receivedJob != null)
                     {
+                        _output.Clear();
                         Type jobType = receivedJob.GetType();
                         if (jobType == typeof(TranscodingJob) || jobType == typeof(MergeJob))
                         {
@@ -141,8 +142,10 @@ namespace ffmpeg_farm_client
             _currentJob = transcodingJob;
             _currentJob.MachineName = Environment.MachineName;
 
-            foreach (string arguments in transcodingJob.Arguments)
+            for (int i = 0; i < transcodingJob.Arguments.Length; i++)
             {
+                string arguments = transcodingJob.Arguments[i];
+
                 using (_commandlineProcess = new Process())
                 {
                     _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -170,25 +173,20 @@ namespace ffmpeg_farm_client
 
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
 
-                    if (_currentJob.Done)
+                    bool isLastCommand = i == transcodingJob.Arguments.Length - 1;
+                    if (isLastCommand && _currentJob.Done)
                     {
                         var matches = Regex.Matches(_output.ToString(), @"^\[libx264 @ \w+?\] PSNR Mean.+Avg:([\d\.]+)",
                             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
                         if (matches.Count > 0)
                         {
-                            TimeSinceLastUpdate.Stop();
-
                             var job = (TranscodingJob)_currentJob;
-                            List<FfmpegPart> parts = job.Chunks.ToList();
+                            var parts = job.Chunks.ToList();
 
-                            for (int i = 0; i < matches.Count; i++)
+                            for (int j = 0; j < matches.Count; j++)
                             {
-                                parts[i].Psnr = Convert.ToSingle(matches[i].Groups[1].Value, NumberFormatInfo.InvariantInfo);
+                                parts[j].Psnr = Convert.ToSingle(matches[j].Groups[1].Value, NumberFormatInfo.InvariantInfo);
                             }
-
-                            _output.Clear();
-
-                            TimeSinceLastUpdate.Start();
                         }
                     }
 
@@ -213,6 +211,8 @@ namespace ffmpeg_farm_client
             if (e.Data == null)
                 return;
 
+            _output.AppendLine(e.Data);
+
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
             if (match.Success)
             {
@@ -228,15 +228,6 @@ namespace ffmpeg_farm_client
                 Console.WriteLine(_progress);
 
                 TimeSinceLastUpdate.Start();
-            }
-            else
-            {
-                _output.AppendLine(e.Data);
-
-                using (var sw = new StreamWriter(@"d:\temp\ffmpeg.log", true))
-                {
-                    sw.WriteLine(e.Data);
-                }
             }
         }
         

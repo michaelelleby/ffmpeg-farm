@@ -275,13 +275,12 @@ namespace API.WindowsService.Controllers
                 State = TranscodingJobState.Queued
             };
             StringBuilder arguments = new StringBuilder($@"-y -i ""{source}""");
-            for (int i = 0; i < job.Targets.Length; i++)
+            //for (int i = 0; i < job.Targets.Length; i++)
+            foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
             {
-                DestinationFormat format = job.Targets[i];
-
                 string chunkFilename =
-                    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{i}_audio.mp4";
-                arguments.Append($@" -c:a aac -b:a {format.AudioBitrate}k -vn ""{chunkFilename}""");
+                    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{bitrate}_audio.mp4";
+                arguments.Append($@" -c:a aac -b:a {bitrate}k -vn ""{chunkFilename}""");
 
                 audioJob.Chunks.Add(
                     new FfmpegPart
@@ -289,7 +288,7 @@ namespace API.WindowsService.Controllers
                         SourceFilename = source,
                         JobCorrelationId = jobCorrelationId,
                         Filename = chunkFilename,
-                        Target = i,
+                        Target = 0,
                         Number = 0
                     });
             }
@@ -515,15 +514,19 @@ namespace API.WindowsService.Controllers
 
                 foreach (FfmpegPart part in transcodingJob.Chunks)
                 {
+                    DestinationFormat format = job.Targets[part.Target];
                     connection.Execute(
-                        "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number, FfmpegJobs_Id) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegJobsId);",
+                        "INSERT INTO FfmpegParts (JobCorrelationId, Target, Filename, Number, FfmpegJobs_Id, Width, Height, Bitrate) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegJobsId, @Width, @Height, @Bitrate);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             Target = part.Target,
                             Filename = part.Filename,
                             Number = part.Number,
-                            FfmpegJobsId = jobId
+                            FfmpegJobsId = jobId,
+                            Width = format.Width,
+                            Height = format.Height,
+                            Bitrate = format.VideoBitrate
                         });
                 }
             }

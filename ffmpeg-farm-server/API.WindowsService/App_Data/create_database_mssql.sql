@@ -1,4 +1,4 @@
-/****** Object:  Table [dbo].[Clients]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[Clients]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -14,7 +14,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -43,7 +43,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[FfmpegMergeJobs]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -69,7 +69,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[FfmpegParts]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -82,6 +82,9 @@ CREATE TABLE [dbo].[FfmpegParts](
 	[Target] [int] NOT NULL,
 	[FfmpegJobs_Id] [int] NOT NULL,
 	[PSNR] [float] NOT NULL,
+	[Width] [int] NOT NULL,
+	[Height] [int] NOT NULL,
+	[Bitrate] [int] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -89,7 +92,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[FfmpegRequest]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -116,7 +119,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[FfmpegRequestTargets]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -141,7 +144,7 @@ CREATE TABLE [dbo].[FfmpegRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 21-07-2016 22:33:29 ******/
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 22-07-2016 16:34:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

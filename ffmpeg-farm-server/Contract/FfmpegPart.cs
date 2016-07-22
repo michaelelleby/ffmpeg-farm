@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Contracts;
 
 namespace Contract
 {
@@ -12,5 +13,8 @@ namespace Contract
         public bool IsAudio => Filename.EndsWith("_audio.mp4", StringComparison.InvariantCultureIgnoreCase);
         public Guid JobCorrelationId { get; set; }
         public double Psnr { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Bitrate { get; set; }
     }
 }

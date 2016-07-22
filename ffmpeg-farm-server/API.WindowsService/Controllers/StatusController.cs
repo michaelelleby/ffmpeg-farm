@@ -291,9 +291,10 @@ namespace API.WindowsService.Controllers
         private static void QueueMergeJob(BaseJob job, IDbConnection connection, string outputFolder,
             string fileNameWithoutExtension, string fileExtension, JobRequest jobRequest)
         {
-            var chunks = connection.Query<FfmpegPart>(
-                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
-                new {Id = job.JobCorrelationId});
+            ICollection<FfmpegPart> chunks = connection.Query<FfmpegPart>(
+                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename, Width, Height, Bitrate FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                new {Id = job.JobCorrelationId})
+                .ToList();
 
             foreach (IEnumerable<FfmpegPart> chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
@@ -318,12 +319,11 @@ namespace API.WindowsService.Controllers
                         tw.WriteLine($"file '{part.Filename}'");
                     }
                 }
-                string audioSource = ffmpegParts.Single(x => x.IsAudio).Filename;
+                string audioSource = chunks.Single(x => x.IsAudio && x.Bitrate == target.AudioBitrate).Filename;
 
                 string arguments =
                     $@"-y -f concat -safe 0 -i ""{path}"" -i ""{audioSource}"" -c copy {targetFilename}";
 
-                int duration = Helper.GetDuration(jobRequest.VideoSourceFilename);
                 connection.Execute(
                     "INSERT INTO FfmpegMergeJobs (JobCorrelationId, Arguments, Needed, State, Target) VALUES(@JobCorrelationId, @Arguments, @Needed, @State, @Target);",
                     new
