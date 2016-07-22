@@ -123,6 +123,7 @@ namespace ffmpeg_farm_client
                 TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
                 _commandlineProcess.Start();
+                _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
                 _commandlineProcess.BeginErrorReadLine();
 
                 TimeSinceLastUpdate.Start();
@@ -165,6 +166,7 @@ namespace ffmpeg_farm_client
                     TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
 
                     _commandlineProcess.Start();
+                    _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
                     _commandlineProcess.BeginErrorReadLine();
 
                     TimeSinceLastUpdate.Start();
