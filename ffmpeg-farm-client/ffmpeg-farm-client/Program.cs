@@ -173,7 +173,15 @@ namespace ffmpeg_farm_client
 
                     _commandlineProcess.WaitForExit();
 
-                    _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                    if (FfmpegDetectedError())
+                    {
+                        _currentJob.Failed = true;
+                        _currentJob.Done = false;
+                    }
+                    else
+                    {
+                        _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                    }
 
                     bool isLastCommand = i == transcodingJob.Arguments.Length - 1;
                     if (isLastCommand && _currentJob.Done)
@@ -197,6 +205,12 @@ namespace ffmpeg_farm_client
                     TimeSinceLastUpdate.Stop();
                 }
             }
+        }
+
+        private static bool FfmpegDetectedError()
+        {
+            return Regex.IsMatch(_output.ToString(), @"\] Error",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
         }
 
         private static void TimeSinceLastUpdate_Elapsed(object sender, ElapsedEventArgs e)
@@ -232,7 +246,7 @@ namespace ffmpeg_farm_client
                 TimeSinceLastUpdate.Start();
             }
         }
-        
+
         private static async Task UpdateProgress()
         {
             try

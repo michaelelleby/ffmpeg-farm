@@ -71,9 +71,11 @@ namespace API.WindowsService.Controllers
                 using (var scope = new TransactionScope())
                 {
                     Type jobType = job.GetType();
-                    TranscodingJobState jobState = job.Done
-                        ? TranscodingJobState.Done
-                        : TranscodingJobState.InProgress;
+                    TranscodingJobState jobState = job.Failed
+                        ? TranscodingJobState.Failed
+                        : job.Done
+                            ? TranscodingJobState.Done
+                            : TranscodingJobState.InProgress;
 
                     if (jobType == typeof(TranscodingJob))
                     {

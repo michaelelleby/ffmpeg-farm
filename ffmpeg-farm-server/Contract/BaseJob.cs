@@ -26,5 +26,6 @@ namespace Contract
         public bool Done { get; set; }
 
         public int Id { get; set; }
+        public bool Failed { get; set; }
     }
 }

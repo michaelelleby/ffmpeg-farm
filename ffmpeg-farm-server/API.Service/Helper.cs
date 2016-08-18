@@ -33,7 +33,7 @@ namespace API.Service
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType% ""{sourceFilename}""",
+                    Arguments = $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType%|%FrameCount% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -52,7 +52,8 @@ namespace API.Service
                 Framerate = float.Parse(output[1], NumberFormatInfo.InvariantInfo),
                 Width = Convert.ToInt32(output[2]),
                 Height = Convert.ToInt32(output[3]),
-                Interlaced = output[4].ToUpperInvariant() == "INTERLACED"
+                Interlaced = output[4].ToUpperInvariant() == "INTERLACED",
+                Frames = Convert.ToInt32(output[5])
             };
         }
 
