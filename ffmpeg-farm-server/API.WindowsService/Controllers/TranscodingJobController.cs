@@ -528,7 +528,7 @@ namespace API.WindowsService.Controllers
                             FfmpegJobsId = jobId,
                             Width = format.Width,
                             Height = format.Height,
-                            Bitrate = format.VideoBitrate
+                            Bitrate = part.IsAudio ? format.AudioBitrate : format.VideoBitrate
                         });
                 }
             }
