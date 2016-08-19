@@ -53,6 +53,13 @@ namespace Contract
         /// Whether to calculate PSNR values for each output file
         /// </summary>
         public bool EnablePsnr { get; set; }
+        
+        /// <summary>
+        /// Timestamp to start in source file
+        /// Remember that 40 miliseconds = 1 frame in 25 fps video
+        /// and 1 frame offset would be 00:00:00.040 in TimeSpan format
+        /// </summary>
+        public TimeSpan? Inpoint { get; set; }
 
         [JsonIgnore]
         public bool HasAlternateAudio => !string.IsNullOrWhiteSpace(AudioSourceFilename) && !string.IsNullOrWhiteSpace(VideoSourceFilename);

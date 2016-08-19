@@ -274,7 +274,7 @@ namespace API.WindowsService.Controllers
                 Needed = job.Needed,
                 State = TranscodingJobState.Queued
             };
-            StringBuilder arguments = new StringBuilder($@"-y -i ""{source}""");
+            StringBuilder arguments = new StringBuilder($@"-y -ss {job.Inpoint} -i ""{source}""");
             //for (int i = 0; i < job.Targets.Length; i++)
             foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
             {
@@ -312,15 +312,16 @@ namespace API.WindowsService.Controllers
                     }),
                 }).ToList();
 
-            for (int i = 0; mi.Duration - i*chunkDuration > 0; i++)
+            int duration = Convert.ToInt32(mi.Duration - job.Inpoint.GetValueOrDefault().TotalSeconds);
+            for (int i = 0; duration - i*chunkDuration > 0; i++)
             {
                 int value = i*chunkDuration;
-                if (value > mi.Duration)
+                if (value > duration)
                 {
-                    value = mi.Duration;
+                    value = duration;
                 }
 
-                var transcodingJob = TranscodingJob(job, value, chunkDuration, resolutions, jobCorrelationId, mi, destinationFolder, destinationFilenamePrefix, destinationFormat, i);
+                var transcodingJob = TranscodingJob(job, value, chunkDuration, resolutions, jobCorrelationId, mi, destinationFolder, destinationFilenamePrefix, destinationFormat, i, job.Inpoint.GetValueOrDefault());
 
                 transcodingJobs.Add(transcodingJob);
             }
@@ -341,7 +342,8 @@ namespace API.WindowsService.Controllers
         }
 
         private static TranscodingJob TranscodingJob(JobRequest job, int value, int chunkDuration, IList<Resolution> resolutions,
-            Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string destinationFormat, int i)
+            Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string destinationFormat, int i,
+            TimeSpan inpoint)
         {
             var argumentList = new List<string>();
             var arguments = new StringBuilder();
@@ -358,7 +360,7 @@ namespace API.WindowsService.Controllers
             if (job.EnableTwoPass)
             {
                 arguments.Append(
-                    $@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+                    $@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
                 arguments.Append($"split={resolutions.Count}");
                 for (int j = 0; j < resolutions.Count; j++)
@@ -390,7 +392,7 @@ namespace API.WindowsService.Controllers
             }
 
             arguments.Clear();
-            arguments.Append($@"-y -ss {TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+            arguments.Append($@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.VideoSourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
             arguments.Append($"split={resolutions.Count}");
             for (int j = 0; j < resolutions.Count; j++)
