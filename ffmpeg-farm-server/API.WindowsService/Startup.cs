@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Configuration;
-using System.IO;
-using System.Reflection;
 using System.Web.Http;
+using API.Repository;
+using Contract;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Owin;
+using StructureMap;
 using Swashbuckle.Application;
 
 namespace API.WindowsService
@@ -23,12 +23,12 @@ namespace API.WindowsService
                 defaults: new { id = RouteParameter.Optional }
             );
 
+            config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
+
             config.EnableSwagger(c =>
             {
                 c.SingleApiVersion("v1", "A title for your API");
                 c.DescribeAllEnumsAsStrings();
-                //c.IncludeXmlComments(GetXmlCommentsPathForControllers());
-                //c.IncludeXmlComments(GetXmlCommentsPathForContract());
             }).EnableSwaggerUi();
 
             config.Formatters.JsonFormatter.SerializerSettings = new JsonSerializerSettings
@@ -36,26 +36,24 @@ namespace API.WindowsService
                 Converters = new List<JsonConverter>
                 {
                     new StringEnumConverter()
-                },
-                TypeNameHandling = TypeNameHandling.All
+                }
             };
 
+            var container = new Container();
+            container.Configure(_ =>
+            {
+                _.For<IVideoJobRepository>()
+                    .Use<VideoJobRepository>();
+
+                _.For<IAudioJobRepository>()
+                    .Use<AudioJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+            });
+
+            config.DependencyResolver = new StructureMapDependencyResolver(container);
+
             appBuilder.UseWebApi(config);
-        }
-
-        private string GetXmlCommentsPathForContract()
-        {
-            var uriString = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase) + Path.DirectorySeparatorChar + "App_Data" + Path.DirectorySeparatorChar + "API.Contract.xml";
-            return new Uri(uriString).LocalPath;
-        }
-
-        private string GetXmlCommentsPathForControllers()
-        {
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            var commentsFileName = Assembly.GetExecutingAssembly().GetName().Name + ".XML";
-            var commentsFile = Path.Combine(baseDirectory, commentsFileName);
-
-            return commentsFile;
         }
     }
 }

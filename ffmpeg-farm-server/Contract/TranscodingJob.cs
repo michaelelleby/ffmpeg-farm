@@ -18,7 +18,7 @@ namespace Contract
         public string[] Arguments { get; set; }
 
         public ICollection<FfmpegPart> Chunks { get; set; }
-        public DateTime Needed { get; set; }
+        public DateTimeOffset Needed { get; set; }
 
         public TranscodingJob()
         {

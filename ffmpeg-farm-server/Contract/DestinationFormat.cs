@@ -17,6 +17,11 @@ namespace Contract
 
         public string Level { get; set; }
 
+        public string Codec { get; set; }
+
+        public string OutputExtension { get; set; }
+
+
         [JsonIgnore]
         public int Target { get; set; }
     }

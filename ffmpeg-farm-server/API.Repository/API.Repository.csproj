@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A015F759-529F-4B76-BD1D-94831FE886DF}</ProjectGuid>
+    <ProjectGuid>{A1B19C7B-9D5E-4C7B-8FC0-CBCCC86BD83D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>API.Service</RootNamespace>
-    <AssemblyName>API.Service</AssemblyName>
+    <RootNamespace>API.Repository</RootNamespace>
+    <AssemblyName>API.Repository</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -35,24 +35,30 @@
       <HintPath>..\packages\Dapper.1.42\lib\net45\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ContainerHelper.cs" />
-    <Compile Include="Helper.cs" />
-    <Compile Include="JobStateChanger.cs" />
+    <Compile Include="AudioJobRepository.cs" />
+    <Compile Include="JobRepository.cs" />
+    <Compile Include="VideoJobRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Service\API.Service.csproj">
+      <Project>{A015F759-529F-4B76-BD1D-94831FE886DF}</Project>
+      <Name>API.Service</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Contract\API.Contract.csproj">
-      <Project>{c5ab7e69-27b9-4071-a0d1-6a6e22df7d8c}</Project>
+      <Project>{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}</Project>
       <Name>API.Contract</Name>
     </ProjectReference>
   </ItemGroup>

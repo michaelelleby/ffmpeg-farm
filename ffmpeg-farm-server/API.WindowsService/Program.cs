@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace API.WindowsService
 {
@@ -14,16 +11,14 @@ namespace API.WindowsService
         /// </summary>
         static void Main()
         {
-            ServiceBase[] ServicesToRun;
-
-            ServicesToRun = new ServiceBase[]
+            var servicesToRun = new ServiceBase[]
             {
                 new APIService()
             };
 
             if (Environment.UserInteractive)
             {
-                APIService service = (APIService) ServicesToRun.First();
+                APIService service = (APIService) servicesToRun.First();
                 service.Start();
                 Console.WriteLine("Press any key to stop program");
                 Console.Read();
@@ -31,7 +26,7 @@ namespace API.WindowsService
             }
             else
             {
-                ServiceBase.Run(ServicesToRun);
+                ServiceBase.Run(servicesToRun);
             }
         }
     }

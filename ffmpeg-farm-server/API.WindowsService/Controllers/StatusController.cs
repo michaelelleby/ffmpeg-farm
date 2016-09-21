@@ -57,14 +57,14 @@ namespace API.WindowsService.Controllers
                 connection.Open();
 
                 JobRequest jobRequest = connection.Query<JobRequest>(
-                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash, EnablePsnr FROM FfmpegRequest WHERE JobCorrelationId = @Id",
+                    "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash, EnablePsnr FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id",
                     new {Id = job.JobCorrelationId})
                     .SingleOrDefault();
                 if (jobRequest == null)
                     throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
 
                 jobRequest.Targets = connection.Query<DestinationFormat>(
-                    "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegRequestTargets WHERE JobCorrelationId = @Id;",
+                    "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegVideoRequestTargets WHERE JobCorrelationId = @Id;",
                     new {Id = job.JobCorrelationId})
                     .ToArray();
 
@@ -80,7 +80,7 @@ namespace API.WindowsService.Controllers
                     if (jobType == typeof(TranscodingJob))
                     {
                         int updatedRows = connection.Execute(
-                            "UPDATE FfmpegJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                            "UPDATE FfmpegVideoJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
                             new
                             {
                                 Id = job.Id,
@@ -98,7 +98,7 @@ namespace API.WindowsService.Controllers
                             foreach (FfmpegPart chunk in ((TranscodingJob)job).Chunks)
                             {
                                 connection.Execute(
-                                    "UPDATE FFmpegParts SET PSNR = @Psnr WHERE Id = @Id;",
+                                    "UPDATE FfmpegVideoParts SET PSNR = @Psnr WHERE Id = @Id;",
                                     new {Id = chunk.Id, Psnr = chunk.Psnr});
                             }
                         }
@@ -156,7 +156,7 @@ namespace API.WindowsService.Controllers
                 using (var scope = new TransactionScope())
                 {
                     ICollection<TranscodingJobState> totalJobs = connection.Query(
-                            "SELECT State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                            "SELECT State FROM FfmpegVideoJobs WHERE JobCorrelationId = @Id;",
                             new { Id = jobRequest.JobCorrelationId })
                             .Select(x => (TranscodingJobState)Enum.Parse(typeof(TranscodingJobState), x.State))
                             .ToList();
@@ -209,19 +209,19 @@ namespace API.WindowsService.Controllers
                 if (jobCorrelationId != default(Guid))
                 {
                     requests =
-                        connection.Query<JobRequestDto>("SELECT * from FfmpegRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                        connection.Query<JobRequestDto>("SELECT * from FfmpegVideoRequest WHERE JobCorrelationId = @JobCorrelationId;",
                             new {JobCorrelationId = jobCorrelationId})
                             .ToList();
                     jobs =
                         connection.Query<TranscodingJobDto>(
-                            "SELECT * FROM FfmpegJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                            "SELECT * FROM FfmpegVideoJobs WHERE JobCorrelationId = @JobCorrelationId;",
                             new {JobCorrelationId = jobCorrelationId})
                             .ToList();
                 }
                 else
                 {
-                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegRequest").ToList();
-                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegJobs").ToList();
+                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegVideoRequest").ToList();
+                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegVideoJobs").ToList();
                 }
             }
 
@@ -265,7 +265,7 @@ namespace API.WindowsService.Controllers
                 $@"-dash 4000 -rap -frag-rap -profile onDemand -out {destinationFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}.mpd";
 
             var chunks = connection.Query<FfmpegPart>(
-                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename FROM FfmpegVideoParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                 new {Id = job.JobCorrelationId});
             foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
@@ -294,14 +294,14 @@ namespace API.WindowsService.Controllers
             string fileNameWithoutExtension, string fileExtension, JobRequest jobRequest)
         {
             ICollection<FfmpegPart> chunks = connection.Query<FfmpegPart>(
-                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename, Width, Height, Bitrate FROM FfmpegParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
+                "SELECT Filename, Number, Target, (SELECT VideoSourceFilename FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id) AS VideoSourceFilename, Width, Height, Bitrate FROM FfmpegVideoParts WHERE JobCorrelationId = @Id ORDER BY Target, Number;",
                 new {Id = job.JobCorrelationId})
                 .ToList();
 
             foreach (IEnumerable<FfmpegPart> chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
-                var ffmpegParts = chunk as IList<FfmpegPart> ?? chunk.ToList();
-                int targetNumber = ffmpegParts.First().Target;
+                var FfmpegVideoParts = chunk as IList<FfmpegPart> ?? chunk.ToList();
+                int targetNumber = FfmpegVideoParts.First().Target;
                 DestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
@@ -316,7 +316,7 @@ namespace API.WindowsService.Controllers
 
                 using (TextWriter tw = new StreamWriter(path))
                 {
-                    foreach (FfmpegPart part in ffmpegParts.Where(x => x.IsAudio == false))
+                    foreach (FfmpegPart part in FfmpegVideoParts.Where(x => x.IsAudio == false))
                     {
                         tw.WriteLine($"file '{part.Filename}'");
                     }
