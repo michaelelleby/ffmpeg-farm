@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Transactions;
+using API.Service;
 using Contract;
 using Dapper;
 
@@ -18,7 +21,7 @@ namespace API.Repository
             _connectionString = connectionString;
         }
 
-        public Guid Add(AudioJobRequest request, ICollection<TranscodingJob> jobs)
+        public Guid Add(AudioJobRequest request, ICollection<AudioTranscodingJob> jobs)
         {
             Guid jobCorrelationId = Guid.NewGuid();
 
@@ -50,7 +53,7 @@ namespace API.Repository
                             });
                     }
 
-                    foreach (TranscodingJob transcodingJob in jobs)
+                    foreach (AudioTranscodingJob transcodingJob in jobs)
                     {
                         connection.Execute(
                             "INSERT INTO FfmpegAudioJobs (JobCorrelationId, Arguments, Needed, SourceFilename, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @SourceFilename, @State);",
@@ -68,6 +71,47 @@ namespace API.Repository
                 scope.Complete();
 
                 return jobCorrelationId;
+            }
+        }
+
+        public AudioTranscodingJob GetNextTranscodingJob()
+        {
+            int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+            DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                using (var scope = new TransactionScope())
+                {
+                    var job = connection.Query<AudioTranscodingJob>(
+                            "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
+                            new
+                            {
+                                QueuedState = TranscodingJobState.Queued,
+                                InProgressState = TranscodingJobState.InProgress,
+                                Heartbeat = timeout
+                            })
+                        .SingleOrDefault();
+                    if (job == null)
+                    {
+                        return null;
+                    }
+
+                    var rowsUpdated =
+                        connection.Execute(
+                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
+                            new { State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id });
+                    if (rowsUpdated == 0)
+                    {
+                        throw new Exception("Failed to mark row as taken");
+                    }
+
+                    scope.Complete();
+
+                    return job;
+                }
             }
         }
     }

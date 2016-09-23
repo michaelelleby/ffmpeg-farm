@@ -5,6 +5,7 @@ namespace Contract
 {
     public interface IAudioJobRepository : IJobRepository
     {
-        Guid Add(AudioJobRequest request, ICollection<TranscodingJob> jobs);
+        Guid Add(AudioJobRequest request, ICollection<AudioTranscodingJob> jobs);
+        AudioTranscodingJob GetNextTranscodingJob();
     }
 }

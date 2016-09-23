@@ -6,11 +6,11 @@ namespace Contract
 {
     public interface IVideoJobRepository : IJobRepository
     {
-        TranscodingJob GetNextTranscodingJob();
+        VideoTranscodingJob GetNextTranscodingJob();
         MergeJob GetNextMergeJob();
         Mp4boxJob GetNextDashJob();
 
-        void SaveJobs(JobRequest job, ICollection<TranscodingJob> jobs, IDbConnection connection,
+        void SaveJobs(JobRequest job, ICollection<VideoTranscodingJob> jobs, IDbConnection connection,
             Guid jobCorrelationId, int chunkDuration);
     }
 }

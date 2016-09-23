@@ -27,5 +27,11 @@ namespace Contract
 
         public int Id { get; set; }
         public bool Failed { get; set; }
+        public TranscodingJobState State { get; set; }
+
+        /// <summary>
+        /// Source filename
+        /// </summary>
+        public string SourceFilename { get; set; }
     }
 }

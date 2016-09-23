@@ -14,7 +14,7 @@ namespace API.Repository
 {
     public class VideoJobRepository : JobRepository, IVideoJobRepository
     {
-        public TranscodingJob GetNextTranscodingJob()
+        public VideoTranscodingJob GetNextTranscodingJob()
         {
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             DateTime timeout =
@@ -54,7 +54,7 @@ namespace API.Repository
 
                     scope.Complete();
 
-                    var job = new TranscodingJob
+                    var job = new VideoTranscodingJob
                     {
                         Id = Convert.ToInt32(data.Id),
                         Arguments = data.Arguments.Split('|'),
@@ -156,7 +156,7 @@ namespace API.Repository
             }
         }
 
-        public void SaveJobs(JobRequest job, ICollection<TranscodingJob> jobs, IDbConnection connection,
+        public void SaveJobs(JobRequest job, ICollection<VideoTranscodingJob> jobs, IDbConnection connection,
             Guid jobCorrelationId, int chunkDuration)
         {
             if (jobs.Any(x => x.State == TranscodingJobState.Unknown))
@@ -193,7 +193,7 @@ namespace API.Repository
                     });
             }
 
-            foreach (TranscodingJob transcodingJob in jobs)
+            foreach (VideoTranscodingJob transcodingJob in jobs)
             {
                 connection.Execute(
                     "INSERT INTO FfmpegVideoJobs (JobCorrelationId, Arguments, Needed, VideoSourceFilename, ChunkDuration, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @VideoSourceFilename, @ChunkDuration, @State);",

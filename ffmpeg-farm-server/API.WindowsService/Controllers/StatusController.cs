@@ -77,7 +77,7 @@ namespace API.WindowsService.Controllers
                             ? TranscodingJobState.Done
                             : TranscodingJobState.InProgress;
 
-                    if (jobType == typeof(TranscodingJob))
+                    if (jobType == typeof(VideoTranscodingJob))
                     {
                         int updatedRows = connection.Execute(
                             "UPDATE FfmpegVideoJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
@@ -95,7 +95,7 @@ namespace API.WindowsService.Controllers
 
                         if (jobRequest.EnablePsnr)
                         {
-                            foreach (FfmpegPart chunk in ((TranscodingJob)job).Chunks)
+                            foreach (FfmpegPart chunk in ((VideoTranscodingJob)job).Chunks)
                             {
                                 connection.Execute(
                                     "UPDATE FfmpegVideoParts SET PSNR = @Psnr WHERE Id = @Id;",

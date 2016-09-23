@@ -1,6 +1,6 @@
 namespace Contract
 {
-    public class MergeJob : TranscodingJob
+    public class MergeJob : VideoTranscodingJob
     {
     }
 }

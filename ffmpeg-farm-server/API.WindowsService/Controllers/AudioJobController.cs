@@ -22,6 +22,25 @@ namespace API.WindowsService.Controllers
             _repository = repository;
         }
 
+        public HttpResponseMessage Get(string machineName)
+        {
+            if (string.IsNullOrWhiteSpace(machineName))
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified");
+            }
+
+            Helper.InsertClientHeartbeat(machineName);
+
+            var job = _repository.GetNextTranscodingJob();
+
+            return Request.CreateResponse(HttpStatusCode.OK, job);
+        }
+
+        /// <summary>
+        /// Create a new job
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         public HttpResponseMessage Post(AudioJobRequestModel input)
         {
             if (!ModelState.IsValid)
@@ -36,7 +55,6 @@ namespace API.WindowsService.Controllers
         /// Delete a job
         /// </summary>
         /// <param name="jobId">Job id returned when creating new job</param>
-        [HttpDelete]
         public HttpResponseMessage Delete(Guid jobId)
         {
             if (jobId == Guid.Empty)
@@ -46,6 +64,7 @@ namespace API.WindowsService.Controllers
                 ? Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found")
                 : Request.CreateResponse(HttpStatusCode.OK);
         }
+
         private Guid HandleNewAudioJob(AudioJobRequestModel request)
         {
             if (request == null)
@@ -68,10 +87,10 @@ namespace API.WindowsService.Controllers
 
             string sourceFilename = request.SourceFilename;
 
-            var jobs = new List<TranscodingJob>();
+            var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
             {
-                TranscodingJob transcodingJob = new TranscodingJob
+                AudioTranscodingJob transcodingJob = new AudioTranscodingJob
                 {
                     JobCorrelationId = jobCorrelationId,
                     SourceFilename = sourceFilename,
@@ -85,20 +104,9 @@ namespace API.WindowsService.Controllers
                     $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{target
                         .Bitrate}.{extension}";
 
-                string arguments =
+                transcodingJob.Arguments =
                     $@"-y -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
                         .Bitrate}k -vn ""{destinationFilename}""";
-
-                transcodingJob.Chunks.Add(
-                    new FfmpegPart
-                    {
-                        SourceFilename = sourceFilename,
-                        JobCorrelationId = jobCorrelationId,
-                        Filename = destinationFilename,
-                        Target = 0,
-                        Number = 0
-                    });
-                transcodingJob.Arguments = new[] {arguments};
 
                 jobs.Add(transcodingJob);
             }

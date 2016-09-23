@@ -3,15 +3,8 @@ using System.Collections.Generic;
 
 namespace Contract
 {
-    public class TranscodingJob : BaseJob
+    public class VideoTranscodingJob : BaseJob
     {
-        public TranscodingJobState State { get; set; }
-
-        /// <summary>
-        /// Source filename
-        /// </summary>
-        public string SourceFilename { get; set; }
-
         /// <summary>
         /// Commandline arguments sent to FFmpeg
         /// </summary>
@@ -20,7 +13,7 @@ namespace Contract
         public ICollection<FfmpegPart> Chunks { get; set; }
         public DateTimeOffset Needed { get; set; }
 
-        public TranscodingJob()
+        public VideoTranscodingJob()
         {
             Chunks = new List<FfmpegPart>();
         }

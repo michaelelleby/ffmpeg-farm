@@ -106,7 +106,7 @@ namespace API.WindowsService.Controllers
             if (!Directory.Exists(request.OutputFolder))
                 throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
 
-            ICollection<TranscodingJob> transcodingJobs = new List<TranscodingJob>();
+            ICollection<VideoTranscodingJob> transcodingJobs = new List<VideoTranscodingJob>();
             const int chunkDuration = 60;
 
             // Queue audio first because it cannot be chunked and thus will take longer to transcode
@@ -121,7 +121,7 @@ namespace API.WindowsService.Controllers
                 format.Target = t++;
             }
 
-            TranscodingJob audioJob = new TranscodingJob
+            VideoTranscodingJob audioJob = new VideoTranscodingJob
             {
                 JobCorrelationId = jobCorrelationId,
                 SourceFilename = source,
@@ -195,13 +195,13 @@ namespace API.WindowsService.Controllers
             }
         }
 
-        private static TranscodingJob TranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
+        private static VideoTranscodingJob TranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
             Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
             TimeSpan inpoint)
         {
             var argumentList = new List<string>();
             var arguments = new StringBuilder();
-            var transcodingJob = new TranscodingJob
+            var transcodingJob = new VideoTranscodingJob
             {
                 JobCorrelationId = jobCorrelationId,
                 SourceFilename = job.SourceFilename,
