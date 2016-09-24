@@ -82,6 +82,7 @@
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobStatusModel.cs" />
     <Compile Include="JobResultModel.cs" />
+    <Compile Include="JobType.cs" />
     <Compile Include="Mediainfo.cs" />
     <Compile Include="MergeJob.cs" />
     <Compile Include="Models\JobRequestModel.cs" />

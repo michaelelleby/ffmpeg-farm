@@ -38,7 +38,14 @@ namespace API.WindowsService.Controllers
                 null;
         }
 
-        public void PutProgressUpdate(BaseJob job)
+        /// <summary>
+        /// Update status of an active job.
+        /// 
+        /// This also serves as a heartbeat, to tell the server
+        /// that the client is still working actively on the job
+        /// </summary>
+        /// <param name="job"></param>
+        public void Put(BaseJob job)
         {
             if (job == null) throw new ArgumentNullException(nameof(job));
             if (string.IsNullOrWhiteSpace(job.MachineName))
@@ -56,146 +63,195 @@ namespace API.WindowsService.Controllers
             {
                 connection.Open();
 
-                JobRequest jobRequest = connection.Query<JobRequest>(
+                int isVideo = connection.ExecuteScalar<int>(
+                    "SELECT COUNT(*) FROM FfmpegVideoRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                    new {job.JobCorrelationId});
+                if (isVideo == 1)
+                {
+                    UpdateVideoJob(job, connection);
+                    return;
+                }
+
+                int isAudio = connection.ExecuteScalar<int>(
+                    "SELECT COUNT(*) FROM FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                    new { job.JobCorrelationId });
+                if (isAudio == 1)
+                {
+                    UpdateAudioJob(job, connection);
+                }
+            }
+        }
+
+        private static void UpdateAudioJob(BaseJob job, IDbConnection connection)
+        {
+            using (var scope = new TransactionScope())
+            {
+                TranscodingJobState jobState = job.Failed
+                    ? TranscodingJobState.Failed
+                    : job.Done
+                        ? TranscodingJobState.Done
+                        : TranscodingJobState.InProgress;
+
+                int updatedRows = connection.Execute(
+                    "UPDATE FfmpegAudioJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                    new
+                    {
+                        Id = job.Id,
+                        Progress = job.Progress.TotalSeconds,
+                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                        State = jobState,
+                        MachineName = job.MachineName,
+                    });
+
+                if (updatedRows != 1)
+                    throw new Exception($"Failed to update progress for job id {job.Id}");
+
+                scope.Complete();
+            }
+        }
+
+        private static void UpdateVideoJob(BaseJob job, IDbConnection connection)
+        {
+            JobRequest jobRequest = connection.Query<JobRequest>(
                     "SELECT JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, Needed, EnableDash, EnablePsnr FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id",
                     new {Id = job.JobCorrelationId})
-                    .SingleOrDefault();
-                if (jobRequest == null)
-                    throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
+                .SingleOrDefault();
+            if (jobRequest == null)
+                throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
 
-                jobRequest.Targets = connection.Query<DestinationFormat>(
+            jobRequest.Targets = connection.Query<DestinationFormat>(
                     "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegVideoRequestTargets WHERE JobCorrelationId = @Id;",
                     new {Id = job.JobCorrelationId})
-                    .ToArray();
+                .ToArray();
 
-                using (var scope = new TransactionScope())
+            using (var scope = new TransactionScope())
+            {
+                Type jobType = job.GetType();
+                TranscodingJobState jobState = job.Failed
+                    ? TranscodingJobState.Failed
+                    : job.Done
+                        ? TranscodingJobState.Done
+                        : TranscodingJobState.InProgress;
+
+                if (jobType == typeof(VideoTranscodingJob))
                 {
-                    Type jobType = job.GetType();
-                    TranscodingJobState jobState = job.Failed
-                        ? TranscodingJobState.Failed
-                        : job.Done
-                            ? TranscodingJobState.Done
-                            : TranscodingJobState.InProgress;
-
-                    if (jobType == typeof(VideoTranscodingJob))
-                    {
-                        int updatedRows = connection.Execute(
-                            "UPDATE FfmpegVideoJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
-                            new
-                            {
-                                Id = job.Id,
-                                Progress = job.Progress.TotalSeconds,
-                                Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState,
-                                MachineName = job.MachineName,
-                            });
-
-                        if (updatedRows != 1)
-                            throw new Exception($"Failed to update progress for job id {job.Id}");
-
-                        if (jobRequest.EnablePsnr)
+                    int updatedRows = connection.Execute(
+                        "UPDATE FfmpegVideoJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                        new
                         {
-                            foreach (FfmpegPart chunk in ((VideoTranscodingJob)job).Chunks)
-                            {
-                                connection.Execute(
-                                    "UPDATE FfmpegVideoParts SET PSNR = @Psnr WHERE Id = @Id;",
-                                    new {Id = chunk.Id, Psnr = chunk.Psnr});
-                            }
+                            Id = job.Id,
+                            Progress = job.Progress.TotalSeconds,
+                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                            State = jobState,
+                            MachineName = job.MachineName,
+                        });
+
+                    if (updatedRows != 1)
+                        throw new Exception($"Failed to update progress for job id {job.Id}");
+
+                    if (jobRequest.EnablePsnr)
+                    {
+                        foreach (FfmpegPart chunk in ((VideoTranscodingJob) job).Chunks)
+                        {
+                            connection.Execute(
+                                "UPDATE FfmpegVideoParts SET PSNR = @Psnr WHERE Id = @Id;",
+                                new {Id = chunk.Id, Psnr = chunk.Psnr});
                         }
                     }
-                    else if (jobType == typeof(MergeJob))
-                    {
-                        int updatedRows = connection.Execute(
-                            "UPDATE FfmpegMergeJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
-                            new
-                            {
-                                Id = job.Id,
-                                Progress = job.Progress.TotalSeconds,
-                                Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState,
-                                MachineName = job.MachineName
-                            });
+                }
+                else if (jobType == typeof(MergeJob))
+                {
+                    int updatedRows = connection.Execute(
+                        "UPDATE FfmpegMergeJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                        new
+                        {
+                            Id = job.Id,
+                            Progress = job.Progress.TotalSeconds,
+                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                            State = jobState,
+                            MachineName = job.MachineName
+                        });
 
-                        if (updatedRows != 1)
-                            throw new Exception($"Failed to update progress for job id {job.Id}");
+                    if (updatedRows != 1)
+                        throw new Exception($"Failed to update progress for job id {job.Id}");
 
-                        var states = connection.Query<string>(
+                    var states = connection.Query<string>(
                             "SELECT State FROM FfmpegMergeJobs WHERE JobCorrelationId = @Id;",
                             new {Id = job.JobCorrelationId})
-                            .Select(value => Enum.Parse(typeof(TranscodingJobState), value))
-                            .Cast<TranscodingJobState>();
+                        .Select(value => Enum.Parse(typeof(TranscodingJobState), value))
+                        .Cast<TranscodingJobState>();
 
-                        if (states.All(x => x == TranscodingJobState.Done))
-                        {
-                            string tempFolder = string.Concat(Path.GetDirectoryName(jobRequest.DestinationFilename),
-                                Path.DirectorySeparatorChar, jobRequest.JobCorrelationId.ToString("N"));
-
-                            Directory.Delete(tempFolder, true);
-                        }
-                    }
-                    else if (jobType == typeof(Mp4boxJob))
+                    if (states.All(x => x == TranscodingJobState.Done))
                     {
-                        int updatedRows = connection.Execute(
-                            "UPDATE Mp4boxJobs SET Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE JobCorrelationId = @Id;",
-                            new
-                            {
-                                Id = job.JobCorrelationId,
-                                Progress = job.Progress.TotalSeconds,
-                                Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                                State = jobState,
-                                MachineName = job.MachineName
-                            });
+                        string tempFolder = string.Concat(Path.GetDirectoryName(jobRequest.DestinationFilename),
+                            Path.DirectorySeparatorChar, jobRequest.JobCorrelationId.ToString("N"));
 
-                        if (updatedRows != 1)
-                            throw new Exception($"Failed to update progress for job id {job.Id}");
+                        Directory.Delete(tempFolder, true);
                     }
-                    
-                    scope.Complete();
+                }
+                else if (jobType == typeof(Mp4boxJob))
+                {
+                    int updatedRows = connection.Execute(
+                        "UPDATE Mp4boxJobs SET Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE JobCorrelationId = @Id;",
+                        new
+                        {
+                            Id = job.JobCorrelationId,
+                            Progress = job.Progress.TotalSeconds,
+                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                            State = jobState,
+                            MachineName = job.MachineName
+                        });
+
+                    if (updatedRows != 1)
+                        throw new Exception($"Failed to update progress for job id {job.Id}");
                 }
 
-                using (var scope = new TransactionScope())
+                scope.Complete();
+            }
+
+            using (var scope = new TransactionScope())
+            {
+                ICollection<TranscodingJobState> totalJobs = connection.Query(
+                        "SELECT State FROM FfmpegVideoJobs WHERE JobCorrelationId = @Id;",
+                        new {Id = jobRequest.JobCorrelationId})
+                    .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
+                    .ToList();
+
+                if (totalJobs.Any(x => x != TranscodingJobState.Done))
                 {
-                    ICollection<TranscodingJobState> totalJobs = connection.Query(
-                            "SELECT State FROM FfmpegVideoJobs WHERE JobCorrelationId = @Id;",
-                            new { Id = jobRequest.JobCorrelationId })
-                            .Select(x => (TranscodingJobState)Enum.Parse(typeof(TranscodingJobState), x.State))
-                            .ToList();
+                    // Not all transcoding jobs are finished
+                    return;
+                }
 
-                    if (totalJobs.Any(x => x != TranscodingJobState.Done))
-                    {
-                        // Not all transcoding jobs are finished
-                        return;
-                    }
-
-                    totalJobs = connection.Query(
+                totalJobs = connection.Query(
                         "SELECT State FROM FfmpegMergeJobs WHERE JobCorrelationId = @Id;",
                         new {Id = jobRequest.JobCorrelationId})
-                        .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
-                        .ToList();
+                    .Select(x => (TranscodingJobState) Enum.Parse(typeof(TranscodingJobState), x.State))
+                    .ToList();
 
-                    if (totalJobs.Any(x => x != TranscodingJobState.Done))
-                    {
-                        // Not all merge jobs are finished
-                        return;
-                    }
-
-                    string destinationFilename = jobRequest.DestinationFilename;
-                    string fileNameWithoutExtension =
-                        Path.GetFileNameWithoutExtension(destinationFilename);
-                    string fileExtension = Path.GetExtension(destinationFilename);
-                    string outputFolder = Path.GetDirectoryName(destinationFilename);
-
-                    if (totalJobs.Count == 0)
-                    {
-                        QueueMergeJob(job, connection, outputFolder, fileNameWithoutExtension, fileExtension, jobRequest);
-                    }
-                    else if (jobRequest.EnableDash)
-                    {
-                        QueueMpegDashMergeJob(job, destinationFilename, connection, jobRequest, fileNameWithoutExtension, outputFolder, fileExtension);
-                    }
-
-                    scope.Complete();
+                if (totalJobs.Any(x => x != TranscodingJobState.Done))
+                {
+                    // Not all merge jobs are finished
+                    return;
                 }
+
+                string destinationFilename = jobRequest.DestinationFilename;
+                string fileNameWithoutExtension =
+                    Path.GetFileNameWithoutExtension(destinationFilename);
+                string fileExtension = Path.GetExtension(destinationFilename);
+                string outputFolder = Path.GetDirectoryName(destinationFilename);
+
+                if (totalJobs.Count == 0)
+                {
+                    QueueMergeJob(job, connection, outputFolder, fileNameWithoutExtension, fileExtension, jobRequest);
+                }
+                else if (jobRequest.EnableDash)
+                {
+                    QueueMpegDashMergeJob(job, destinationFilename, connection, jobRequest, fileNameWithoutExtension,
+                        outputFolder, fileExtension);
+                }
+
+                scope.Complete();
             }
         }
 

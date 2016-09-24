@@ -33,5 +33,10 @@ namespace Contract
         /// Source filename
         /// </summary>
         public string SourceFilename { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public JobType Type { get;}
     }
 }

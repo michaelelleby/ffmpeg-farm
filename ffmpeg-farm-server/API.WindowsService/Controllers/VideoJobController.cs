@@ -58,7 +58,7 @@ namespace API.WindowsService.Controllers
             if (jobId == Guid.Empty)
                 throw new ArgumentException("Job id must be a valid GUID.");
 
-            return _repository.DeleteJob(jobId) == false
+            return _repository.DeleteJob(jobId, JobType.Video) == false
                 ? Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found")
                 : Request.CreateResponse(HttpStatusCode.OK);
         }

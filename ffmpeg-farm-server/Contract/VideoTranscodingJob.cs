@@ -17,5 +17,7 @@ namespace Contract
         {
             Chunks = new List<FfmpegPart>();
         }
+
+        public new JobType Type => JobType.Video;
     }
 }

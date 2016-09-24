@@ -4,6 +4,6 @@ namespace Contract
 {
     public interface IJobRepository
     {
-        bool DeleteJob(Guid jobId);
+        bool DeleteJob(Guid jobId, JobType type);
     }
 }

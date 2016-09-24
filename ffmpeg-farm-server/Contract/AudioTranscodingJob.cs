@@ -7,5 +7,7 @@ namespace Contract
         public string Arguments { get; set; }
 
         public DateTimeOffset Needed { get; set; }
+
+        public new JobType Type => JobType.Audio;
     }
 }

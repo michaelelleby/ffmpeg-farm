@@ -30,6 +30,11 @@
             Source filename
             </summary>
         </member>
+        <member name="P:Contract.BaseJob.Type">
+            <summary>
+            
+            </summary>
+        </member>
         <member name="P:Contract.JobRequest.VideoSourceFilename">
             <summary>
             Video source

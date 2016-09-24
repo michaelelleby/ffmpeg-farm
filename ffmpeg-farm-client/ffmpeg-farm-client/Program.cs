@@ -46,7 +46,7 @@ namespace ffmpeg_farm_client
 
             while (true)
             {
-                object receivedJob = null;
+                BaseJob receivedJob = null;
 
                 try
                 {
@@ -54,14 +54,35 @@ namespace ffmpeg_farm_client
                     {
                         HttpResponseMessage result =
                             client.GetAsync(string.Concat(ConfigurationManager.AppSettings["ServerUrl"],
-                                "/transcodingjob?machinename=" + Environment.MachineName)).Result;
+                                "/AudioJob?machinename=" + Environment.MachineName)).Result;
                         if (result.IsSuccessStatusCode)
                         {
                             string json = result.Content.ReadAsStringAsync().Result;
                             if (!string.IsNullOrWhiteSpace(json))
                             {
-                                receivedJob = JsonConvert.DeserializeObject<BaseJob>(json,
+                                var temp = JsonConvert.DeserializeObject<BaseJob>(json,
                                     _jsonSerializerSettings);
+                                switch (temp.Type)
+                                {
+                                    case JobType.Audio:
+                                        receivedJob = JsonConvert.DeserializeObject<AudioTranscodingJob>(json,
+                                            _jsonSerializerSettings);
+                                        break;
+                                    case JobType.Video:
+                                        receivedJob = JsonConvert.DeserializeObject<VideoTranscodingJob>(json,
+                                            _jsonSerializerSettings);
+                                        break;
+                                    case JobType.VideoMp4box:
+                                        receivedJob = JsonConvert.DeserializeObject<Mp4boxJob>(json,
+                                            _jsonSerializerSettings);
+                                        break;
+                                    case JobType.VideoMerge:
+                                        receivedJob = JsonConvert.DeserializeObject<MergeJob>(json,
+                                            _jsonSerializerSettings);
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
 
                                 _progress = new TimeSpan();
                             }
@@ -71,14 +92,20 @@ namespace ffmpeg_farm_client
                     if (receivedJob != null)
                     {
                         _output.Clear();
-                        Type jobType = receivedJob.GetType();
-                        if (jobType == typeof(TranscodingJob) || jobType == typeof(MergeJob))
+                        switch (receivedJob.Type)
                         {
-                            ExecuteTranscodingJob((TranscodingJob)receivedJob);
-                        }
-                        if (jobType == typeof(Mp4boxJob))
-                        {
-                            ExecuteMp4boxJob((Mp4boxJob)receivedJob);
+                            case JobType.Audio:
+                                ExecuteAudioTranscodingJob((AudioTranscodingJob) receivedJob);
+                                break;
+                            case JobType.Video:
+                            case JobType.VideoMerge:
+                                ExecuteVideoTranscodingJob((VideoTranscodingJob) receivedJob);
+                                break;
+                            case JobType.VideoMp4box:
+                                ExecuteMp4BoxJob((Mp4boxJob)receivedJob);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
 
                         continue;
@@ -96,7 +123,54 @@ namespace ffmpeg_farm_client
             }
         }
 
-        private static void ExecuteMp4boxJob(Mp4boxJob receivedJob)
+        private static void ExecuteAudioTranscodingJob(AudioTranscodingJob job)
+        {
+            _currentJob = job;
+            _currentJob.MachineName = Environment.MachineName;
+
+            using (_commandlineProcess = new Process())
+            {
+                _commandlineProcess.StartInfo = new ProcessStartInfo
+                {
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    FileName = ConfigurationManager.AppSettings["FfmpegPath"],
+                    Arguments = job.Arguments
+                };
+
+                Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
+
+                _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
+
+                TimeSinceLastUpdate.Elapsed += TimeSinceLastUpdate_Elapsed;
+
+                _commandlineProcess.Start();
+                _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                _commandlineProcess.BeginErrorReadLine();
+
+                TimeSinceLastUpdate.Start();
+
+                _commandlineProcess.WaitForExit();
+
+                if (FfmpegDetectedError())
+                {
+                    _currentJob.Failed = true;
+                    _currentJob.Done = false;
+                }
+                else
+                {
+                    _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                }
+
+                UpdateProgress().Wait();
+
+                TimeSinceLastUpdate.Stop();
+            }
+        }
+
+        private static void ExecuteMp4BoxJob(Mp4boxJob receivedJob)
         {
             string pathToMp4Box = ConfigurationManager.AppSettings["Mp4BoxPath"];
             if (string.IsNullOrWhiteSpace(pathToMp4Box)) throw new ArgumentNullException("Mp4BoxPath");
@@ -138,14 +212,14 @@ namespace ffmpeg_farm_client
             }
         }
 
-        private static void ExecuteTranscodingJob(TranscodingJob transcodingJob)
+        private static void ExecuteVideoTranscodingJob(VideoTranscodingJob videoTranscodingJob)
         {
-            _currentJob = transcodingJob;
+            _currentJob = videoTranscodingJob;
             _currentJob.MachineName = Environment.MachineName;
 
-            for (int i = 0; i < transcodingJob.Arguments.Length; i++)
+            for (int i = 0; i < videoTranscodingJob.Arguments.Length; i++)
             {
-                string arguments = transcodingJob.Arguments[i];
+                string arguments = videoTranscodingJob.Arguments[i];
 
                 using (_commandlineProcess = new Process())
                 {
@@ -183,14 +257,14 @@ namespace ffmpeg_farm_client
                         _currentJob.Done = _commandlineProcess.ExitCode == 0;
                     }
 
-                    bool isLastCommand = i == transcodingJob.Arguments.Length - 1;
+                    bool isLastCommand = i == videoTranscodingJob.Arguments.Length - 1;
                     if (isLastCommand && _currentJob.Done)
                     {
                         var matches = Regex.Matches(_output.ToString(), @"^\[libx264 @ \w+?\] PSNR Mean.+Avg:([\d\.]+)",
                             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
                         if (matches.Count > 0)
                         {
-                            var job = (TranscodingJob)_currentJob;
+                            var job = (VideoTranscodingJob)_currentJob;
                             var parts = job.Chunks.ToList();
 
                             for (int j = 0; j < matches.Count; j++)
