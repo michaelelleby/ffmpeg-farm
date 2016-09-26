@@ -4,6 +4,7 @@ using System.Web.Http;
 using API.Repository;
 using API.WindowsService.Filters;
 using Contract;
+using FluentValidation.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Owin;
@@ -58,6 +59,8 @@ namespace API.WindowsService
             config.DependencyResolver = new StructureMapDependencyResolver(container);
 
             config.Filters.Add(new ExceptionFilter());
+
+            FluentValidationModelValidatorProvider.Configure(config);
 
             appBuilder.UseWebApi(config);
         }

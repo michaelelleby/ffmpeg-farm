@@ -80,11 +80,6 @@ namespace API.WindowsService.Controllers
             };
             Guid jobCorrelationId = Guid.NewGuid();
 
-            Directory.CreateDirectory(request.OutputFolder);
-
-            if (!Directory.Exists(request.OutputFolder))
-                throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
-
             string sourceFilename = request.SourceFilename;
 
             var jobs = new List<AudioTranscodingJob>();
@@ -110,6 +105,10 @@ namespace API.WindowsService.Controllers
 
                 jobs.Add(transcodingJob);
             }
+
+            Directory.CreateDirectory(request.OutputFolder);
+            if (!Directory.Exists(request.OutputFolder))
+                throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
 
             return _repository.Add(jobRequest, jobs);
         }
