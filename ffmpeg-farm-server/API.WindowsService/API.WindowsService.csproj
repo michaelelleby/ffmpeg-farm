@@ -119,6 +119,7 @@
     <Compile Include="Controllers\ResumeController.cs" />
     <Compile Include="Controllers\StatusController.cs" />
     <Compile Include="Controllers\VideoJobController.cs" />
+    <Compile Include="Filters\ExceptionFilter.cs" />
     <Compile Include="Models\AudioJobRequestModel.cs" />
     <Compile Include="Models\JobRequestModel.cs" />
     <Compile Include="Models\VideoJobRequestModel.cs" />

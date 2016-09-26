@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Web.Http;
 using API.Repository;
+using API.WindowsService.Filters;
 using Contract;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -55,6 +56,8 @@ namespace API.WindowsService
             });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);
+
+            config.Filters.Add(new ExceptionFilter());
 
             appBuilder.UseWebApi(config);
         }
