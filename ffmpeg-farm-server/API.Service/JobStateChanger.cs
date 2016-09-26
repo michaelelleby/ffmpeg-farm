@@ -17,6 +17,8 @@ namespace API.Service
 
                 using (var scope = new TransactionScope())
                 {
+                    
+
                     var rowsUpdated = connection.Execute(
                         "UPDATE FfmpegVideoJobs SET State = @NewState WHERE JobCorrelationId = @Id AND State = @OldState;",
                         new { Id = jobCorrelationId, Newstate = newState, OldState = oldState});

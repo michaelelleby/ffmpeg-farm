@@ -49,6 +49,9 @@ namespace API.WindowsService
                     .Use<AudioJobRepository>()
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IJobRepository>()
+                    .Use<JobRepository>();
             });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);

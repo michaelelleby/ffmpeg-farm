@@ -7,17 +7,27 @@ namespace API.WindowsService.Controllers
 {
     public class PauseController : ApiController
     {
+        private readonly IJobRepository _jobRepository;
+
+        public PauseController(IJobRepository jobRepository)
+        {
+            if (jobRepository == null) throw new ArgumentNullException(nameof(jobRepository));
+
+            _jobRepository = jobRepository;
+        }
+        
         /// <summary>
         /// Pause a job
         /// </summary>
         /// <param name="jobId">Job id</param>
         /// <returns>Number of tasks paused or zero if none were found in the queued state for the requested job</returns>
         [HttpPatch]
-        public bool Pause(Guid jobId)
+        public void Pause(Guid jobId, JobType type)
         {
             if (jobId == Guid.Empty) throw new ArgumentException($@"Invalid Job Id specified: {jobId}");
+            if (type == JobType.Unknown) throw new ArgumentOutOfRangeException(nameof(type));
 
-            return new JobStateChanger().Change(jobId, TranscodingJobState.Paused, TranscodingJobState.Queued);
+            _jobRepository.PauseJob(jobId, type);
         }
     }
 }

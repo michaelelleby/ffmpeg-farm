@@ -42,6 +42,51 @@ namespace API.Repository
             }
         }
 
+        public void PauseJob(Guid jobId, JobType type)
+        {
+            using (var scope = new TransactionScope())
+            {
+                using (var conn = Helper.GetConnection())
+                {
+                    switch (type)
+                    {
+                        case JobType.Audio:
+                            PauseAudioJob(jobId, conn);
+                            break;
+                        case JobType.Video:
+                            PauseVideoJob(jobId, conn);
+                            break;
+                        case JobType.VideoMp4box:
+                        case JobType.VideoMerge:
+                            throw new NotImplementedException();
+                        case JobType.Unknown:
+                        default:
+                            throw new ArgumentOutOfRangeException($"No job found with id {jobId:B}");
+                    }
+
+                    scope.Complete();
+                }
+            }
+        }
+
+        private static void PauseVideoJob(Guid jobId, IDbConnection conn)
+        {
+            var rowsUpdated = conn.Execute("UPDATE FfmpegVideoJobs SET State = @PausedState WHERE JobCorrelationId = @JobId AND State = @QueuedState",
+                new { JobId = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued });
+
+            if (rowsUpdated == 0)
+                throw new InvalidOperationException($"Unable to pause any jobs for job {jobId:B} since none are in queued state and only jobs in queued state can be paused.");
+        }
+
+        private static void PauseAudioJob(Guid jobId, IDbConnection conn)
+        {
+            var rowsUpdated = conn.Execute("UPDATE FfmpegAudioJobs SET State = @PausedState WHERE JobCorrelationId = @JobId AND State = @QueuedState",
+                new {JobId = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
+
+            if (rowsUpdated == 0)
+                throw new InvalidOperationException($"Unable to pause any jobs for job {jobId:B} since none are in queued state and only jobs in queued state can be paused.");
+        }
+
         private static int DeleteAudioJob(Guid jobId, IDbConnection connection)
         {
             connection.Execute("DELETE FROM FfmpegAudioJobs WHERE JobCorrelationId = @Id;", new {Id = jobId});
