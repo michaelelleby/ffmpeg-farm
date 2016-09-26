@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
 using System.Transactions;
 using API.Service;
@@ -160,6 +162,32 @@ namespace API.Repository
             int rowsDeleted = connection.Execute("DELETE FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id;",
                 new {Id = jobId});
             return rowsDeleted;
+        }
+
+        public IEnumerable<AudioJobRequestDto> Get()
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                IDictionary<Guid, AudioJobRequestDto> requests = new ConcurrentDictionary<Guid, AudioJobRequestDto>();
+
+                var rows = connection.Query<AudioJobRequestDto>(
+                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest ORDER BY Id ASC;");
+                foreach (AudioJobRequestDto requestDto in rows)
+                {
+                    requests.Add(requestDto.JobCorrelationId, requestDto);
+                }
+
+                var jobs = connection.Query<AudioTranscodingJobDto>(
+                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs ORDER BY Id ASC;");
+
+                foreach (AudioTranscodingJobDto dto in jobs)
+                {
+                    requests[dto.JobCorrelationId].Jobs.Add(dto);
+                }
+
+                return requests.Values;
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Transactions;
 using API.Service;
 using Contract;
@@ -30,14 +32,15 @@ namespace API.Repository
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegAudioRequest (JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created) VALUES(@JobCorrelationId, @SourceFilename, @DestinationFilename, @Needed, @Created);",
+                        "INSERT INTO FfmpegAudioRequest (JobCorrelationId, SourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @SourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             request.SourceFilename,
                             request.DestinationFilename,
                             request.Needed,
-                            Created = DateTime.UtcNow,
+                            request.OutputFolder,
+                            Created = DateTime.UtcNow
                         });
 
                     foreach (AudioDestinationFormat target in request.Targets)
@@ -102,7 +105,7 @@ namespace API.Repository
                     var rowsUpdated =
                         connection.Execute(
                             "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
-                            new { State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id });
+                            new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id});
                     if (rowsUpdated == 0)
                     {
                         throw new Exception("Failed to mark row as taken");
@@ -112,6 +115,50 @@ namespace API.Repository
 
                     return job;
                 }
+            }
+        }
+
+        public IEnumerable<AudioJobRequestDto> Get()
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                IDictionary<Guid, AudioJobRequestDto> requests = new ConcurrentDictionary<Guid, AudioJobRequestDto>();
+
+                var rows = connection.Query<AudioJobRequestDto>(
+                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest ORDER BY Id ASC;");
+                foreach (AudioJobRequestDto requestDto in rows)
+                {
+                    requests.Add(requestDto.JobCorrelationId, requestDto);
+                }
+
+                var jobs = connection.Query<AudioTranscodingJobDto>(
+                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs ORDER BY Id ASC;");
+
+                foreach (AudioTranscodingJobDto dto in jobs)
+                {
+                    requests[dto.JobCorrelationId].Jobs.Add(dto);
+                }
+
+                return requests.Values;
+            }
+        }
+
+        public AudioJobRequestDto Get(Guid id)
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                var request = connection.QuerySingle<AudioJobRequestDto>(
+                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                    new {JobCorrelationId = id});
+
+                request.Jobs = connection.Query<AudioTranscodingJobDto>(
+                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                        new {JobCorrelationId = id})
+                    .ToList();
+
+                return request;
             }
         }
     }

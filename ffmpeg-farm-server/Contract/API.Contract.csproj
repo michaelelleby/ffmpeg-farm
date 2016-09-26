@@ -65,7 +65,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AudioDestinationFormat.cs" />
+    <Compile Include="AudioJobRequestDto.cs" />
     <Compile Include="AudioTranscodingJob.cs" />
+    <Compile Include="AudioTranscodingJobDto.cs" />
     <Compile Include="Codec.cs" />
     <Compile Include="AudioJobRequest.cs" />
     <Compile Include="BaseJob.cs" />

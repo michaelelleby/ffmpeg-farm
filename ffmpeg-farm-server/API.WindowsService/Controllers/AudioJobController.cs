@@ -76,6 +76,7 @@ namespace API.WindowsService.Controllers
                 Inpoint = request.Inpoint,
                 Targets = request.Targets,
                 SourceFilename = request.SourceFilename,
+                OutputFolder = request.OutputFolder,
                 DestinationFilename = request.DestinationFilenamePrefix
             };
             Guid jobCorrelationId = Guid.NewGuid();

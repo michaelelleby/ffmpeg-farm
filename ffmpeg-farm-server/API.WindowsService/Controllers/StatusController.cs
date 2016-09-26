@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Transactions;
 using System.Web.Http;
+using API.Repository;
 using API.Service;
 using Contract;
 using Contract.Dto;
@@ -17,25 +18,44 @@ namespace API.WindowsService.Controllers
 {
     public class StatusController : ApiController
     {
-        public JobStatusModel GetStatus()
+        private readonly IAudioJobRepository _repository;
+
+        public StatusController(IAudioJobRepository repository)
         {
-            return new JobStatusModel
-            {
-                Requests = GetJobStatuses()
-            };
+            if (repository == null) throw new ArgumentNullException(nameof(repository));
+
+            _repository = repository;
         }
 
-        public JobStatusModel GetStatusForSpecificJob(Guid id)
+        /// <summary>
+        /// Get status for all jobs
+        /// </summary>
+        /// <returns></returns>
+        public HttpResponseMessage Get()
+        {
+            var request = _repository.Get();
+
+            return Request.CreateResponse(HttpStatusCode.OK, GetJobStatuses());
+        }
+
+        /// <summary>
+        /// Get status for a specific job
+        /// </summary>
+        /// <param name="id">ID of job to get status of</param>
+        /// <returns></returns>
+        public HttpResponseMessage Get(Guid id)
         {
             if (id == Guid.Empty)
-                throw new HttpResponseException(new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.PreconditionFailed,
-                    ReasonPhrase = "JobCorrelationId must be a valid GUID"
-                });
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.PreconditionFailed, "ID must be a valid GUID");
+            }
 
-            return
-                null;
+            var request = _repository.Get(id);
+
+            if (request == null)
+                return Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}");
+
+            return Request.CreateResponse(HttpStatusCode.OK, request);
         }
 
         /// <summary>
@@ -265,19 +285,19 @@ namespace API.WindowsService.Controllers
                 if (jobCorrelationId != default(Guid))
                 {
                     requests =
-                        connection.Query<JobRequestDto>("SELECT * from FfmpegVideoRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                        connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
                             new {JobCorrelationId = jobCorrelationId})
                             .ToList();
                     jobs =
                         connection.Query<TranscodingJobDto>(
-                            "SELECT * FROM FfmpegVideoJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                            "SELECT * FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
                             new {JobCorrelationId = jobCorrelationId})
                             .ToList();
                 }
                 else
                 {
-                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegVideoRequest").ToList();
-                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegVideoJobs").ToList();
+                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest").ToList();
+                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegAudioJobs").ToList();
                 }
             }
 
