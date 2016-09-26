@@ -7,7 +7,6 @@ namespace API.WindowsService
 {
     public partial class APIService : ServiceBase
     {
-        public string baseAddress = "http://localhost:9000/";
         private IDisposable _server = null;
 
         protected override void OnStart(string[] args)
@@ -23,7 +22,8 @@ namespace API.WindowsService
 
         public void Start()
         {
-            _server = WebApp.Start<Startup>(url: baseAddress);
+            var url = "http://+:9000/";
+            _server = WebApp.Start<Startup>(url);
         }
 
         public void Stop()

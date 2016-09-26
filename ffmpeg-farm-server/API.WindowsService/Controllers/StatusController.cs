@@ -82,7 +82,7 @@ namespace API.WindowsService.Controllers
             }
         }
 
-        private static void UpdateAudioJob(BaseJob job, IDbConnection connection)
+        private static void UpdateAudioJob(BaseJob job, IDbConnection  connection)
         {
             using (var scope = new TransactionScope())
             {
@@ -100,7 +100,7 @@ namespace API.WindowsService.Controllers
                         Progress = job.Progress.TotalSeconds,
                         Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                         State = jobState,
-                        MachineName = job.MachineName,
+                        MachineName = job.MachineName
                     });
 
                 if (updatedRows != 1)
