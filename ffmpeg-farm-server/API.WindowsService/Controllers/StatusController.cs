@@ -35,7 +35,8 @@ namespace API.WindowsService.Controllers
         {
             var request = _repository.Get();
 
-            return Request.CreateResponse(HttpStatusCode.OK, GetJobStatuses());
+            IEnumerable<JobRequestModel> jobStatuses = GetJobStatuses();
+            return Request.CreateResponse(HttpStatusCode.OK, jobStatuses);
         }
 
         /// <summary>
@@ -50,12 +51,27 @@ namespace API.WindowsService.Controllers
                 return Request.CreateErrorResponse(HttpStatusCode.PreconditionFailed, "ID must be a valid GUID");
             }
 
-            var request = _repository.Get(id);
+            AudioJobRequestDto request = _repository.Get(id);
+            JobRequestModel model = new JobRequestModel
+            {
+                JobCorrelationId = request.JobCorrelationId,
+                SourceFilename = request.SourceFilename,
+                DestinationFilenamePrefix = request.DestinationFilename,
+                Needed = request.Needed.GetValueOrDefault(),
+                Created = request.Created,
+                Jobs = request.Jobs.Select(j => new TranscodingJobModel
+                {
+                    Heartbeat = j.Heartbeat.GetValueOrDefault(),
+                    HeartbeatMachine = j.HeartbeatMachineName,
+                    State = j.State
+                })
+            };
+
 
             if (request == null)
                 return Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}");
 
-            return Request.CreateResponse(HttpStatusCode.OK, request);
+            return Request.CreateResponse(HttpStatusCode.OK, model);
         }
 
         /// <summary>
@@ -304,12 +320,10 @@ namespace API.WindowsService.Controllers
             IEnumerable<JobRequestModel> requestModels = requests.Select(m => new JobRequestModel
             {
                 JobCorrelationId = m.JobCorrelationId,
-                VideoSourceFilename = m.VideoSourceFilename,
-                AudioSourceFilename = m.AudioSourceFilename,
-                DestinationFilename = m.DestinationFilename,
+                SourceFilename = m.AudioSourceFilename,
+                DestinationFilenamePrefix = m.DestinationFilename,
                 Needed = m.Needed,
                 Created = m.Created,
-                MpegDash = m.EnableDash,
                 Jobs = jobs.Where(x => x.JobCorrelationId == m.JobCorrelationId).Select(j => new TranscodingJobModel
                 {
                     Progress = j.Progress,
