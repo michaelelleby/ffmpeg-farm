@@ -1,0 +1,61 @@
+<Project ToolsVersion="4.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <TPath>$(MSBuildProjectDirectory)\MSBuild.ExtensionPack.tasks</TPath>
+        <User>$(ServiceUsername)</User>
+        <Password>$(ServicePassword)</Password>
+		<ServiceName>JobManager</ServiceName>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\src\JobManager.WindowsService\app.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\src\JobManager.WindowsService\app.$(Environment).config</TransformFilePath>
+    </PropertyGroup>
+	<Import Project="$(TPath)"/>
+	<PropertyGroup>
+		<SlowCheetahTargets Condition=" '$(SlowCheetahTargets)'=='' ">$(MSBuildProjectDirectory)\src\packages\SlowCheetah.2.5.15\tools\SlowCheetah.Transforms.targets</SlowCheetahTargets>
+	</PropertyGroup>
+	<Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" />
+
+	<ItemGroup>
+		<TargetDeployPaths Include="$(DeployPath.Split(`;`))"/>
+	</ItemGroup>
+	
+	<Target Name="Default">
+		<!-- Check whether a service exists (this should return true in most cases) -->
+        <MSBuild.ExtensionPack.Computer.WindowsService TaskAction="CheckExists" ServiceName="$(ServiceName)">
+            <Output TaskParameter="Exists" PropertyName="DoesExist"/>
+		</MSBuild.ExtensionPack.Computer.WindowsService>
+		
+		<!-- Stop a service on a Remote Machine -->
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)" />
+		
+		<!-- Deploy files to destination -->
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
+			<Output TaskParameter="ExitCode" PropertyName="Exit" />
+            <Output TaskParameter="ReturnCode" PropertyName="Return" />
+		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\Certs" Destination="%(TargetDeployPaths.Identity)\Certs" Files="*.*" Options="/MIR">
+			<Output TaskParameter="ExitCode" PropertyName="Exit" />
+            <Output TaskParameter="ReturnCode" PropertyName="Return" />
+		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\SshKeys" Destination="%(TargetDeployPaths.Identity)\SshKeys" Files="*.*" Options="/MIR">
+			<Output TaskParameter="ExitCode" PropertyName="Exit" />
+            <Output TaskParameter="ReturnCode" PropertyName="Return" />
+		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
+		
+		<!-- Transform config file -->
+		<TransformXml
+			Condition="Exists('$(TransformFilePath)')"
+			Source="$(SourceConfigPath)"
+			Transform="$(TransformFilePath)"
+			Destination="%(TargetDeployPaths.Identity)\DR.OnDemand.JobManager.WindowsService.exe.config" />
+		
+		<!-- Install a service on a Remote Machine -->
+		<MSBuild.ExtensionPack.Computer.WindowsService
+			Condition="!$(DoesExist) == 'true' and $(InstallService) == 'true'"
+			TaskAction="Install"
+			ServiceName="$(ServiceName)"
+			User="$(User)"
+			Password="$(password)"
+			ServicePath="%(TargetDeployPaths.Identity)\DR.OnDemand.JobManager.WindowsService.exe" />
+        <!-- Start a service on a Remote Machine -->
+        <MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)" />
+	</Target>
+ </Project>
