@@ -5,7 +5,7 @@
 		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools\</SlowCheetahToolsPath>
         <User>$(ServiceUsername)</User>
         <Password>$(ServicePassword)</Password>
-		<ServiceName>JobManager</ServiceName>
+		<ServiceName>FFmpegServerAPI</ServiceName>
 		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\app.config</SourceConfigPath>
 		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\app.$(Environment).config</TransformFilePath>
     </PropertyGroup>
