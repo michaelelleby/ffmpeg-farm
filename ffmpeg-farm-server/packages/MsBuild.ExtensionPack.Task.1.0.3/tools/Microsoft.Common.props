@@ -1,0 +1,41 @@
+<!--
+***********************************************************************************************
+Microsoft.Common.props
+
+WARNING:  DO NOT MODIFY this file unless you are knowledgeable about MSBuild and have
+          created a backup copy.  Incorrect changes to this file will make it
+          impossible to load or build your projects from the command-line or the IDE.
+
+Copyright (C) Microsoft Corporation. All rights reserved.
+***********************************************************************************************
+-->
+
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+      <CustomBeforeMicrosoftCommonProps Condition="'$(CustomBeforeMicrosoftCommonProps)'==''">$(MSBuildExtensionsPath)\v$(MSBuildToolsVersion)\Custom.Before.$(MSBuildThisFile)</CustomBeforeMicrosoftCommonProps>
+      <CustomAfterMicrosoftCommonProps Condition="'$(CustomAfterMicrosoftCommonProps)'==''">$(MSBuildExtensionsPath)\v$(MSBuildToolsVersion)\Custom.After.$(MSBuildThisFile)</CustomAfterMicrosoftCommonProps>
+    </PropertyGroup>
+
+    <Import Project="$(CustomBeforeMicrosoftCommonProps)" Condition="'$(CustomBeforeMicrosoftCommonProps)' != '' and Exists('$(CustomBeforeMicrosoftCommonProps)')" />
+
+    <!-- This is used to determine whether Microsoft.COmmon.targets needs to import 
+         Microsoft.Common.props itself, or whether it has been imported previously,
+         e.g. by the project itself. -->
+    <PropertyGroup>
+        <MicrosoftCommonPropsHasBeenImported>true</MicrosoftCommonPropsHasBeenImported>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Configuration Condition=" '$(Configuration)' == '' and '$(DefaultProjectConfiguration)' != '' ">$(DefaultProjectConfiguration)</Configuration>
+        <Platform Condition=" '$(Platform)' == '' and '$(DefaultProjectPlatform)' != '' ">$(DefaultProjectPlatform)</Platform>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <WMSJSProject>WJProject</WMSJSProject>
+        <WMSJSProjectDirectory>JavaScript</WMSJSProjectDirectory>
+    </PropertyGroup>
+
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.VisualStudioVersion.v*.Common.props" Condition="'$(VisualStudioVersion)' == ''" />
+
+    <Import Project="$(CustomAfterMicrosoftCommonProps)" Condition="'$(CustomAfterMicrosoftCommonProps)' != '' and Exists('$(CustomAfterMicrosoftCommonProps)')" />
+</Project>

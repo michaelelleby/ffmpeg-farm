@@ -4,8 +4,8 @@
         <User>$(ServiceUsername)</User>
         <Password>$(ServicePassword)</Password>
 		<ServiceName>JobManager</ServiceName>
-		<SourceConfigPath>$(MSBuildProjectDirectory)\src\JobManager.WindowsService\app.config</SourceConfigPath>
-		<TransformFilePath>$(MSBuildProjectDirectory)\src\JobManager.WindowsService\app.$(Environment).config</TransformFilePath>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.$(Environment).config</TransformFilePath>
     </PropertyGroup>
 	<Import Project="$(TPath)"/>
 	<PropertyGroup>
@@ -27,15 +27,7 @@
 		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)" />
 		
 		<!-- Deploy files to destination -->
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
-			<Output TaskParameter="ExitCode" PropertyName="Exit" />
-            <Output TaskParameter="ReturnCode" PropertyName="Return" />
-		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\Certs" Destination="%(TargetDeployPaths.Identity)\Certs" Files="*.*" Options="/MIR">
-			<Output TaskParameter="ExitCode" PropertyName="Exit" />
-            <Output TaskParameter="ReturnCode" PropertyName="Return" />
-		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\JobManager.WindowsService\SshKeys" Destination="%(TargetDeployPaths.Identity)\SshKeys" Files="*.*" Options="/MIR">
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\API.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
 			<Output TaskParameter="ExitCode" PropertyName="Exit" />
             <Output TaskParameter="ReturnCode" PropertyName="Return" />
 		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
@@ -45,7 +37,7 @@
 			Condition="Exists('$(TransformFilePath)')"
 			Source="$(SourceConfigPath)"
 			Transform="$(TransformFilePath)"
-			Destination="%(TargetDeployPaths.Identity)\DR.OnDemand.JobManager.WindowsService.exe.config" />
+			Destination="%(TargetDeployPaths.Identity)\API.WindowsService.exe.config" />
 		
 		<!-- Install a service on a Remote Machine -->
 		<MSBuild.ExtensionPack.Computer.WindowsService
@@ -54,7 +46,7 @@
 			ServiceName="$(ServiceName)"
 			User="$(User)"
 			Password="$(password)"
-			ServicePath="%(TargetDeployPaths.Identity)\DR.OnDemand.JobManager.WindowsService.exe" />
+			ServicePath="%(TargetDeployPaths.Identity)\API.WindowsService.exe" />
         <!-- Start a service on a Remote Machine -->
         <MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)" />
 	</Target>
