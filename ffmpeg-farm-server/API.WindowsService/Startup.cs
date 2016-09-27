@@ -31,7 +31,10 @@ namespace API.WindowsService
             {
                 c.SingleApiVersion("v1", "A title for your API");
                 c.DescribeAllEnumsAsStrings();
-            }).EnableSwaggerUi();
+            }).EnableSwaggerUi(c =>
+            {
+                c.DisableValidator();
+            });
 
             config.Formatters.JsonFormatter.SerializerSettings = new JsonSerializerSettings
             {
