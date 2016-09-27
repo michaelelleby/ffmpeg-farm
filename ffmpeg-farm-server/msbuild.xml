@@ -1,15 +1,16 @@
 <Project ToolsVersion="4.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <TPath>$(MSBuildProjectDirectory)\MSBuild.ExtensionPack.tasks</TPath>
+        <ExtensionPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\MSBuild.ExtensionPack.tasks</ExtensionPath>
+		<ExtensionTasksPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\</ExtensionTasksPath>
         <User>$(ServiceUsername)</User>
         <Password>$(ServicePassword)</Password>
 		<ServiceName>JobManager</ServiceName>
 		<SourceConfigPath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.config</SourceConfigPath>
 		<TransformFilePath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.$(Environment).config</TransformFilePath>
     </PropertyGroup>
-	<Import Project="$(TPath)"/>
+	<Import Project="$(ExtensionPath)"/>
 	<PropertyGroup>
-		<SlowCheetahTargets Condition=" '$(SlowCheetahTargets)'=='' ">$(MSBuildProjectDirectory)\src\packages\SlowCheetah.2.5.15\tools\SlowCheetah.Transforms.targets</SlowCheetahTargets>
+		<SlowCheetahTargets Condition=" '$(SlowCheetahTargets)'=='' ">$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\content\Properties\SlowCheetah\SlowCheetah.Transforms.targets</SlowCheetahTargets>
 	</PropertyGroup>
 	<Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" />
 
