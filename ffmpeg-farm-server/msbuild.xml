@@ -5,8 +5,8 @@
         <User>$(ServiceUsername)</User>
         <Password>$(ServicePassword)</Password>
 		<ServiceName>JobManager</ServiceName>
-		<SourceConfigPath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.config</SourceConfigPath>
-		<TransformFilePath>$(MSBuildProjectDirectory)\src\API.WindowsService\app.$(Environment).config</TransformFilePath>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\app.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\app.$(Environment).config</TransformFilePath>
     </PropertyGroup>
 	<Import Project="$(ExtensionPath)"/>
 	<PropertyGroup>
@@ -28,7 +28,7 @@
 		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)" />
 		
 		<!-- Deploy files to destination -->
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\API.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\API.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
 			<Output TaskParameter="ExitCode" PropertyName="Exit" />
             <Output TaskParameter="ReturnCode" PropertyName="Return" />
 		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
