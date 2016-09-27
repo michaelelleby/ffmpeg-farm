@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ExtensionPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\MSBuild.ExtensionPack.tasks</ExtensionPath>
 		<ExtensionTasksPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\</ExtensionTasksPath>
-		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools</SlowCheetahToolsPath>
+		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools\</SlowCheetahToolsPath>
         <User>$(ServiceUsername)</User>
         <Password>$(ServicePassword)</Password>
 		<ServiceName>JobManager</ServiceName>
