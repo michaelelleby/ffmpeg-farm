@@ -60,6 +60,7 @@ CREATE TABLE [dbo].[FfmpegAudioRequest](
 	[DestinationFilename] [nvarchar](max) NOT NULL,
 	[Needed] [datetimeoffset](7) NULL,
 	[Created] [datetimeoffset](7) NOT NULL,
+	[OutputFolder] [varchar](max) NOT NULL
  CONSTRAINT [PK_FfmpegAudioRequest] PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
