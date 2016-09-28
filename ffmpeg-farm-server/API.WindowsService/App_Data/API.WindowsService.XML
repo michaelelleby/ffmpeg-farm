@@ -4,13 +4,6 @@
         <name>API.WindowsService</name>
     </assembly>
     <members>
-        <member name="M:API.WindowsService.Controllers.AudioJobController.Get(System.String)">
-            <summary>
-            
-            </summary>
-            <param name="machineName"></param>
-            <returns><see cref="T:Contract.AudioTranscodingJob" aref="API.Contract"/></returns>
-        </member>
         <member name="M:API.WindowsService.Controllers.AudioJobController.Post(API.WindowsService.Models.AudioJobRequestModel)">
             <summary>
             Create a new job
@@ -51,9 +44,9 @@
             <param name="id">ID of job to get status of</param>
             <returns></returns>
         </member>
-        <member name="M:API.WindowsService.Controllers.StatusController.Put(Contract.BaseJob)">
+        <member name="M:API.WindowsService.Controllers.StatusController.UpdateProgress(Contract.BaseJob)">
             <summary>
-            Update status of an active job.
+            Update progress of an active job.
             
             This also serves as a heartbeat, to tell the server
             that the client is still working actively on the job

@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Web.Http;
 using API.Repository;
+using API.Service;
 using API.WindowsService.Filters;
 using Contract;
 using FluentValidation.WebApi;
@@ -57,6 +58,9 @@ namespace API.WindowsService
 
                 _.For<IJobRepository>()
                     .Use<JobRepository>();
+
+                _.For<IHelper>()
+                    .Use<Helper>();
             });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);

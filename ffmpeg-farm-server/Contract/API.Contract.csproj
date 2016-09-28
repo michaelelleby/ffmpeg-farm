@@ -99,6 +99,7 @@
     <Compile Include="FfmpegPart.cs" />
     <Compile Include="H264Profile.cs" />
     <Compile Include="IAudioJobRepository.cs" />
+    <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
     <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />

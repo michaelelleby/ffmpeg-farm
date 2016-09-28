@@ -11,14 +11,14 @@ using Dapper;
 
 namespace API.Service
 {
-    public class Helper
+    public class Helper : IHelper
     {
-        public static IDbConnection GetConnection()
+        public IDbConnection GetConnection()
         {
             return new SqlConnection(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
         }
 
-        public static Mediainfo GetMediainfo(string sourceFilename)
+        public Mediainfo GetMediainfo(string sourceFilename)
         {
             if (string.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
             if (!File.Exists(sourceFilename))
@@ -57,7 +57,7 @@ namespace API.Service
             };
         }
 
-        public static int GetDuration(string sourceFilename)
+        public int GetDuration(string sourceFilename)
         {
             if (string.IsNullOrWhiteSpace(sourceFilename)) throw new ArgumentNullException("sourceFilename");
             if (!File.Exists(sourceFilename))
@@ -86,7 +86,7 @@ namespace API.Service
             return Convert.ToInt32(mediaInfoProcess.StandardOutput.ReadToEnd())/1000;
         }
 
-        public static void InsertClientHeartbeat(string machineName)
+        public void InsertClientHeartbeat(string machineName)
         {
             using (var connection = GetConnection())
             {
