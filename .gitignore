@@ -249,3 +249,5 @@ _Pvt_Extensions
 *.sln.iml
 
 *.sqlite
+#ignore nswag tools
+**/NSwag*

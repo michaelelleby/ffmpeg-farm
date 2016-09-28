@@ -1,0 +1,15 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="FFmpegFarm.WindowsService.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
+      <Value Profile="(Default)">http://od01udv:9000</Value>
+    </Setting>
+    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\\Projects\\ffmpeg-20160927-92de2c2-win64-static\\bin\\ffmpeg.exe</Value>
+    </Setting>
+    <Setting Name="Threads" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
