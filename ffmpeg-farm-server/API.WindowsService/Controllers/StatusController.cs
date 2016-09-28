@@ -31,12 +31,25 @@ namespace API.WindowsService.Controllers
         /// Get status for all jobs
         /// </summary>
         /// <returns></returns>
-        public HttpResponseMessage Get()
+        public IEnumerable<JobRequestModel> Get()
         {
-            var request = _repository.Get();
+            IEnumerable<AudioJobRequestDto> jobStatuses = _repository.Get();
+            IEnumerable<JobRequestModel> requestModels = jobStatuses.Select(m => new JobRequestModel
+            {
+                JobCorrelationId = m.JobCorrelationId,
+                SourceFilename = m.SourceFilename,
+                DestinationFilenamePrefix = m.DestinationFilename,
+                Needed = m.Needed.GetValueOrDefault(),
+                Created = m.Created,
+                Jobs = m.Jobs.Select(j => new TranscodingJobModel
+                {
+                    Heartbeat = j.Heartbeat.GetValueOrDefault(),
+                    HeartbeatMachine = j.HeartbeatMachineName,
+                    State = j.State,
+                })
+            });
 
-            IEnumerable<JobRequestModel> jobStatuses = GetJobStatuses();
-            return Request.CreateResponse(HttpStatusCode.OK, jobStatuses);
+            return requestModels;
         }
 
         /// <summary>
@@ -44,14 +57,15 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
         /// <returns></returns>
-        public HttpResponseMessage Get(Guid id)
+        public JobRequestModel Get(Guid id)
         {
             if (id == Guid.Empty)
-            {
-                return Request.CreateErrorResponse(HttpStatusCode.PreconditionFailed, "ID must be a valid GUID");
-            }
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.PreconditionFailed, "ID must be a valid GUID"));
 
             AudioJobRequestDto request = _repository.Get(id);
+            if (request == null)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}"));
+
             JobRequestModel model = new JobRequestModel
             {
                 JobCorrelationId = request.JobCorrelationId,
@@ -59,6 +73,7 @@ namespace API.WindowsService.Controllers
                 DestinationFilenamePrefix = request.DestinationFilename,
                 Needed = request.Needed.GetValueOrDefault(),
                 Created = request.Created,
+                OutputFolder = request.OutputFolder,
                 Jobs = request.Jobs.Select(j => new TranscodingJobModel
                 {
                     Heartbeat = j.Heartbeat.GetValueOrDefault(),
@@ -68,10 +83,7 @@ namespace API.WindowsService.Controllers
             };
 
 
-            if (request == null)
-                return Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}");
-
-            return Request.CreateResponse(HttpStatusCode.OK, model);
+            return model;
         }
 
         /// <summary>
@@ -85,13 +97,7 @@ namespace API.WindowsService.Controllers
         {
             if (job == null) throw new ArgumentNullException(nameof(job));
             if (string.IsNullOrWhiteSpace(job.MachineName))
-            {
-                throw new HttpResponseException(new HttpResponseMessage
-                {
-                    ReasonPhrase = "Machinename must be specified",
-                    StatusCode = HttpStatusCode.BadRequest
-                });
-            }
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
 
             Helper.InsertClientHeartbeat(job.MachineName);
 
@@ -289,52 +295,6 @@ namespace API.WindowsService.Controllers
 
                 scope.Complete();
             }
-        }
-
-        private static IEnumerable<JobRequestModel> GetJobStatuses(Guid jobCorrelationId = default(Guid))
-        {
-            IEnumerable<TranscodingJobDto> jobs;
-            IEnumerable<JobRequestDto> requests;
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-                if (jobCorrelationId != default(Guid))
-                {
-                    requests =
-                        connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
-                            new {JobCorrelationId = jobCorrelationId})
-                            .ToList();
-                    jobs =
-                        connection.Query<TranscodingJobDto>(
-                            "SELECT * FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
-                            new {JobCorrelationId = jobCorrelationId})
-                            .ToList();
-                }
-                else
-                {
-                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest").ToList();
-                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegAudioJobs").ToList();
-                }
-            }
-
-            IEnumerable<JobRequestModel> requestModels = requests.Select(m => new JobRequestModel
-            {
-                JobCorrelationId = m.JobCorrelationId,
-                SourceFilename = m.AudioSourceFilename,
-                DestinationFilenamePrefix = m.DestinationFilename,
-                Needed = m.Needed,
-                Created = m.Created,
-                Jobs = jobs.Where(x => x.JobCorrelationId == m.JobCorrelationId).Select(j => new TranscodingJobModel
-                {
-                    Progress = j.Progress,
-                    Heartbeat = j.Heartbeat,
-                    HeartbeatMachine = j.HeartBeatMachineName,
-                    State = j.State,
-                    ChunkDuration = j.ChunkDuration
-                })
-            });
-
-            return requestModels;
         }
 
         private static void QueueMpegDashMergeJob(BaseJob job, string destinationFilename, IDbConnection connection,

@@ -8,6 +8,7 @@ using System.Web.Http;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;
+using Swashbuckle.Swagger;
 
 namespace API.WindowsService.Controllers
 {
@@ -22,18 +23,19 @@ namespace API.WindowsService.Controllers
             _repository = repository;
         }
 
-        public HttpResponseMessage Get(string machineName)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="machineName"></param>
+        /// <returns><see cref="AudioTranscodingJob" aref="API.Contract"/></returns>
+        public AudioTranscodingJob Get(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName))
-            {
-                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified");
-            }
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
 
             Helper.InsertClientHeartbeat(machineName);
 
-            var job = _repository.GetNextTranscodingJob();
-
-            return Request.CreateResponse(HttpStatusCode.OK, job);
+            return _repository.GetNextTranscodingJob();
         }
 
         /// <summary>
@@ -41,28 +43,28 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public HttpResponseMessage Post(AudioJobRequestModel input)
+        public Guid Post(AudioJobRequestModel input)
         {
             if (!ModelState.IsValid)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState);
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            return Request.CreateResponse(HttpStatusCode.Created, HandleNewAudioJob(input));
+            return HandleNewAudioJob(input);
         }
 
         /// <summary>
         /// Delete a job
         /// </summary>
         /// <param name="jobId">Job id returned when creating new job</param>
-        public HttpResponseMessage Delete(Guid jobId)
+        public void Delete(Guid jobId)
         {
             if (jobId == Guid.Empty)
                 throw new ArgumentException("Job id must be a valid GUID.");
 
-            return _repository.DeleteJob(jobId, JobType.Audio) == false
-                ? Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found")
-                : Request.CreateResponse(HttpStatusCode.OK);
+            bool deleteJob = _repository.DeleteJob(jobId, JobType.Audio);
+            if (deleteJob == false)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found"));
         }
 
         private Guid HandleNewAudioJob(AudioJobRequestModel request)

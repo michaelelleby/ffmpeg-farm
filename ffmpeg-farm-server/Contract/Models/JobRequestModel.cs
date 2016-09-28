@@ -31,13 +31,10 @@ namespace Contract.Models
         }
 
         public DateTimeOffset Created { get; set; }
-
         public DateTimeOffset Needed { get; set; }
-
-        public string DestinationFilenamePrefix { get; set; }
-
         public string SourceFilename { get; set; }
-
+        public string DestinationFilenamePrefix { get; set; }
+        public string OutputFolder { get; set; }
         public IEnumerable<TranscodingJobModel> Jobs { get; set; }
     }
 }

@@ -2,9 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Transactions;
 using API.Service;
 using Contract;
+using Contract.Dto;
 using Dapper;
 
 namespace API.Repository
@@ -188,6 +190,35 @@ namespace API.Repository
 
                 return requests.Values;
             }
+        }
+
+        public IEnumerable<JobRequestDto> GetJobStatuses(Guid jobCorrelationId = default(Guid))
+        {
+            IEnumerable<TranscodingJobDto> jobs;
+            IEnumerable<JobRequestDto> requests;
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                if (jobCorrelationId != default(Guid))
+                {
+                    requests =
+                        connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
+                                new {JobCorrelationId = jobCorrelationId})
+                            .ToList();
+                    jobs =
+                        connection.Query<TranscodingJobDto>(
+                                "SELECT * FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                                new {JobCorrelationId = jobCorrelationId})
+                            .ToList();
+                }
+                else
+                {
+                    requests = connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest").ToList();
+                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegAudioJobs").ToList();
+                }
+            }
+
+            return requests;
         }
     }
 }

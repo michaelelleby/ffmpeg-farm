@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Transactions;
 using API.Service;
 using Contract;
+using Contract.Dto;
+using Contract.Models;
 using Dapper;
 
 namespace API.Repository
@@ -18,7 +20,7 @@ namespace API.Repository
 
         public AudioJobRepository(string connectionString)
         {
-            if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
+            if (String.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
 
             _connectionString = connectionString;
         }
@@ -123,6 +125,9 @@ namespace API.Repository
             using (var connection = Helper.GetConnection())
             {
                 connection.Open();
+
+                // The dictionary is used for performance reasons, since we can add the specific jobs to each request
+                // by using the job id as kesy
                 IDictionary<Guid, AudioJobRequestDto> requests = new ConcurrentDictionary<Guid, AudioJobRequestDto>();
 
                 var rows = connection.Query<AudioJobRequestDto>(

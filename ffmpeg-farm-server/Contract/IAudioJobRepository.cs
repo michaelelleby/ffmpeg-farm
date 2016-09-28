@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Contract.Dto;
 
 namespace Contract
 {
