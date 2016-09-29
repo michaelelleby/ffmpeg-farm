@@ -18,7 +18,7 @@ namespace FFmpegFarm.Worker
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
         private readonly StringBuilder _output;
-        private Client.AudioTranscodingJob _currentJob;
+        private AudioTranscodingJob _currentJob;
         private static readonly int TimeOut = (int) TimeSpan.FromSeconds(20).TotalMilliseconds;
         private readonly ILogger _logger;
 
@@ -107,7 +107,7 @@ namespace FFmpegFarm.Worker
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
                 }
                 var statusClient = new StatusClient(_apiUri);
-                statusClient.PutAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
+                statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
                 _logger.Debug($"Job done {job.Id}");
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
             }
@@ -145,7 +145,7 @@ namespace FFmpegFarm.Worker
 
             _currentJob.Progress = _progress.ToString();
             var statusClient = new StatusClient(_apiUri);
-            statusClient.PutAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
+            statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
             _logger.Debug(_progress.ToString());
 
             _timeSinceLastUpdate.Change(0, TimeOut); //start

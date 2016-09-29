@@ -93,6 +93,7 @@ namespace FFmpegFarm.Worker.Client
             throw new SwaggerException("The HTTP status code of the response was not expected (" + (int)response_.StatusCode + ").", status_, responseData_, null);
         }
     
+        /// <summary>Create a new job</summary>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task<string> PostAsync(AudioJobRequestModel input)
@@ -100,6 +101,7 @@ namespace FFmpegFarm.Worker.Client
             return PostAsync(input, CancellationToken.None);
         }
     
+        /// <summary>Create a new job</summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -140,6 +142,8 @@ namespace FFmpegFarm.Worker.Client
             throw new SwaggerException("The HTTP status code of the response was not expected (" + (int)response_.StatusCode + ").", status_, responseData_, null);
         }
     
+        /// <summary>Delete a job</summary>
+        /// <param name="jobId">Job id returned when creating new job</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task DeleteAsync(string jobId)
@@ -147,6 +151,8 @@ namespace FFmpegFarm.Worker.Client
             return DeleteAsync(jobId, CancellationToken.None);
         }
     
+        /// <summary>Delete a job</summary>
+        /// <param name="jobId">Job id returned when creating new job</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -260,6 +266,8 @@ namespace FFmpegFarm.Worker.Client
     
         public string BaseUrl { get; set; }
     
+        /// <summary>Pause a job</summary>
+        /// <param name="jobId">Job id</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task PauseAsync(string jobId, Type type)
@@ -267,6 +275,8 @@ namespace FFmpegFarm.Worker.Client
             return PauseAsync(jobId, type, CancellationToken.None);
         }
     
+        /// <summary>Pause a job</summary>
+        /// <param name="jobId">Job id</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -325,6 +335,8 @@ namespace FFmpegFarm.Worker.Client
     
         public string BaseUrl { get; set; }
     
+        /// <summary>Resume a job</summary>
+        /// <param name="jobId">Job id</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task ResumeAsync(string jobId, Type1 type)
@@ -332,6 +344,8 @@ namespace FFmpegFarm.Worker.Client
             return ResumeAsync(jobId, type, CancellationToken.None);
         }
     
+        /// <summary>Resume a job</summary>
+        /// <param name="jobId">Job id</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -390,6 +404,7 @@ namespace FFmpegFarm.Worker.Client
     
         public string BaseUrl { get; set; }
     
+        /// <summary>Get status for all jobs</summary>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task<ObservableCollection<JobRequestModel>> GetAllAsync()
@@ -397,6 +412,7 @@ namespace FFmpegFarm.Worker.Client
             return GetAllAsync(CancellationToken.None);
         }
     
+        /// <summary>Get status for all jobs</summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -434,17 +450,25 @@ namespace FFmpegFarm.Worker.Client
             throw new SwaggerException("The HTTP status code of the response was not expected (" + (int)response_.StatusCode + ").", status_, responseData_, null);
         }
     
+        /// <summary>Update progress of an active job.
+        /// 
+        /// This also serves as a heartbeat, to tell the server
+        /// that the client is still working actively on the job</summary>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public Task PutAsync(BaseJob job)
+        public Task UpdateProgressAsync(BaseJob job)
         {
-            return PutAsync(job, CancellationToken.None);
+            return UpdateProgressAsync(job, CancellationToken.None);
         }
     
+        /// <summary>Update progress of an active job.
+        /// 
+        /// This also serves as a heartbeat, to tell the server
+        /// that the client is still working actively on the job</summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>No Content</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public async Task PutAsync(BaseJob job, CancellationToken cancellationToken)
+        public async Task UpdateProgressAsync(BaseJob job, CancellationToken cancellationToken)
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status");
     
@@ -472,6 +496,8 @@ namespace FFmpegFarm.Worker.Client
             throw new SwaggerException("The HTTP status code of the response was not expected (" + (int)response_.StatusCode + ").", status_, responseData_, null);
         }
     
+        /// <summary>Get status for a specific job</summary>
+        /// <param name="id">ID of job to get status of</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
         public Task<JobRequestModel> GetAsync(string id)
@@ -479,6 +505,8 @@ namespace FFmpegFarm.Worker.Client
             return GetAsync(id, CancellationToken.None);
         }
     
+        /// <summary>Get status for a specific job</summary>
+        /// <param name="id">ID of job to get status of</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
@@ -583,6 +611,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Job id</summary>
         [JsonProperty("JobCorrelationId", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string JobCorrelationId
         {
@@ -597,6 +626,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Client machine name. Used when reporting progress updates</summary>
         [JsonProperty("MachineName", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string MachineName
         {
@@ -611,6 +641,8 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Progress of how many seconds has been encoded
+        /// Used when reporting progress updates</summary>
         [JsonProperty("Progress", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string Progress
         {
@@ -625,6 +657,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Whether this job is done</summary>
         [JsonProperty("Done", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public bool? Done
         {
@@ -682,6 +715,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Source filename</summary>
         [JsonProperty("SourceFilename", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string SourceFilename
         {
@@ -1238,6 +1272,7 @@ namespace FFmpegFarm.Worker.Client
         private string _sourceFilename; 
         private BaseJobType _type;
     
+        /// <summary>Job id</summary>
         [JsonProperty("JobCorrelationId", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string JobCorrelationId
         {
@@ -1252,6 +1287,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Client machine name. Used when reporting progress updates</summary>
         [JsonProperty("MachineName", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string MachineName
         {
@@ -1266,6 +1302,8 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Progress of how many seconds has been encoded
+        /// Used when reporting progress updates</summary>
         [JsonProperty("Progress", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string Progress
         {
@@ -1280,6 +1318,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Whether this job is done</summary>
         [JsonProperty("Done", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public bool? Done
         {
@@ -1337,6 +1376,7 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        /// <summary>Source filename</summary>
         [JsonProperty("SourceFilename", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string SourceFilename
         {
