@@ -25,7 +25,7 @@ namespace FFmpegFarm.Worker
         private int _progressSpinner;
         private const int ProgressSkip = 10;
 
-        public Node(string ffmpegPath, string apiUri, ILogger logger)
+        private Node(string ffmpegPath, string apiUri, ILogger logger)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -43,7 +43,11 @@ namespace FFmpegFarm.Worker
             _logger.Debug("Node started...");
         }
 
-        public void Run(CancellationToken ct)
+        public static Task GetNodeTask(string ffmpegPath, string apiUri, ILogger logger, CancellationToken ct)
+        {
+            return new Task(() => new Node(ffmpegPath,apiUri,logger).Run(ct));
+        }
+        private void Run(CancellationToken ct)
         {
             try
             {

@@ -43,12 +43,16 @@ namespace FFmpegFarm.WindowsService
             _tasks = new List<Task>();
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
-                var task =
-                    Task.Factory.StartNew(
-                        () =>
-                        new Node(Settings.Default.FFmpegPath, Settings.Default.ControllerApi, _logger)
-                        .Run(_cancellationTokenSource.Token));
-                task.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnCanceled);
+
+                var task = Node.GetNodeTask(
+                    Settings.Default.FFmpegPath,
+                    Settings.Default.ControllerApi,
+                    _logger,
+                    _cancellationTokenSource.Token);
+                
+                //task.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnCanceled);
+                //task.ContinueWith(t => { _logger.Exception(t.Exception); }, TaskContinuationOptions.NotOnCanceled);
+                task.Start();
                 _tasks.Add(task);
             }
         }

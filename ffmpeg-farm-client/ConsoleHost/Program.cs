@@ -38,11 +38,14 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
             var tasks = new List<Task>();
             for (var x = 0; x < int.Parse(cfg["threads"]); x++)
             {
-                var task =
-                    Task.Factory.StartNew(
-                        () => new Worker.Node(cfg["FFmpegPath"], cfg["ControllerApi"], logger).Run(cancelSource.Token));
-                task.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnCanceled);
-                
+                var task = Worker.Node.GetNodeTask(
+                    cfg["FFmpegPath"],
+                    cfg["ControllerApi"],
+                    logger,
+                    cancelSource.Token);
+                //task.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnCanceled);
+                //task.ContinueWith(t => { logger.Exception(t.Exception); }, TaskContinuationOptions.NotOnCanceled);
+                task.Start();
                 tasks.Add(task);
             }
             while (!cancelSource.IsCancellationRequested)
