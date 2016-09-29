@@ -249,3 +249,5 @@ _Pvt_Extensions
 *.sln.iml
 
 *.sqlite
+#ignore auto generated xml doc
+ffmpeg-farm-server/API.WindowsService/App_Data/*.XML
