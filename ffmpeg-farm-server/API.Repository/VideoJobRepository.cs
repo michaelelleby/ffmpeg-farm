@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Transactions;
-using API.Service;
 using Contract;
 using Dapper;
 
@@ -14,6 +11,11 @@ namespace API.Repository
 {
     public class VideoJobRepository : JobRepository, IVideoJobRepository
     {
+        public VideoJobRepository(IHelper helper) : base(helper)
+        {
+            
+        }
+
         public VideoTranscodingJob GetNextTranscodingJob()
         {
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);

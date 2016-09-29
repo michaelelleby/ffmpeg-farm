@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
 using System.Web.Http;
 using API.Service;
 using Contract;
@@ -25,10 +27,14 @@ namespace API.WindowsService.Controllers
         [HttpPatch]
         public void Resume(Guid jobId, JobType type)
         {
-            if (jobId == Guid.Empty) throw new ArgumentException($@"Invalid Job Id specified: {jobId}");
-            if (type == JobType.Unknown) throw new ArgumentOutOfRangeException(nameof(type));
+            if (jobId == Guid.Empty)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, $@"Invalid Job Id specified: {jobId}"));
+            if (type == JobType.Unknown)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, $"JobType {type} is not valid."));
 
-            _jobRepository.ResumeJob(jobId, type);
+            bool result = _jobRepository.ResumeJob(jobId, type);
+            if (result == false)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No {type} job found with id {jobId}"));
         }
     }
 }

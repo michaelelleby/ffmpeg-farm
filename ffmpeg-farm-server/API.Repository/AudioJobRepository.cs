@@ -18,15 +18,17 @@ namespace API.Repository
     {
         private readonly string _connectionString;
 
-        public AudioJobRepository(string connectionString)
+        public AudioJobRepository(IHelper helper, string connectionString) : base(helper)
         {
-            if (String.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
-
             _connectionString = connectionString;
         }
 
         public Guid Add(AudioJobRequest request, ICollection<AudioTranscodingJob> jobs)
         {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (jobs == null) throw new ArgumentNullException(nameof(jobs));
+            if (jobs.Count == 0) throw new ArgumentException("Jobs parameter must contain at least 1 job", nameof(jobs));
+
             Guid jobCorrelationId = Guid.NewGuid();
 
             using (var scope = new TransactionScope())
@@ -78,7 +80,7 @@ namespace API.Repository
                 return jobCorrelationId;
             }
         }
-
+        
         public AudioTranscodingJob GetNextTranscodingJob()
         {
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);

@@ -3,37 +3,33 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Web.Http;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;
-using Swashbuckle.Swagger;
 
 namespace API.WindowsService.Controllers
 {
     public class AudioJobController : ApiController
     {
         private readonly IAudioJobRepository _repository;
+        private readonly IHelper _helper;
 
-        public AudioJobController(IAudioJobRepository repository)
+        public AudioJobController(IAudioJobRepository repository, IHelper helper)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
 
             _repository = repository;
+            _helper = helper;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="machineName"></param>
-        /// <returns><see cref="AudioTranscodingJob" aref="API.Contract"/></returns>
         public AudioTranscodingJob Get(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName))
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
 
-            Helper.InsertClientHeartbeat(machineName);
+            _helper.InsertClientHeartbeat(machineName);
 
             return _repository.GetNextTranscodingJob();
         }
@@ -60,7 +56,7 @@ namespace API.WindowsService.Controllers
         public void Delete(Guid jobId)
         {
             if (jobId == Guid.Empty)
-                throw new ArgumentException("Job id must be a valid GUID.");
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Job id must be a valid GUID."));
 
             bool deleteJob = _repository.DeleteJob(jobId, JobType.Audio);
             if (deleteJob == false)

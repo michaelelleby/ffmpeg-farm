@@ -21,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>XmlComments.xml</DocumentationFile>
+    <DocumentationFile>..\API.WindowsService\App_Data\Contract.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>..\API.WindowsService\App_Data\Contract.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -99,6 +100,7 @@
     <Compile Include="FfmpegPart.cs" />
     <Compile Include="H264Profile.cs" />
     <Compile Include="IAudioJobRepository.cs" />
+    <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
     <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />

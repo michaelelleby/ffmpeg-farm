@@ -22,7 +22,9 @@ namespace API.WindowsService
 
         public void Start()
         {
-            var url = "http://+:9000/";
+            var port = 9000;
+            var url = Environment.UserInteractive ? $"http://localhost:{port}/" : $"http://+:{port}/";
+            var readableUrl = url.Replace("+", Environment.MachineName);
             _server = WebApp.Start<Startup>(url);
         }
 
