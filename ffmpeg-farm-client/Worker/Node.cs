@@ -72,7 +72,7 @@ namespace FFmpegFarm.Worker
         {
             _currentJob = job;
             _currentJob.MachineName = Environment.MachineName;
-            _logger.Debug($"New job recived {job.Id}");
+            _logger.Debug($"New job recived {job.JobCorrelationId}");
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -93,7 +93,7 @@ namespace FFmpegFarm.Worker
                 _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
                 _commandlineProcess.BeginErrorReadLine();
 
-                _timeSinceLastUpdate.Change(0, TimeOut); // start
+                _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
 
                 _commandlineProcess.WaitForExit();
 
@@ -101,14 +101,17 @@ namespace FFmpegFarm.Worker
                 {
                     _currentJob.Failed = true;
                     _currentJob.Done = false;
+                    _logger.Warn(_output.ToString());
+                    _logger.Debug($"Job failed {job.JobCorrelationId}");
                 }
                 else
                 {
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                    _logger.Debug($"Job done {job.JobCorrelationId}");
                 }
                 var statusClient = new StatusClient(_apiUri);
                 statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
-                _logger.Debug($"Job done {job.Id}");
+                
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
             }
         }
@@ -148,7 +151,7 @@ namespace FFmpegFarm.Worker
             statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
             _logger.Debug(_progress.ToString());
 
-            _timeSinceLastUpdate.Change(0, TimeOut); //start
+            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
     }
 }

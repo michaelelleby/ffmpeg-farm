@@ -35,7 +35,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("C:\\\\Projects\\\\ffmpeg-20160927-92de2c2-win64-static\\\\bin\\\\ffmpeg.exe")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\ffmpeg\\bin\\ffmpeg.exe")]
         public string FFmpegPath {
             get {
                 return ((string)(this["FFmpegPath"]));
