@@ -20,8 +20,9 @@ namespace FFmpegFarm.Worker
         private readonly StringBuilder _output;
         private Client.AudioTranscodingJob _currentJob;
         private static readonly int TimeOut = (int) TimeSpan.FromSeconds(20).TotalMilliseconds;
-        
-        public Node(string ffmpegPath, string apiUri)
+        private readonly ILogger _logger;
+
+        public Node(string ffmpegPath, string apiUri, ILogger logger)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -30,38 +31,48 @@ namespace FFmpegFarm.Worker
             _ffmpegPath = ffmpegPath;
             if (string.IsNullOrWhiteSpace(apiUri))
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
+            if(logger == null)
+                throw new ArgumentNullException(nameof(logger));
             _apiUri = apiUri;
             _timeSinceLastUpdate = new Timer(_ => TimeSinceLastUpdate_Elapsed(), null, -1, TimeOut);
             _output = new StringBuilder();
-            Console.WriteLine("Node started...");
+            _logger = logger;
+            _logger.Debug("Node started...");
         }
 
-        public async void Run(CancellationToken ct)
+        public void Run(CancellationToken ct)
         {
-            ct.ThrowIfCancellationRequested();
-            _cancellationToken = ct;
-            var jobClient = new Client.AudioJobClient(_apiUri);
-            while (!ct.IsCancellationRequested)
+            try
             {
-                var job = await jobClient.GetAsync(Environment.MachineName, ct);
-                if (job == null)
+                ct.ThrowIfCancellationRequested();
+                _cancellationToken = ct;
+                var jobClient = new AudioJobClient(_apiUri);
+                while (!ct.IsCancellationRequested)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
-                    continue;
+                    var job = jobClient.GetAsync(Environment.MachineName, ct).Result;
+                    if (job == null)
+                    {
+                        Task.Delay(TimeSpan.FromSeconds(5), ct).GetAwaiter().GetResult();
+                        continue;
+                    }
+                    ExecuteAudioTranscodingJob(job);
+                    _output.Clear();
                 }
-                ExecuteAudioTranscodingJob(job);
-                _output.Clear();
+                ct.ThrowIfCancellationRequested();
             }
-            // add cleanup if needed here...
-            ct.ThrowIfCancellationRequested();
+            finally { 
+                // add cleanup if needed here...
+                _logger.Debug("Cancel recived shutting down...");
+
+            }
         }
 
 
-        private async void ExecuteAudioTranscodingJob(Client.AudioTranscodingJob job)
+        private void ExecuteAudioTranscodingJob(AudioTranscodingJob job)
         {
             _currentJob = job;
             _currentJob.MachineName = Environment.MachineName;
-
+            _logger.Debug($"New job recived {job.Id}");
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -73,7 +84,7 @@ namespace FFmpegFarm.Worker
                     Arguments = job.Arguments
                 };
 
-                //Console.WriteLine(_commandlineProcess.StartInfo.Arguments);
+                _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}");
 
                 _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                 _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
@@ -96,8 +107,8 @@ namespace FFmpegFarm.Worker
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
                 }
                 var statusClient = new StatusClient(_apiUri);
-                await statusClient.PutAsync(_currentJob.ToBaseJob(), _cancellationToken);
-
+                statusClient.PutAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
+                _logger.Debug($"Job done {job.Id}");
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
             }
         }
@@ -114,10 +125,10 @@ namespace FFmpegFarm.Worker
                 return;
 
             _commandlineProcess.Kill();
-            Console.WriteLine("Timed out..");
+            _logger.Warn("Timed out..");
         }
 
-        private async void Ffmpeg_DataReceived(object sender, DataReceivedEventArgs e)
+        private void Ffmpeg_DataReceived(object sender, DataReceivedEventArgs e)
         {
             if (e.Data == null)
                 return;
@@ -125,22 +136,19 @@ namespace FFmpegFarm.Worker
             _output.AppendLine(e.Data);
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
-            if (match.Success)
-            {
-                _timeSinceLastUpdate.Change(-1, TimeOut); //stop
+            if (!match.Success) return;
+            _timeSinceLastUpdate.Change(-1, TimeOut); //stop
 
-                _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
-                    Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
-                    Convert.ToInt32(match.Groups[4].Value) * 25);
+            _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
+                Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
+                Convert.ToInt32(match.Groups[4].Value) * 25);
 
-                _currentJob.Progress = _progress.ToString();
-                var statusClient = new StatusClient(_apiUri);
-                await statusClient.PutAsync(_currentJob.ToBaseJob(),_cancellationToken);
-                
-                Console.WriteLine(_progress);
+            _currentJob.Progress = _progress.ToString();
+            var statusClient = new StatusClient(_apiUri);
+            statusClient.PutAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
+            _logger.Debug(_progress.ToString());
 
-                _timeSinceLastUpdate.Change(0, TimeOut); //start
-            }
+            _timeSinceLastUpdate.Change(0, TimeOut); //start
         }
     }
 }
