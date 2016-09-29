@@ -30,11 +30,11 @@
         {
             this.serviceInstaller1 = new System.ServiceProcess.ServiceInstaller();
             this.serviceProcessInstaller1 = new System.ServiceProcess.ServiceProcessInstaller();
+            this.eventLogInstaller1 = new System.Diagnostics.EventLogInstaller();
             // 
             // serviceInstaller1
             // 
             this.serviceInstaller1.Description = "Host for worker node threads";
-            this.serviceInstaller1.DisplayName = "FFmpegFarm Worker";
             this.serviceInstaller1.ServiceName = "FFmpegFarmWorker";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
@@ -44,10 +44,22 @@
             this.serviceProcessInstaller1.Password = null;
             this.serviceProcessInstaller1.Username = null;
             // 
+            // eventLogInstaller1
+            // 
+            this.eventLogInstaller1.CategoryCount = 0;
+            this.eventLogInstaller1.CategoryResourceFile = null;
+            this.eventLogInstaller1.Log = "FFmpegFarm";
+            this.eventLogInstaller1.MessageResourceFile = null;
+            this.eventLogInstaller1.ParameterResourceFile = null;
+            this.eventLogInstaller1.Source = "Client";
+            this.eventLogInstaller1.UninstallAction = System.Configuration.Install.UninstallAction.NoAction;
+            // 
             // Installer
             // 
             this.Installers.AddRange(new System.Configuration.Install.Installer[] {
-            this.serviceInstaller1});
+            this.serviceInstaller1,
+            this.serviceProcessInstaller1,
+            this.eventLogInstaller1});
 
         }
 
@@ -55,5 +67,6 @@
 
         private System.ServiceProcess.ServiceInstaller serviceInstaller1;
         private System.ServiceProcess.ServiceProcessInstaller serviceProcessInstaller1;
+        private System.Diagnostics.EventLogInstaller eventLogInstaller1;
     }
 }

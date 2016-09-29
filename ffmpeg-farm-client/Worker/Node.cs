@@ -80,7 +80,7 @@ namespace FFmpegFarm.Worker
         {
             _currentJob = job;
             _currentJob.MachineName = Environment.MachineName;
-            _logger.Debug($"New job recived {job.JobCorrelationId}", _threadId);
+            _logger.Information($"New job recived {job.JobCorrelationId}", _threadId);
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -110,12 +110,12 @@ namespace FFmpegFarm.Worker
                     _currentJob.Failed = true;
                     _currentJob.Done = false;
                     _logger.Warn(_output.ToString());
-                    _logger.Debug($"Job failed {job.JobCorrelationId}", _threadId);
+                    _logger.Warn($"Job failed {job.JobCorrelationId}", _threadId);
                 }
                 else
                 {
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
-                    _logger.Debug($"Job done {job.JobCorrelationId}", _threadId);
+                    _logger.Information($"Job done {job.JobCorrelationId}", _threadId);
                 }
                 var statusClient = new StatusClient(_apiUri);
                 statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();

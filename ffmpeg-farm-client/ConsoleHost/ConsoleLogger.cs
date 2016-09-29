@@ -27,6 +27,17 @@ namespace FFmpegFarm.ConsoleHost
             }
         }
 
+        public void Information(string text, int? threadId = null, string memberName = "")
+        {
+            lock (Lock)
+            {
+                WriteThreadId(threadId, memberName);
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine(text);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+        }
+
         public void Warn(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             lock (Lock)

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.ServiceProcess;
 using System.Threading;
@@ -12,34 +11,18 @@ namespace FFmpegFarm.WindowsService
     public partial class Service : ServiceBase
     {
         private IList<Task> _tasks;
-        private CancellationTokenSource _cancellationTokenSource;
-        private static readonly ILogger _logger = new DummyLogger();
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ILogger _logger;
         public Service()
         {
             InitializeComponent();
-        }
-
-        private class DummyLogger : ILogger
-        {
-           
-            public void Debug(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
-            {
-                
-            }
-
-            public void Warn(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
-            {
-                
-            }
-
-            public void Exception(Exception exception, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
-            {
-                
-            }
+            _logger = new EventLogger(eventLog);
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         protected override void OnStart(string[] args)
         {
+            _logger.Information($"Starting service\n{Settings.Default.FFmpegPath}\n{Settings.Default.ControllerApi}\n{Settings.Default.Threads} threads.");
             _tasks = new List<Task>();
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
@@ -64,6 +47,7 @@ namespace FFmpegFarm.WindowsService
             {
                 Thread.Sleep(10);
             }
+            _logger.Information("Stopped");
         }
     }
 }
