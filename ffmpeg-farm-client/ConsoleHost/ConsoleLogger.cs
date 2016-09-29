@@ -7,42 +7,42 @@ namespace FFmpegFarm.ConsoleHost
     internal class ConsoleLogger : ILogger
     {
         private static readonly int[] Palette = { 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 };
-        private void WriteThreadId()
+        private void WriteThreadId(int? threadId, string memberName)
         {
-            var id = Thread.CurrentThread.ManagedThreadId;
+            var id = threadId ?? Thread.CurrentThread.ManagedThreadId;
             Console.ForegroundColor = (ConsoleColor) Palette[(id%Palette.Length)];
-            Console.Write($"{id}");
+            Console.Write($"{id} ({memberName})");
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.Write(" : ");
         }
         private static readonly object Lock = new object();
-        public void Debug(string text)
+        public void Debug(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             lock (Lock)
             {
-                WriteThreadId();
+                WriteThreadId(threadId, memberName);
                 Console.ForegroundColor = ConsoleColor.Gray;
                 Console.WriteLine(text);
                 Console.ForegroundColor = ConsoleColor.White;
             }
         }
 
-        public void Warn(string text)
+        public void Warn(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             lock (Lock)
             {
-                WriteThreadId();
+                WriteThreadId(threadId, memberName);
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(text);
                 Console.ForegroundColor = ConsoleColor.White;
             }
         }
 
-        public void Exception(Exception exception)
+        public void Exception(Exception exception, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             lock (Lock)
             {
-                WriteThreadId();
+                WriteThreadId(threadId, memberName);
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(exception.Message);
                 Console.ForegroundColor = ConsoleColor.DarkRed;

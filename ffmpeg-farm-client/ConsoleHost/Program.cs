@@ -56,7 +56,7 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 if (input.Key == ConsoleKey.X && input.Modifiers.HasFlag(ConsoleModifiers.Control))
                     cancelSource.Cancel();
             }
-            while (tasks.Any(t=>!t.IsCompleted))
+            while (tasks.Any(t => !t.IsCompleted))
             {
                 Thread.Sleep(10);
                 Console.Write(".");

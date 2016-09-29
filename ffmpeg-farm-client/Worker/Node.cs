@@ -21,6 +21,9 @@ namespace FFmpegFarm.Worker
         private AudioTranscodingJob _currentJob;
         private static readonly int TimeOut = (int) TimeSpan.FromSeconds(20).TotalMilliseconds;
         private readonly ILogger _logger;
+        private int? _threadId; // main thread id, used for logging in child threads.
+        private int _progressSpinner;
+        private const int ProgressSkip = 10;
 
         public Node(string ffmpegPath, string apiUri, ILogger logger)
         {
@@ -44,6 +47,7 @@ namespace FFmpegFarm.Worker
         {
             try
             {
+                _threadId = Thread.CurrentThread.ManagedThreadId;
                 ct.ThrowIfCancellationRequested();
                 _cancellationToken = ct;
                 var jobClient = new AudioJobClient(_apiUri);
@@ -72,7 +76,7 @@ namespace FFmpegFarm.Worker
         {
             _currentJob = job;
             _currentJob.MachineName = Environment.MachineName;
-            _logger.Debug($"New job recived {job.JobCorrelationId}");
+            _logger.Debug($"New job recived {job.JobCorrelationId}", _threadId);
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -84,7 +88,7 @@ namespace FFmpegFarm.Worker
                     Arguments = job.Arguments
                 };
 
-                _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}");
+                _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
 
                 _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                 _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
@@ -102,12 +106,12 @@ namespace FFmpegFarm.Worker
                     _currentJob.Failed = true;
                     _currentJob.Done = false;
                     _logger.Warn(_output.ToString());
-                    _logger.Debug($"Job failed {job.JobCorrelationId}");
+                    _logger.Debug($"Job failed {job.JobCorrelationId}", _threadId);
                 }
                 else
                 {
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
-                    _logger.Debug($"Job done {job.JobCorrelationId}");
+                    _logger.Debug($"Job done {job.JobCorrelationId}", _threadId);
                 }
                 var statusClient = new StatusClient(_apiUri);
                 statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
@@ -128,7 +132,7 @@ namespace FFmpegFarm.Worker
                 return;
 
             _commandlineProcess.Kill();
-            _logger.Warn("Timed out..");
+            _logger.Warn("Timed out..", _threadId);
         }
 
         private void Ffmpeg_DataReceived(object sender, DataReceivedEventArgs e)
@@ -149,7 +153,9 @@ namespace FFmpegFarm.Worker
             _currentJob.Progress = _progress.ToString();
             var statusClient = new StatusClient(_apiUri);
             statusClient.UpdateProgressAsync(_currentJob.ToBaseJob(), _cancellationToken).GetAwaiter().GetResult();
-            _logger.Debug(_progress.ToString());
+
+            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
+                _logger.Debug(_progress.ToString("g"), _threadId);
 
             _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
