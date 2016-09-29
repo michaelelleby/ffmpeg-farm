@@ -4,6 +4,7 @@ using System.Net.Http;
 // ReSharper disable once CheckNamespace
 namespace FFmpegFarm.Worker.Client
 {
+    /*
     public partial class AudioJobClient
     {
         partial void PrepareRequest(HttpClient request, ref string url)
@@ -19,4 +20,5 @@ namespace FFmpegFarm.Worker.Client
             request.Timeout = TimeSpan.FromSeconds(4);
         }
     }
+    */
 }
