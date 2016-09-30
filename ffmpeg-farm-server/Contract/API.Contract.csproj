@@ -93,6 +93,7 @@
     <Compile Include="AudioJobRequest.cs" />
     <Compile Include="BaseJob.cs" />
     <Compile Include="ClientHeartbeat.cs" />
+    <Compile Include="Channels.cs" />
     <Compile Include="ContainerFormat.cs" />
     <Compile Include="DestinationFormat.cs" />
     <Compile Include="Dto\JobRequestDto.cs" />
