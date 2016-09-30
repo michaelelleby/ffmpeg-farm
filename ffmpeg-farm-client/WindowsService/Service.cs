@@ -32,9 +32,7 @@ namespace FFmpegFarm.WindowsService
                     Settings.Default.ControllerApi,
                     _logger,
                     _cancellationTokenSource.Token);
-                
-                //task.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnCanceled);
-                //task.ContinueWith(t => { _logger.Exception(t.Exception); }, TaskContinuationOptions.NotOnCanceled);
+
                 task.Start();
                 _tasks.Add(task);
             }

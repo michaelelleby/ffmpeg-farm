@@ -43,8 +43,6 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                     cfg["ControllerApi"],
                     logger,
                     cancelSource.Token);
-                //task.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnCanceled);
-                //task.ContinueWith(t => { logger.Exception(t.Exception); }, TaskContinuationOptions.NotOnCanceled);
                 task.Start();
                 tasks.Add(task);
             }
