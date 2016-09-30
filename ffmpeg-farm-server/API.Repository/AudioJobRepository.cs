@@ -108,7 +108,7 @@ namespace API.Repository
 
                     var rowsUpdated =
                         connection.Execute(
-                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
+                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND State != @State;",
                             new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id});
                     if (rowsUpdated == 0)
                     {
