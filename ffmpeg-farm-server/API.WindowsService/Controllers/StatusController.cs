@@ -60,33 +60,62 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
         /// <returns></returns>
-        public JobRequestModel Get(Guid id)
+        public JobStatus Get(Guid id)
         {
             if (id == Guid.Empty)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "ID must be a valid GUID"));
 
-            AudioJobRequestDto request = _repository.Get(id);
-            if (request == null)
+            AudioJobRequestDto job = _repository.Get(id);
+            if (job == null)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}"));
 
-            JobRequestModel model = new JobRequestModel
+            JobStatus result = new JobStatus();
+
+            result.State = GetJobStatus(job);
+            result.JobCorrelationId = job.JobCorrelationId;
+            result.Created = job.Created;
+
+            if (result.State == TranscodingJobState.Done)
+                result.OutputFiles = GetOutputFiles(job.Jobs);
+
+            return result;
+        }
+
+        private List<string> GetOutputFiles(ICollection<AudioTranscodingJobDto> jobs)
+        {
+            List<string> result = new List<string>();
+            foreach (var job in jobs)
             {
-                JobCorrelationId = request.JobCorrelationId,
-                SourceFilename = request.SourceFilename,
-                DestinationFilenamePrefix = request.DestinationFilename,
-                Needed = request.Needed.GetValueOrDefault(),
-                Created = request.Created,
-                OutputFolder = request.OutputFolder,
-                Jobs = request.Jobs.Select(j => new TranscodingJobModel
-                {
-                    Heartbeat = j.Heartbeat.GetValueOrDefault(),
-                    HeartbeatMachine = j.HeartbeatMachineName,
-                    State = j.State
-                })
-            };
+                result.Add("Dummyfilename_" + job.SourceFilename);
+            }
+            return result;
+        }
 
+        private static TranscodingJobState GetJobStatus(AudioJobRequestDto job)
+        {
+            var transcodingJobs = job.Jobs.Select(j => new TranscodingJobModel
+            {
+                Heartbeat = j.Heartbeat.GetValueOrDefault(),
+                HeartbeatMachine = j.HeartbeatMachineName,
+                State = j.State
+            });
 
-            return model;
+            if (transcodingJobs.All(x => x.State == TranscodingJobState.Done))
+                return TranscodingJobState.Done;
+
+            if (transcodingJobs.All(j => j.State == TranscodingJobState.Queued))
+                return TranscodingJobState.Queued;
+
+            if (transcodingJobs.Any(j => j.State == TranscodingJobState.Failed))
+                return TranscodingJobState.Failed;
+
+            if (transcodingJobs.All(j => j.State == TranscodingJobState.Paused))
+                return TranscodingJobState.Paused;
+
+            if (transcodingJobs.Any(j => j.State == TranscodingJobState.InProgress))
+                return TranscodingJobState.InProgress;
+
+            return TranscodingJobState.Unknown;
         }
 
         /// <summary>

@@ -90,7 +90,13 @@ namespace API.Repository
             {
                 connection.Open();
 
-                using (var scope = new TransactionScope())
+                using (var scope = new TransactionScope(
+                    TransactionScopeOption.Required, 
+                    new TransactionOptions
+                    {
+                        IsolationLevel = IsolationLevel.RepeatableRead,
+                        Timeout = TransactionManager.MaximumTimeout
+                    }))
                 {
                     var job = connection.Query<AudioTranscodingJob>(
                             "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
@@ -108,7 +114,7 @@ namespace API.Repository
 
                     var rowsUpdated =
                         connection.Execute(
-                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND State != @State;",
+                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
                             new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id});
                     if (rowsUpdated == 0)
                     {
