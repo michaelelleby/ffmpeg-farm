@@ -180,7 +180,7 @@ namespace FFmpegFarm.Worker
             {
                 try
                 {
-                    return apiCall(arg, _cancellationToken).GetAwaiter().GetResult();
+                   return apiCall(arg, _cancellationToken).GetAwaiter().GetResult();
                 }
                 catch (Exception e)
                 {
@@ -196,13 +196,36 @@ namespace FFmpegFarm.Worker
         /// Retries and ignores exceptions.
         /// </summary>
         private void ApiWrapper<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
-        { 
+        {
             // work around since Task<void> is not allowed. 
-            ApiWrapper((a,ct) => new Task<object> (() =>
+            // THIS IS BROKEN FOR SOME REASON!
+            // sorry, can't keep it dry... :'(
+            /*
+            ApiWrapper(
+                (a,ct) => 
+                new Task<object> (() =>
+                {
+                    apiCall(a, ct).GetAwaiter().GetResult();
+                    return null;
+                }), arg);
+            */
+            const int retryCount = 10;
+            Exception exception = null;
+            for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
-                apiCall(a, ct).GetAwaiter().GetResult();
-                return null;
-            }), arg);
+                try
+                {
+                    apiCall(arg, _cancellationToken).GetAwaiter().GetResult();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
+                Thread.Sleep(1000);
+            }
+            _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
+            
         }
     }
 }
