@@ -184,7 +184,7 @@ namespace FFmpegFarm.Worker
                 }
                 catch (Exception e)
                 {
-                    exception = e.InnerException;
+                    exception = e;
                 }
                 Thread.Sleep(1000);
             }
