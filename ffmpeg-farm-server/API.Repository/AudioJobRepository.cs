@@ -90,13 +90,7 @@ namespace API.Repository
             {
                 connection.Open();
 
-                using (var scope = new TransactionScope(
-                    TransactionScopeOption.Required, 
-                    new TransactionOptions
-                    {
-                        IsolationLevel = IsolationLevel.RepeatableRead,
-                        Timeout = TransactionManager.MaximumTimeout
-                    }))
+                using (var scope = new TransactionScope())
                 {
                     var job = connection.Query<AudioTranscodingJob>(
                             "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
@@ -114,8 +108,16 @@ namespace API.Repository
 
                     var rowsUpdated =
                         connection.Execute(
-                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
-                            new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id});
+                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND (State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout));",
+                            new
+                            {
+                                State = TranscodingJobState.InProgress,
+                                Heartbeat = DateTimeOffset.UtcNow,
+                                Id = job.Id,
+                                Timeout = timeout,
+                                QueuedState = TranscodingJobState.Queued,
+                                InProgressState = TranscodingJobState.InProgress,
+                            });
                     if (rowsUpdated == 0)
                     {
                         throw new Exception("Failed to mark row as taken");
