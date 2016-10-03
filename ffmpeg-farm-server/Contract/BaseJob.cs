@@ -39,6 +39,6 @@ namespace Contract
         /// </summary>
         public JobType Type { get;}
 
-        public DateTime Heartbeat { get; set; }
+        public DateTime? Heartbeat { get; set; }
     }
 }
