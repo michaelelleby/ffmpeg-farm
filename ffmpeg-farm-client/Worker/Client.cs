@@ -500,7 +500,7 @@ namespace FFmpegFarm.Worker.Client
         /// <param name="id">ID of job to get status of</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public Task<JobRequestModel> GetAsync(string id)
+        public Task<JobStatus> GetAsync(string id)
         {
             return GetAsync(id, CancellationToken.None);
         }
@@ -510,7 +510,7 @@ namespace FFmpegFarm.Worker.Client
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public async Task<JobRequestModel> GetAsync(string id, CancellationToken cancellationToken)
+        public async Task<JobStatus> GetAsync(string id, CancellationToken cancellationToken)
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status/{id}");
     
@@ -529,11 +529,11 @@ namespace FFmpegFarm.Worker.Client
     
             if (status_ == "200") 
             {
-                var result_ = default(JobRequestModel); 
+                var result_ = default(JobStatus); 
                 try
                 {
                     if (responseData_.Length > 0)
-                        result_ = JsonConvert.DeserializeObject<JobRequestModel>(Encoding.UTF8.GetString(responseData_, 0, responseData_.Length));                                
+                        result_ = JsonConvert.DeserializeObject<JobStatus>(Encoding.UTF8.GetString(responseData_, 0, responseData_.Length));                                
                     return result_; 
                 } 
                 catch (Exception exception) 
@@ -875,7 +875,8 @@ namespace FFmpegFarm.Worker.Client
     { 
         private AudioDestinationFormatAudioCodec _audioCodec; 
         private AudioDestinationFormatFormat _format; 
-        private int? _bitrate;
+        private int? _bitrate; 
+        private AudioDestinationFormatChannels _channels;
     
         [JsonProperty("AudioCodec", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         [JsonConverter(typeof(StringEnumConverter))]
@@ -916,6 +917,21 @@ namespace FFmpegFarm.Worker.Client
                 if (_bitrate != value)
                 {
                     _bitrate = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("Channels", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public AudioDestinationFormatChannels Channels
+        {
+            get { return _channels; }
+            set 
+            {
+                if (_channels != value)
+                {
+                    _channels = value; 
                     RaisePropertyChanged();
                 }
             }
@@ -1426,6 +1442,92 @@ namespace FFmpegFarm.Worker.Client
         }
     }
     
+    [JsonObject(MemberSerialization.OptIn)]
+    [GeneratedCode("NJsonSchema", "4.8.6094.34027")]
+    public partial class JobStatus : INotifyPropertyChanged
+    { 
+        private string _jobCorrelationId; 
+        private JobStatusState _state; 
+        private DateTime? _created; 
+        private ObservableCollection<string> _outputFiles;
+    
+        [JsonProperty("JobCorrelationId", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public string JobCorrelationId
+        {
+            get { return _jobCorrelationId; }
+            set 
+            {
+                if (_jobCorrelationId != value)
+                {
+                    _jobCorrelationId = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("State", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public JobStatusState State
+        {
+            get { return _state; }
+            set 
+            {
+                if (_state != value)
+                {
+                    _state = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("Created", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public DateTime? Created
+        {
+            get { return _created; }
+            set 
+            {
+                if (_created != value)
+                {
+                    _created = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("OutputFiles", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public ObservableCollection<string> OutputFiles
+        {
+            get { return _outputFiles; }
+            set 
+            {
+                if (_outputFiles != value)
+                {
+                    _outputFiles = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        public event PropertyChangedEventHandler PropertyChanged;
+    
+        public string ToJson() 
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+        
+        public static JobStatus FromJson(string data)
+        {
+            return JsonConvert.DeserializeObject<JobStatus>(data);
+        }
+        
+        protected virtual void RaisePropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            var handler = PropertyChanged;
+            if (handler != null) 
+                handler(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+    
     [GeneratedCode("NJsonSchema", "4.8.6094.34027")]
     public enum Type
     {
@@ -1544,6 +1646,20 @@ namespace FFmpegFarm.Worker.Client
     }
     
     [GeneratedCode("NJsonSchema", "4.8.6094.34027")]
+    public enum AudioDestinationFormatChannels
+    {
+        [EnumMember(Value = "Unknown")]
+        Unknown = 0,
+    
+        [EnumMember(Value = "Mono")]
+        Mono = 1,
+    
+        [EnumMember(Value = "Stereo")]
+        Stereo = 2,
+    
+    }
+    
+    [GeneratedCode("NJsonSchema", "4.8.6094.34027")]
     public enum JobRequestModelState
     {
         [EnumMember(Value = "Unknown")]
@@ -1629,6 +1745,29 @@ namespace FFmpegFarm.Worker.Client
     
         [EnumMember(Value = "VideoMerge")]
         VideoMerge = 4,
+    
+    }
+    
+    [GeneratedCode("NJsonSchema", "4.8.6094.34027")]
+    public enum JobStatusState
+    {
+        [EnumMember(Value = "Unknown")]
+        Unknown = 0,
+    
+        [EnumMember(Value = "Queued")]
+        Queued = 1,
+    
+        [EnumMember(Value = "Paused")]
+        Paused = 2,
+    
+        [EnumMember(Value = "InProgress")]
+        InProgress = 3,
+    
+        [EnumMember(Value = "Done")]
+        Done = 4,
+    
+        [EnumMember(Value = "Failed")]
+        Failed = 5,
     
     }
 
