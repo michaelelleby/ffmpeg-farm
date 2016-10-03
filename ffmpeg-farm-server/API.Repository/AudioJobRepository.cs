@@ -108,8 +108,8 @@ namespace API.Repository
 
                     var rowsUpdated =
                         connection.Execute(
-                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND State != @State;",
-                            new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id});
+                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND HeartBeat = @PreviousHeartbeat;",
+                            new {State = TranscodingJobState.InProgress, Heartbeat = DateTimeOffset.UtcNow, Id = job.Id, PreviousHeartbeat = job.Heartbeat });
                     if (rowsUpdated == 0)
                     {
                         throw new Exception("Failed to mark row as taken");
