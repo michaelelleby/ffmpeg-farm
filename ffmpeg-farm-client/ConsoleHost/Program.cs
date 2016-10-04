@@ -52,8 +52,7 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                    !(Console.KeyAvailable && (keyInfo = Console.ReadKey(false)).Key == ConsoleKey.X
                      && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control)))
             {
-                // ReSharper disable once MethodSupportsCancellation
-                Task.Delay(100).GetAwaiter().GetResult();
+                Thread.Sleep(100);
             }
             if (!cancelSource.IsCancellationRequested)
                 cancelSource.Cancel();

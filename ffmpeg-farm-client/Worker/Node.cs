@@ -127,7 +127,10 @@ namespace FFmpegFarm.Worker
                 ApiWrapper(_statusClient.UpdateProgressAsync, _currentJob.ToBaseJob());
                 
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
+                Monitor.Enter(_lock); // lock before dispose
             }
+            _commandlineProcess = null;
+            Monitor.Exit(_lock);
         }
 
         private bool FfmpegDetectedError()
@@ -141,11 +144,18 @@ namespace FFmpegFarm.Worker
         {
             lock (_lock)
             {
-                if (_commandlineProcess == null || _commandlineProcess.HasExited)
-                    return;
+                try
+                {
+                    if (_commandlineProcess == null || _commandlineProcess.HasExited)
+                        return;
 
-                _commandlineProcess.Kill();
-                _logger.Warn($"Process kill, {reason}.", _threadId);
+                    _commandlineProcess.Kill();
+                    _logger.Warn($"Process kill, {reason}.", _threadId);
+                }
+                catch (Exception e)
+                {
+                    _logger.Exception(e);
+                }
             }
         }
 
@@ -183,14 +193,28 @@ namespace FFmpegFarm.Worker
             Exception exception = null;
             for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
+                #if DEBUGAPI
+                var timer = new Stopwatch();
+                timer.Start();
+                #endif
                 try
                 {
-                   return apiCall(arg, _cancellationToken).GetAwaiter().GetResult();
+                    return apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
                 }
                 catch (Exception e)
                 {
                     exception = e;
+                    #if DEBUGAPI
+                    _logger.Exception(e,_threadId);
+                    #endif
                 }
+                #if DEBUGAPI
+                finally
+                {
+                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms");
+                    timer.Stop();
+                }
+                #endif
                 Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
             }
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
@@ -202,31 +226,33 @@ namespace FFmpegFarm.Worker
         /// </summary>
         private void ApiWrapper<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
         {
-            // work around since Task<void> is not allowed. 
-            // THIS IS BROKEN FOR SOME REASON!
-            // sorry, can't keep it dry... :'(
-            /*
-            ApiWrapper(
-                (a,ct) => 
-                new Task<object> (() =>
-                {
-                    apiCall(a, ct).GetAwaiter().GetResult();
-                    return null;
-                }), arg);
-            */
             const int retryCount = 3;
             Exception exception = null;
             for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
+                #if DEBUGAPI
+                var timer = new Stopwatch();
+                timer.Start();
+                #endif
                 try
                 {
-                    apiCall(arg, _cancellationToken).GetAwaiter().GetResult();
+                    apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
                     return;
                 }
                 catch (Exception e)
                 {
                     exception = e;
+                    #if DEBUGAPI
+                    _logger.Exception(e, _threadId);
+                    #endif
                 }
+                #if DEBUGAPI
+                finally
+                {
+                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms");
+                    timer.Stop();
+                }
+                #endif
                 Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
             }
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
