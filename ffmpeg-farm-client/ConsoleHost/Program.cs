@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -46,21 +47,31 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 task.Start();
                 tasks.Add(task);
             }
-            while (!cancelSource.IsCancellationRequested)
+            ConsoleKeyInfo keyInfo;
+            while (!cancelSource.IsCancellationRequested &&
+                   !(Console.KeyAvailable && (keyInfo = Console.ReadKey(false)).Key == ConsoleKey.X
+                     && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control)))
             {
-                while (!Console.KeyAvailable && !cancelSource.IsCancellationRequested)
-                {
-                    Thread.Sleep(100);
-                }
-                var input = Console.ReadKey(true);
-                
-                if (input.Key == ConsoleKey.X && input.Modifiers.HasFlag(ConsoleModifiers.Control))
-                    cancelSource.Cancel();
+                // ReSharper disable once MethodSupportsCancellation
+                Task.Delay(100).GetAwaiter().GetResult();
             }
-            while (tasks.Any(t => !t.IsCompleted))
+            if (!cancelSource.IsCancellationRequested)
+                cancelSource.Cancel();
+            Console.WriteLine("Shutting down....");
+
+            foreach (var task in tasks)
             {
-                Thread.Sleep(10);
-                Console.Write(".");
+                try
+                {
+                    // ReSharper disable once MethodSupportsCancellation
+                    task.Wait();
+                }
+                catch (Exception e)
+                {
+                    if (!(e.InnerException?.GetType() == typeof(OperationCanceledException) 
+                        || e.InnerException?.GetType() == typeof(TaskCanceledException)))
+                        throw;
+                }
             }
             Console.WriteLine("\nShut done completed... Press any key.");
             Console.ReadKey();

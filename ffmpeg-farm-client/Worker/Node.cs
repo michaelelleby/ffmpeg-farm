@@ -11,6 +11,7 @@ namespace FFmpegFarm.Worker
 {
     public class Node
     {
+        private readonly object _lock = new object();
         private readonly string _ffmpegPath;
         private readonly Timer _timeSinceLastUpdate;
         private CancellationToken _cancellationToken;
@@ -37,7 +38,7 @@ namespace FFmpegFarm.Worker
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
                 throw new ArgumentNullException(nameof(logger));
-            _timeSinceLastUpdate = new Timer(_ => TimeSinceLastUpdate_Elapsed(), null, -1, TimeOut);
+            _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
             _audioJobClient = new AudioJobClient(apiUri);
@@ -56,6 +57,7 @@ namespace FFmpegFarm.Worker
             {
                 _threadId = Thread.CurrentThread.ManagedThreadId;
                 ct.ThrowIfCancellationRequested();
+                ct.Register(() => KillProcess("Canceled"));
                 _cancellationToken = ct;
                 while (!ct.IsCancellationRequested)
                 {
@@ -71,11 +73,10 @@ namespace FFmpegFarm.Worker
                 ct.ThrowIfCancellationRequested();
             }
             finally {
-                _commandlineProcess?.Kill();
                 if (_currentJob != null)
                 {
-                    _logger.Warn($"In progress job failed {_currentJob.JobCorrelationId}");
-                    _currentJob.State = AudioTranscodingJobState.Failed;
+                    _logger.Warn($"In progress job re-queued {_currentJob.JobCorrelationId}");
+                    _currentJob.State = AudioTranscodingJobState.Queued;
                     // ReSharper disable once MethodSupportsCancellation
                     _statusClient.UpdateProgressAsync(_currentJob.ToBaseJob()).GetAwaiter().GetResult();
                 }
@@ -121,7 +122,7 @@ namespace FFmpegFarm.Worker
                 else
                 {
                     _currentJob.Done = _commandlineProcess.ExitCode == 0;
-                    _logger.Information($"Job done {_currentJob.JobCorrelationId}", _threadId);
+                    _logger.Information($"Job {(_currentJob.Done.Value ? "Done" : "Canceled")} {_currentJob.JobCorrelationId}", _threadId);
                 }
                 ApiWrapper(_statusClient.UpdateProgressAsync, _currentJob.ToBaseJob());
                 
@@ -131,17 +132,21 @@ namespace FFmpegFarm.Worker
 
         private bool FfmpegDetectedError()
         {
+
             return Regex.IsMatch(_output.ToString(), @"\] Error",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
         }
-
-        private void TimeSinceLastUpdate_Elapsed()
+        
+        private void KillProcess(string reason)
         {
-            if (_commandlineProcess.HasExited)
-                return;
+            lock (_lock)
+            {
+                if (_commandlineProcess == null || _commandlineProcess.HasExited)
+                    return;
 
-            _commandlineProcess.Kill();
-            _logger.Warn("Timed out..", _threadId);
+                _commandlineProcess.Kill();
+                _logger.Warn($"Process kill, {reason}.", _threadId);
+            }
         }
 
         private void Ffmpeg_DataReceived(object sender, DataReceivedEventArgs e)
@@ -174,7 +179,7 @@ namespace FFmpegFarm.Worker
         /// </summary>
         private TRes ApiWrapper<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
         {
-            const int retryCount = 10;
+            const int retryCount = 3;
             Exception exception = null;
             for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
@@ -186,7 +191,7 @@ namespace FFmpegFarm.Worker
                 {
                     exception = e;
                 }
-                Thread.Sleep(1000);
+                Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
             }
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
             return default(TRes);
@@ -209,7 +214,7 @@ namespace FFmpegFarm.Worker
                     return null;
                 }), arg);
             */
-            const int retryCount = 10;
+            const int retryCount = 3;
             Exception exception = null;
             for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
@@ -222,7 +227,7 @@ namespace FFmpegFarm.Worker
                 {
                     exception = e;
                 }
-                Thread.Sleep(1000);
+                Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
             }
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
             
