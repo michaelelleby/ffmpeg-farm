@@ -72,8 +72,10 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                         throw;
                 }
             }
+            #if DEBUG
             Console.WriteLine("\nShut done completed... Press any key.");
             Console.ReadKey();
+            #endif
         }
     }
 }
