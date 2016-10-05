@@ -19,17 +19,17 @@ namespace API.Service
         {
             if (jobCorrelationId == Guid.Empty) throw new ArgumentException($@"Invalid Job Id specified: {jobCorrelationId}");
 
-            using (var connection = _helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = _helper.GetConnection())
                 {
-                    
+                    connection.Open();
+
+
 
                     var rowsUpdated = connection.Execute(
                         "UPDATE FfmpegVideoJobs SET State = @NewState WHERE JobCorrelationId = @Id AND State = @OldState;",
-                        new { Id = jobCorrelationId, Newstate = newState, OldState = oldState});
+                        new {Id = jobCorrelationId, Newstate = newState, OldState = oldState});
 
                     scope.Complete();
 
