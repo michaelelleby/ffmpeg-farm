@@ -187,10 +187,11 @@ namespace FFmpegFarm.Worker
         /// <summary>
         /// Retries and ignores exceptions.
         /// </summary>
-        private TRes ApiWrapper<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
+        private TRes ApiWrapper<TRes>(Func<TRes> func)
         {
             const int retryCount = 3;
             Exception exception = null;
+            SwaggerException swaggerException = null;
             for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
             {
                 #if DEBUGAPI
@@ -199,50 +200,15 @@ namespace FFmpegFarm.Worker
                 #endif
                 try
                 {
-                    return apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
+                    return func();
                 }
                 catch (Exception e)
                 {
                     exception = e;
+                    swaggerException = e as SwaggerException;
                     #if DEBUGAPI
-                    _logger.Exception(e,_threadId);
-                    #endif
-                }
-                #if DEBUGAPI
-                finally
-                {
-                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms");
-                    timer.Stop();
-                }
-                #endif
-                Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
-            }
-            _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
-            return default(TRes);
-        }
-
-        /// <summary>
-        /// Retries and ignores exceptions.
-        /// </summary>
-        private void ApiWrapper<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
-        {
-            const int retryCount = 3;
-            Exception exception = null;
-            for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
-            {
-                #if DEBUGAPI
-                var timer = new Stopwatch();
-                timer.Start();
-                #endif
-                try
-                {
-                    apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
-                    return;
-                }
-                catch (Exception e)
-                {
-                    exception = e;
-                    #if DEBUGAPI
+                    if (swaggerException != null)
+                        _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}", _threadId);
                     _logger.Exception(e, _threadId);
                     #endif
                 }
@@ -255,8 +221,31 @@ namespace FFmpegFarm.Worker
                 #endif
                 Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
             }
+            if (swaggerException != null)
+                _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}",_threadId);
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
-            
+            return default(TRes);
+        }
+
+
+        /// <summary>
+        /// Retries and ignores exceptions.
+        /// </summary>
+        private TRes ApiWrapper<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
+        {
+            return ApiWrapper(() => apiCall(arg, CancellationToken.None).GetAwaiter().GetResult());
+        }
+
+        /// <summary>
+        /// Retries and ignores exceptions.
+        /// </summary>
+        private void ApiWrapper<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
+        {
+            ApiWrapper(
+                new Func<object> (()=>{
+                    apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
+                    return null;
+                }));
         }
     }
 }
