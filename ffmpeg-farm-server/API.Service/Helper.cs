@@ -88,12 +88,12 @@ namespace API.Service
 
         public void InsertClientHeartbeat(string machineName)
         {
-            using (var connection = GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = GetConnection())
                 {
+                    connection.Open();
+
                     var updatedRows = connection.Execute(
                         "UPDATE Clients SET LastHeartbeat = @Heartbeat WHERE MachineName = @MachineName;",
                         new {MachineName = machineName, HeartBeat = DateTime.UtcNow});

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -86,42 +87,41 @@ namespace API.Repository
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using (var connection = Helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = Helper.GetConnection())
                 {
-                    var job = connection.Query<AudioTranscodingJob>(
-                            "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
-                            new
-                            {
-                                QueuedState = TranscodingJobState.Queued,
-                                InProgressState = TranscodingJobState.InProgress,
-                                Heartbeat = timeout
-                            })
-                        .SingleOrDefault();
-                    if (job == null)
-                    {
-                        return null;
-                    }
+                    connection.Open();
 
-                    var rowsUpdated =
-                        connection.Execute(
-                            "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id AND (State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout));",
-                            new
-                            {
-                                State = TranscodingJobState.InProgress,
-                                Heartbeat = DateTimeOffset.UtcNow,
-                                Id = job.Id,
-                                Timeout = timeout,
-                                QueuedState = TranscodingJobState.Queued,
-                                InProgressState = TranscodingJobState.InProgress,
-                            });
-                    if (rowsUpdated == 0)
+                    var o = new
                     {
-                        throw new Exception("Failed to mark row as taken");
-                    }
+                        State = TranscodingJobState.InProgress,
+                        Heartbeat = DateTimeOffset.UtcNow,
+                        Timeout = timeout,
+                        QueuedState = TranscodingJobState.Queued,
+                        InProgressState = TranscodingJobState.InProgress
+                    };
+                    var parameters = new DynamicParameters(o);
+                    parameters.Add("@Id", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                    parameters.Add("@Arguments", dbType: DbType.AnsiStringFixedLength, direction: ParameterDirection.Output, size: 500);
+                    parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+
+                    var rowsUpdated = connection.Execute(
+                        "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat, @Id = Id, @Arguments = Arguments, @JobCorrelationId = JobCorrelationId WHERE Id = (SELECT TOP 1 Id FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout) ORDER BY Needed ASC, Id ASC);",
+                        parameters);
+                    if (rowsUpdated == 0)
+                        return null;
+
+                    var job = new AudioTranscodingJob
+                    {
+                        Id = parameters.Get<int>("@Id"),
+                        Arguments = parameters.Get<string>("@Arguments"),
+                        JobCorrelationId = parameters.Get<Guid>("JobCorrelationId")
+                    };
+
+                    // Safety check to ensure that the data is being returned correctly in the SQL query
+                    if (job.Id < 0 || string.IsNullOrWhiteSpace(job.Arguments) || job.JobCorrelationId == Guid.Empty)
+                        throw new InvalidOperationException("One or more parameters were not set by SQL query.");
 
                     scope.Complete();
 

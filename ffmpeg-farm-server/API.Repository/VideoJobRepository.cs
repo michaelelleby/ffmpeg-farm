@@ -22,12 +22,12 @@ namespace API.Repository
             DateTime timeout =
                 DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using (var connection = Helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = Helper.GetConnection())
                 {
+                    connection.Open();
+
                     var data = connection.Query<dynamic>(
                             "SELECT TOP 1 Id, Arguments, JobCorrelationId FROM FfmpegVideoJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Heartbeat) ORDER BY Needed ASC, Id ASC;",
                             new
@@ -42,9 +42,11 @@ namespace API.Repository
                         return null;
                     }
 
-                    var parts = connection.Query<dynamic>("SELECT Id, JobCorrelationId, Filename, Number, Target, PSNR FROM FfmpegVideoParts WHERE FfmpegVideoJobs_Id = @JobId;",
-                        new {JobId = data.Id});
-                    
+                    var parts =
+                        connection.Query<dynamic>(
+                            "SELECT Id, JobCorrelationId, Filename, Number, Target, PSNR FROM FfmpegVideoParts WHERE FfmpegVideoJobs_Id = @JobId;",
+                            new {JobId = data.Id});
+
                     var rowsUpdated =
                         connection.Execute(
                             "UPDATE FfmpegVideoJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat WHERE Id = @Id;",
@@ -79,12 +81,12 @@ namespace API.Repository
 
         public MergeJob GetNextMergeJob()
         {
-            using (var connection = Helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = Helper.GetConnection())
                 {
+                    connection.Open();
+
                     int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
                     DateTime timeout = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
@@ -115,7 +117,7 @@ namespace API.Repository
                     return new MergeJob
                     {
                         Id = Convert.ToInt32(data.Id),
-                        Arguments = new string[] { data.Arguments},
+                        Arguments = new string[] {data.Arguments},
                         JobCorrelationId = data.JobCorrelationId
                     };
                 }
@@ -124,12 +126,12 @@ namespace API.Repository
 
         public Mp4boxJob GetNextDashJob()
         {
-            using (var connection = Helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                using (var scope = new TransactionScope())
+                using (var connection = Helper.GetConnection())
                 {
+                    connection.Open();
+
                     var data = connection.Query<Mp4boxJob>(
                             "SELECT TOP 1 JobCorrelationId, Arguments FROM Mp4boxJobs WHERE State = @State ORDER BY Needed ASC, Id ASC;",
                             new {State = TranscodingJobState.Queued})

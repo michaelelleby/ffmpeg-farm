@@ -112,7 +112,9 @@
     <Compile Include="MergeJob.cs" />
     <Compile Include="Models\JobRequestModel.cs" />
     <Compile Include="Models\JobStatus.cs" />
+    <Compile Include="Models\ServiceStatus.cs" />
     <Compile Include="Models\TranscodingJobModel.cs" />
+    <Compile Include="Models\WorkerStatus.cs" />
     <Compile Include="Mp4boxJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Quality.cs" />
