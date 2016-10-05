@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.ServiceProcess;
 using System.Threading;
@@ -41,9 +42,19 @@ namespace FFmpegFarm.WindowsService
         protected override void OnStop()
         {
             _cancellationTokenSource.Cancel();
-            while (_tasks.Any(t => !t.IsCompleted))
+            foreach (var task in _tasks)
             {
-                Thread.Sleep(10);
+                try
+                {
+                    // ReSharper disable once MethodSupportsCancellation
+                    task.Wait();
+                }
+                catch (Exception e)
+                {
+                    if (!(e.InnerException?.GetType() == typeof(OperationCanceledException)
+                        || e.InnerException?.GetType() == typeof(TaskCanceledException)))
+                        throw;
+                }
             }
             _logger.Information("Stopped");
         }

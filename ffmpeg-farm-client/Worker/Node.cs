@@ -78,7 +78,7 @@ namespace FFmpegFarm.Worker
                     _logger.Warn($"In progress job re-queued {_currentJob.JobCorrelationId}");
                     _currentJob.State = AudioTranscodingJobState.Queued;
                     // ReSharper disable once MethodSupportsCancellation
-                    _statusClient.UpdateProgressAsync(_currentJob.ToBaseJob()).GetAwaiter().GetResult();
+                    _statusClient.UpdateProgressAsync(_currentJob.ToBaseJob()).GetAwaiter().GetResult(); // don't use wrapper since cancel has been called.
                 }
                 _logger.Debug("Cancel recived shutting down...");
             }
@@ -249,7 +249,7 @@ namespace FFmpegFarm.Worker
                 #if DEBUGAPI
                 finally
                 {
-                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms");
+                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms", _threadId);
                     timer.Stop();
                 }
                 #endif
