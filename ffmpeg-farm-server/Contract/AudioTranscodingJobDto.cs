@@ -19,5 +19,9 @@ namespace Contract
         public DateTimeOffset? Heartbeat { get; set; }
 
         public string HeartbeatMachineName { get; set; }
+
+        public string DestinationFilename { get; set; }
+
+        public int Bitrate { get; set; }
     }
 }

@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Transactions;
 using System.Web.Http;
-using API.Repository;
-using API.Service;
 using Contract;
-using Contract.Dto;
 using Contract.Models;
-using Dapper;
 
 namespace API.WindowsService.Controllers
 {
@@ -69,26 +62,24 @@ namespace API.WindowsService.Controllers
             if (job == null)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}"));
 
-            JobStatus result = new JobStatus();
-
-            result.State = GetJobStatus(job);
-            result.JobCorrelationId = job.JobCorrelationId;
-            result.Created = job.Created;
+            JobStatus result = new JobStatus
+            {
+                State = GetJobStatus(job),
+                JobCorrelationId = job.JobCorrelationId,
+                Created = job.Created
+            };
 
             if (result.State == TranscodingJobState.Done)
+            {
                 result.OutputFiles = GetOutputFiles(job.Jobs);
+            }
 
             return result;
         }
 
-        private List<string> GetOutputFiles(ICollection<AudioTranscodingJobDto> jobs)
+        private static ICollection<string> GetOutputFiles(ICollection<AudioTranscodingJobDto> jobs)
         {
-            List<string> result = new List<string>();
-            foreach (var job in jobs)
-            {
-                result.Add("Dummyfilename_" + job.SourceFilename);
-            }
-            return result;
+            return jobs.Select(job => job.DestinationFilename).ToList();
         }
 
         private static TranscodingJobState GetJobStatus(AudioJobRequestDto job)

@@ -64,14 +64,16 @@ namespace API.Repository
                     foreach (AudioTranscodingJob transcodingJob in jobs)
                     {
                         connection.Execute(
-                            "INSERT INTO FfmpegAudioJobs (JobCorrelationId, Arguments, Needed, SourceFilename, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @SourceFilename, @State);",
+                            "INSERT INTO FfmpegAudioJobs (JobCorrelationId, Arguments, Needed, SourceFilename, State, DestinationFilename, Bitrate) VALUES(@JobCorrelationId, @Arguments, @Needed, @SourceFilename, @State, @DestinationFilename, @Bitrate);",
                             new
                             {
                                 JobCorrelationId = jobCorrelationId,
                                 transcodingJob.Arguments,
                                 transcodingJob.Needed,
                                 transcodingJob.SourceFilename,
-                                transcodingJob.State
+                                transcodingJob.State,
+                                transcodingJob.DestinationFilename,
+                                transcodingJob.Bitrate
                             });
                     }
                 }
@@ -184,7 +186,7 @@ namespace API.Repository
                     new {JobCorrelationId = id});
 
                 request.Jobs = connection.Query<AudioTranscodingJobDto>(
-                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, Bitrate FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
                         new {JobCorrelationId = id})
                     .ToList();
 

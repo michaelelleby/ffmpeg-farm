@@ -9,5 +9,9 @@ namespace Contract
         public DateTimeOffset Needed { get; set; }
 
         public new JobType Type => JobType.Audio;
+
+        public string DestinationFilename { get; set; }
+
+        public int Bitrate { get; set; }
     }
 }

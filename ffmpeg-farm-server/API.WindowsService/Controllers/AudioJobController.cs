@@ -84,23 +84,23 @@ namespace API.WindowsService.Controllers
             var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
             {
-                AudioTranscodingJob transcodingJob = new AudioTranscodingJob
-                {
-                    JobCorrelationId = jobCorrelationId,
-                    SourceFilename = sourceFilename,
-                    Needed = request.Needed.DateTime,
-                    State = TranscodingJobState.Queued
-                };
-
                 string extension = ContainerHelper.GetExtension(target.Format);
 
                 string destinationFilename =
                     $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{target
                         .Bitrate}.{extension}";
 
-                transcodingJob.Arguments =
-                    $@"-y -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn ""{destinationFilename}""";
+                var transcodingJob = new AudioTranscodingJob
+                {
+                    JobCorrelationId = jobCorrelationId,
+                    SourceFilename = sourceFilename,
+                    Needed = request.Needed.DateTime,
+                    State = TranscodingJobState.Queued,
+                    DestinationFilename = destinationFilename,
+                    Bitrate = target.Bitrate,
+                    Arguments = $@"-y -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                        .Bitrate}k -vn ""{destinationFilename}"""
+                };
 
                 jobs.Add(transcodingJob);
             }
