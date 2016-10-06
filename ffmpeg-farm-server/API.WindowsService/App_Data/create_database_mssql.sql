@@ -1,11 +1,11 @@
-/****** Object:  User [ffmpegfarm]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  User [ffmpegfarm]    Script Date: 06-10-2016 10:31:24 ******/
 CREATE USER [ffmpegfarm] FOR LOGIN [ffmpegfarm] WITH DEFAULT_SCHEMA=[dbo]
 GO
 ALTER ROLE [db_datareader] ADD MEMBER [ffmpegfarm]
 GO
 ALTER ROLE [db_datawriter] ADD MEMBER [ffmpegfarm]
 GO
-/****** Object:  Table [dbo].[Clients]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[Clients]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -21,7 +21,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegAudioJobs]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegAudioJobs]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -48,10 +48,12 @@ CREATE TABLE [dbo].[FfmpegAudioJobs](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegAudioRequest]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegAudioRequest]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
 GO
 CREATE TABLE [dbo].[FfmpegAudioRequest](
 	[id] [int] IDENTITY(1,1) NOT NULL,
@@ -68,7 +70,9 @@ CREATE TABLE [dbo].[FfmpegAudioRequest](
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegAudioRequestTargets]    Script Date: 26-09-2016 15:36:05 ******/
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[FfmpegAudioRequestTargets]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -90,7 +94,7 @@ CREATE TABLE [dbo].[FfmpegAudioRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoJobs]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegVideoJobs]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -119,7 +123,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoMergeJobs]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegVideoMergeJobs]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -145,7 +149,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoParts]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegVideoParts]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -168,7 +172,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegVideoRequest]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegVideoRequest]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -200,7 +204,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoRequestTargets]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[FfmpegVideoRequestTargets]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -225,7 +229,7 @@ CREATE TABLE [dbo].[FfmpegVideoRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 26-09-2016 15:36:05 ******/
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 06-10-2016 10:31:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -249,7 +253,19 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Index [IX_FfmpegAudioRequest]    Script Date: 26-09-2016 15:36:05 ******/
+SET ANSI_PADDING ON
+
+GO
+/****** Object:  Index [IX_FfmpegAudioJobs]    Script Date: 06-10-2016 10:31:24 ******/
+CREATE NONCLUSTERED INDEX [IX_FfmpegAudioJobs] ON [dbo].[FfmpegAudioJobs]
+(
+	[id] ASC,
+	[State] ASC,
+	[Heartbeat] ASC,
+	[Needed] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_FfmpegAudioRequest]    Script Date: 06-10-2016 10:31:24 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [IX_FfmpegAudioRequest] ON [dbo].[FfmpegAudioRequest]
 (
 	[JobCorrelationId] ASC

@@ -10,6 +10,7 @@ namespace API.WindowsService.Validators
             RuleFor(x => x.Format).NotEqual(ContainerFormat.Unknown);
             RuleFor(x => x.AudioCodec).NotEqual(Codec.Unknown);
             RuleFor(x => x.Bitrate).GreaterThan(0);
+            RuleFor(x => x.Channels).NotEqual(Channels.Unknown);
         }
     }
 }
