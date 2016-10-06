@@ -81,52 +81,67 @@ namespace API.Repository
                 return jobCorrelationId;
             }
         }
-        
+
         public AudioTranscodingJob GetNextTranscodingJob()
         {
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using (var scope = new TransactionScope())
+            var data = new
             {
-                using (var connection = Helper.GetConnection())
+                State = TranscodingJobState.InProgress,
+                Heartbeat = DateTimeOffset.UtcNow,
+                Timeout = timeout,
+                QueuedState = TranscodingJobState.Queued,
+                InProgressState = TranscodingJobState.InProgress
+            };
+            var parameters = new DynamicParameters(data);
+            parameters.Add("@Id", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add("@Arguments", dbType: DbType.AnsiStringFixedLength, direction: ParameterDirection.Output, size: 500);
+            parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+                do
                 {
-                    connection.Open();
-
-                    var o = new
+                    try
                     {
-                        State = TranscodingJobState.InProgress,
-                        Heartbeat = DateTimeOffset.UtcNow,
-                        Timeout = timeout,
-                        QueuedState = TranscodingJobState.Queued,
-                        InProgressState = TranscodingJobState.InProgress
-                    };
-                    var parameters = new DynamicParameters(o);
-                    parameters.Add("@Id", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                    parameters.Add("@Arguments", dbType: DbType.AnsiStringFixedLength, direction: ParameterDirection.Output, size: 500);
-                    parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+                        using (var transaction = connection.BeginTransaction())
+                        {
+                            var rowsUpdated = connection.Execute(
+                                "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat, @Id = Id, @Arguments = Arguments, @JobCorrelationId = JobCorrelationId WHERE Id = (SELECT TOP 1 Id FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout) ORDER BY Needed ASC, Id ASC);",
+                                parameters, transaction);
+                            if (rowsUpdated == 0)
+                                return null;
 
-                    var rowsUpdated = connection.Execute(
-                        "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat, @Id = Id, @Arguments = Arguments, @JobCorrelationId = JobCorrelationId WHERE Id = (SELECT TOP 1 Id FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout) ORDER BY Needed ASC, Id ASC);",
-                        parameters);
-                    if (rowsUpdated == 0)
-                        return null;
+                            var job = new AudioTranscodingJob
+                            {
+                                Id = parameters.Get<int>("@Id"),
+                                Arguments = parameters.Get<string>("@Arguments"),
+                                JobCorrelationId = parameters.Get<Guid>("JobCorrelationId")
+                            };
 
-                    var job = new AudioTranscodingJob
+                            // Safety check to ensure that the data is being returned correctly in the SQL query
+                            if (job.Id < 0 || string.IsNullOrWhiteSpace(job.Arguments) || job.JobCorrelationId == Guid.Empty)
+                                throw new InvalidOperationException("One or more parameters were not set by SQL query.");
+
+                            transaction.Commit();
+
+                            return job;
+                        }
+                    }
+                    catch (SqlException e)
                     {
-                        Id = parameters.Get<int>("@Id"),
-                        Arguments = parameters.Get<string>("@Arguments"),
-                        JobCorrelationId = parameters.Get<Guid>("JobCorrelationId")
-                    };
+                        // Retry in case of deadlocks
+                        if (e.ErrorCode == 1205)
+                        {
+                            continue;
+                        }
 
-                    // Safety check to ensure that the data is being returned correctly in the SQL query
-                    if (job.Id < 0 || string.IsNullOrWhiteSpace(job.Arguments) || job.JobCorrelationId == Guid.Empty)
-                        throw new InvalidOperationException("One or more parameters were not set by SQL query.");
-
-                    scope.Complete();
-
-                    return job;
-                }
+                        throw;
+                    }
+                } while (true);
             }
         }
 
