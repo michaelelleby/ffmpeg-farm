@@ -1,45 +1,48 @@
 <Project ToolsVersion="14.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <TPath>$(MSBuildExtensionsPath32)\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks</TPath>
-    <ServiceName>FFmpegFarm</ServiceName>
-    <SourceConfigPath>$(MSBuildProjectDirectory)\src\WindowsService\App.config</SourceConfigPath>
-    <TransformFilePath>$(MSBuildProjectDirectory)\src\WindowsService\App.$(Environment).config</TransformFilePath>
-  </PropertyGroup>
-  <Import Project="$(TPath)"/>
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v14.0\Web\Microsoft.Web.Publishing.targets" Condition="!Exists('$(VSToolsPath)\Web\Microsoft.Web.Publishing.targets')" />
-  <ItemGroup>
-    <RemoteMachines Include="$(DeployMachines.Split(`;`))"/>
-  </ItemGroup>
+	<PropertyGroup>
+		<ExtensionPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\MSBuild.ExtensionPack.tasks</ExtensionPath>
+		<ExtensionTasksPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\</ExtensionTasksPath>
+		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools\</SlowCheetahToolsPath>
+		<ServiceName>FFmpegFarm</ServiceName>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\src\WindowsService\App.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\src\WindowsService\App.$(Environment).config</TransformFilePath>
+	</PropertyGroup>
+	<Import Project="$(ExtensionPath)"/>
+	<Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' And Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />
+	<Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="('$(VSToolsPath)' == '' Or !Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')) And Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
+	<ItemGroup>
+		<RemoteMachines Include="$(DeployMachines.Split(`;`))"/>
+	</ItemGroup>
 
-  <Target Name="Default"  >
-    <MSBuild Projects="$(MSBuildProjectFile)" Properties="CurrentMachine=%(RemoteMachines.Identity)" Targets="Deploy"></MSBuild>
-  </Target>
-  <Target Name="Deploy">
-    <!-- Check whether a service exists (this should return true in most cases) -->
-    <MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="CheckExists" ServiceName="$(ServiceName)"
+	<Target Name="Default"  >
+		<MSBuild Projects="$(MSBuildProjectFile)" Properties="CurrentMachine=%(RemoteMachines.Identity)" Targets="Deploy"/>
+	</Target>
+	<Target Name="Deploy">
+		<!-- Check whether a service exists (this should return true in most cases) -->
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="CheckExists" ServiceName="$(ServiceName)"
                                                    RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)">
-      <Output TaskParameter="Exists" PropertyName="DoesExist"/>
-    </MSBuild.ExtensionPack.Computer.WindowsService>
+			<Output TaskParameter="Exists" PropertyName="DoesExist"/>
+		</MSBuild.ExtensionPack.Computer.WindowsService>
 
-    <!-- Stop a service on a Remote Machine -->
-    <MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)"
+		<!-- Stop a service on a Remote Machine -->
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)"
                                                    RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"/>
 
-    <!-- Deploy files to destination -->
-    <MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\WindowsService\bin\$(Configuration)" Destination="\\$(CurrentMachine)\$(DeployPath)" Files="*.*" Options="/MIR">
-      <Output TaskParameter="ExitCode" PropertyName="Exit" />
-      <Output TaskParameter="ReturnCode" PropertyName="Return" />
-    </MSBuild.ExtensionPack.FileSystem.RoboCopy>
+		<!-- Deploy files to destination -->
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\WindowsService\bin\$(Configuration)" Destination="\\$(CurrentMachine)\$(DeployPath)" Files="*.*" Options="/MIR">
+			<Output TaskParameter="ExitCode" PropertyName="Exit" />
+			<Output TaskParameter="ReturnCode" PropertyName="Return" />
+		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
 
-    <!-- Transform config file -->
-    <TransformXml
+		<!-- Transform config file -->
+		<TransformXml
 			Condition="Exists('$(TransformFilePath)')"
 			Source="$(SourceConfigPath)"
 			Transform="$(TransformFilePath)"
 			Destination="\\$(CurrentMachine)\$(DeployPath)\FFmpegFarm.WindowsService.exe.config" />
 
-    <!-- Install a service on a Remote Machine -->
-    <MSBuild.ExtensionPack.Computer.WindowsService
+		<!-- Install a service on a Remote Machine -->
+		<MSBuild.ExtensionPack.Computer.WindowsService
 			Condition="!$(DoesExist) == 'true' and $(InstallService) == 'true'"
 			TaskAction="Install"
 			ServiceName="$(ServiceName)"
@@ -48,7 +51,7 @@
       RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"
 			ServicePath="$(LocalDeployPath)\FFmpegFarm.WindowsService.exe" />
 
-    <MSBuild.ExtensionPack.Computer.WindowsService TaskAction="UpdateIdentity"
+		<MSBuild.ExtensionPack.Computer.WindowsService TaskAction="UpdateIdentity"
                                                    Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'"
                                                    ServiceName="$(ServiceName)"
                                                    User="$(ServiceUser)"
@@ -57,9 +60,9 @@
                                                    RemoteUserPassword="$(RemoteUserPassword)"
                                                    MachineName="$(CurrentMachine)"
                                                    />
-    
-    <!-- Start a service on a Remote Machine -->
-    <MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)"
+
+		<!-- Start a service on a Remote Machine -->
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)"
                                                    RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"/>
-  </Target>
+	</Target>
 </Project>
