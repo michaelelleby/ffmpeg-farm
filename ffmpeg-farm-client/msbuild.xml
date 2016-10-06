@@ -4,8 +4,8 @@
 		<ExtensionTasksPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\</ExtensionTasksPath>
 		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools\</SlowCheetahToolsPath>
 		<ServiceName>FFmpegFarm</ServiceName>
-		<SourceConfigPath>$(MSBuildProjectDirectory)\src\WindowsService\App.config</SourceConfigPath>
-		<TransformFilePath>$(MSBuildProjectDirectory)\src\WindowsService\App.$(Environment).config</TransformFilePath>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\WindowsService\App.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\WindowsService\App.$(Environment).config</TransformFilePath>
 	</PropertyGroup>
 	<Import Project="$(ExtensionPath)"/>
 	<Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' And Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />
@@ -17,6 +17,7 @@
 	<Target Name="Default"  >
 		<MSBuild Projects="$(MSBuildProjectFile)" Properties="CurrentMachine=%(RemoteMachines.Identity)" Targets="Deploy"/>
 	</Target>
+
 	<Target Name="Deploy">
 		<!-- Check whether a service exists (this should return true in most cases) -->
 		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="CheckExists" ServiceName="$(ServiceName)"
@@ -29,7 +30,7 @@
                                                    RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"/>
 
 		<!-- Deploy files to destination -->
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\src\WindowsService\bin\$(Configuration)" Destination="\\$(CurrentMachine)\$(DeployPath)" Files="*.*" Options="/MIR">
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\WindowsService\bin\$(Configuration)" Destination="\\$(CurrentMachine)\$(DeployPath)" Files="*.*" Options="/MIR">
 			<Output TaskParameter="ExitCode" PropertyName="Exit" />
 			<Output TaskParameter="ReturnCode" PropertyName="Return" />
 		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
