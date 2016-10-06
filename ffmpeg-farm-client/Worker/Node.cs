@@ -112,7 +112,7 @@ namespace FFmpegFarm.Worker
 
                 _commandlineProcess.WaitForExit();
 
-                if (FfmpegDetectedError())
+                if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
                 {
                     _currentJob.Failed = true;
                     _currentJob.Done = false;
@@ -121,7 +121,7 @@ namespace FFmpegFarm.Worker
                 }
                 else
                 {
-                    _currentJob.Done = _commandlineProcess.ExitCode == 0;
+                    _currentJob.Done = true;
                     _logger.Information($"Job {(_currentJob.Done.Value ? "Done" : "Canceled")} {_currentJob.JobCorrelationId}", _threadId);
                 }
                 ApiWrapper(_statusClient.UpdateProgressAsync, _currentJob.ToBaseJob());
