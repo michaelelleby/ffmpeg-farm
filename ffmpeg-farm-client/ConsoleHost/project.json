@@ -4,7 +4,6 @@
   "buildOptions": {
     "emitEntryPoint": true
   },
-
   "dependencies": {
     "Microsoft.Extensions.Configuration": "1.0.0",
     "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
@@ -15,10 +14,12 @@
     },
     "Worker": "1.0.0-*"
   },
-
   "frameworks": {
     "netcoreapp1.0": {
       "imports": "dnxcore50"
     }
+  },
+  "configurations": {
+    "Development": {}
   }
 }
