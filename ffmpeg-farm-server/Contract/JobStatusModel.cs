@@ -5,6 +5,6 @@ namespace Contract
 {
     public class JobStatusModel
     {
-        public IEnumerable<JobRequestModel> Requests { get; set; }
+        public IEnumerable<FfmpegJobModel> Requests { get; set; }
     }
 }

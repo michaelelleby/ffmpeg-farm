@@ -4,17 +4,21 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.WindowsService.Models;
 using Contract;
+using Contract.Dto;
 using Contract.Models;
+using FfmpegTaskModel = Contract.Models.FfmpegTaskModel;
+using JobStatus = Contract.Models.JobStatus;
 
 namespace API.WindowsService.Controllers
 {
     public class StatusController : ApiController
     {
-        private readonly IAudioJobRepository _repository;
+        private readonly IJobRepository _repository;
         private readonly IHelper _helper;
 
-        public StatusController(IAudioJobRepository repository, IHelper helper)
+        public StatusController(IJobRepository repository, IHelper helper)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
@@ -27,19 +31,17 @@ namespace API.WindowsService.Controllers
         /// Get status for all jobs
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<JobRequestModel> Get()
+        public IEnumerable<FfmpegJobModel> Get()
         {
-            IEnumerable<AudioJobRequestDto> jobStatuses = _repository.Get();
-            IEnumerable<JobRequestModel> requestModels = jobStatuses.Select(m => new JobRequestModel
+            ICollection<FFmpegJobDto> jobStatuses = _repository.Get();
+            IEnumerable<FfmpegJobModel> requestModels = jobStatuses.Select(m => new FfmpegJobModel
             {
                 JobCorrelationId = m.JobCorrelationId,
-                SourceFilename = m.SourceFilename,
-                DestinationFilenamePrefix = m.DestinationFilename,
-                Needed = m.Needed.GetValueOrDefault(),
+                Needed = m.Needed,
                 Created = m.Created,
-                Jobs = m.Jobs.Select(j => new TranscodingJobModel
+                Tasks = m.Tasks.Select(j => new FfmpegTaskModel
                 {
-                    Heartbeat = j.Heartbeat.GetValueOrDefault(),
+                    Heartbeat = j.Heartbeat,
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,
                 })
@@ -58,7 +60,7 @@ namespace API.WindowsService.Controllers
             if (id == Guid.Empty)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "ID must be a valid GUID"));
 
-            AudioJobRequestDto job = _repository.Get(id);
+            FFmpegJobDto job = _repository.Get(id);
             if (job == null)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}"));
 
@@ -71,20 +73,21 @@ namespace API.WindowsService.Controllers
 
             if (result.State == TranscodingJobState.Done)
             {
-                result.OutputFiles = GetOutputFiles(job.Jobs);
+                result.OutputFiles = GetOutputFiles(job.Tasks);
             }
 
             return result;
         }
 
-        private static ICollection<string> GetOutputFiles(ICollection<AudioTranscodingJobDto> jobs)
+        private static ICollection<string> GetOutputFiles(ICollection<FFmpegTaskDto> tasks)
         {
-            return jobs.Select(job => job.DestinationFilename).ToList();
+            return tasks.Select(task => task.DestinationFilename)
+                .ToList();
         }
 
-        private static TranscodingJobState GetJobStatus(AudioJobRequestDto job)
+        private static TranscodingJobState GetJobStatus(FFmpegJobDto job)
         {
-            var transcodingJobs = job.Jobs.Select(j => new TranscodingJobModel
+            var transcodingJobs = job.Tasks.Select(j => new Models.FfmpegTaskModel
             {
                 Heartbeat = j.Heartbeat.GetValueOrDefault(),
                 HeartbeatMachine = j.HeartbeatMachineName,
@@ -115,18 +118,19 @@ namespace API.WindowsService.Controllers
         /// This also serves as a heartbeat, to tell the server
         /// that the client is still working actively on the job
         /// </summary>
-        /// <param name="job"></param>
-        [HttpPut]
-        public void UpdateProgress(BaseJob job)
+        /// <param name="model"></param>
+        [HttpPatch]
+        public void UpdateProgress(TaskProgressModel model)
         {
-            if (job == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Job parameter must not be empty"));
-            if (string.IsNullOrWhiteSpace(job.MachineName))
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
+            if (!ModelState.IsValid)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+            }
 
-            _helper.InsertClientHeartbeat(job.MachineName);
+            _helper.InsertClientHeartbeat(model.MachineName);
 
-            _repository.SaveProgress(job);
+            _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
         }
     }
 }
+

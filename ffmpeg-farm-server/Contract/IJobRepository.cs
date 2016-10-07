@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using Contract.Dto;
 
 namespace Contract
 {
     public interface IJobRepository
     {
-        bool DeleteJob(Guid jobId, JobType type);
-        bool PauseJob(Guid jobId, JobType type);
-        bool ResumeJob(Guid jobId, JobType type);
-        void SaveProgress(BaseJob job);
+        bool DeleteJob(Guid jobId);
+        bool PauseJob(Guid jobId);
+        bool ResumeJob(Guid jobId);
+        void SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName);
+        FFmpegTaskDto GetNextJob();
+        FFmpegJobDto Get(Guid id);
+        ICollection<FFmpegJobDto> Get();
     }
 }

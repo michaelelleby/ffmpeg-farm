@@ -63,6 +63,7 @@ namespace API.WindowsService
                 defaults: null,
                 constraints: null,
                 handler: new RedirectHandler(SwaggerDocsConfig.DefaultRootUrlResolver, "/swagger"));
+            config.MapHttpAttributeRoutes();
 
             var container = new Container();
             container.Configure(_ =>
@@ -72,6 +73,11 @@ namespace API.WindowsService
 
                 _.For<IAudioJobRepository>()
                     .Use<AudioJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IMuxJobRepository>()
+                    .Use<MuxJobRepository>()
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
 

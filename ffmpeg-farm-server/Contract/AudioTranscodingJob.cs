@@ -1,17 +1,8 @@
-﻿using System;
-
-namespace Contract
+﻿namespace Contract
 {
-    public class AudioTranscodingJob : BaseJob
+    public class AudioTranscodingJob : FFmpegJob
     {
-        public string Arguments { get; set; }
-
-        public DateTimeOffset Needed { get; set; }
-
-        public new JobType Type => JobType.Audio;
-
-        public string DestinationFilename { get; set; }
-
+        public override JobType Type => JobType.Audio;
         public int Bitrate { get; set; }
     }
 }

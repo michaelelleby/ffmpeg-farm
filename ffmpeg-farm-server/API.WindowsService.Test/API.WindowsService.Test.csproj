@@ -69,13 +69,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controllers\AudioJobControllerTest.cs" />
-    <Compile Include="Controllers\PauseControllerTest.cs" />
-    <Compile Include="Controllers\ResumeJobControllerTest.cs" />
     <Compile Include="Controllers\StatusControllerTest.cs" />
     <Compile Include="Helpers\ApiControllerConventions.cs" />
     <Compile Include="Helpers\ApiControllerCustomization.cs" />
     <Compile Include="Helpers\HttpRequestMessageCustomization.cs" />
+    <Compile Include="JobControllerTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

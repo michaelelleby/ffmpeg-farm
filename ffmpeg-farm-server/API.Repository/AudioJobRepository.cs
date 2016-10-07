@@ -1,26 +1,25 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Transactions;
-using API.Service;
 using Contract;
-using Contract.Dto;
-using Contract.Models;
 using Dapper;
 
 namespace API.Repository
 {
     public class AudioJobRepository : JobRepository, IAudioJobRepository
     {
+        private readonly IHelper _helper;
         private readonly string _connectionString;
 
         public AudioJobRepository(IHelper helper, string connectionString) : base(helper)
         {
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException("connectionString");
+
+            _helper = helper;
             _connectionString = connectionString;
         }
 
@@ -34,7 +33,7 @@ namespace API.Repository
 
             using (var scope = new TransactionScope())
             {
-                using (var connection = new SqlConnection(_connectionString))
+                using (var connection = _helper.GetConnection())
                 {
                     connection.Execute(
                         "INSERT INTO FfmpegAudioRequest (JobCorrelationId, SourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @SourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
@@ -61,19 +60,27 @@ namespace API.Repository
                             });
                     }
 
+                    var jobId = connection.ExecuteScalar<int>(
+                        "INSERT INTO FfmpegJobs (JobCorrelationId, Created, Needed, JobState, JobType) VALUES(@JobCorrelationId, @Created, @Needed, @JobState, @JobType);SELECT @@IDENTITY;",
+                        new
+                        {
+                            JobCorrelationId = jobCorrelationId,
+                            Created = DateTimeOffset.UtcNow,
+                            request.Needed,
+                            JobState = TranscodingJobState.Queued,
+                            JobType = JobType.Audio
+                        });
+
                     foreach (AudioTranscodingJob transcodingJob in jobs)
                     {
                         connection.Execute(
-                            "INSERT INTO FfmpegAudioJobs (JobCorrelationId, Arguments, Needed, SourceFilename, State, DestinationFilename, Bitrate) VALUES(@JobCorrelationId, @Arguments, @Needed, @SourceFilename, @State, @DestinationFilename, @Bitrate);",
+                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename);",
                             new
                             {
-                                JobCorrelationId = jobCorrelationId,
+                                FfmpegJobsId = jobId,
                                 transcodingJob.Arguments,
-                                transcodingJob.Needed,
-                                transcodingJob.SourceFilename,
-                                transcodingJob.State,
-                                transcodingJob.DestinationFilename,
-                                transcodingJob.Bitrate
+                                TaskState = TranscodingJobState.Queued,
+                                transcodingJob.DestinationFilename
                             });
                     }
                 }
@@ -81,69 +88,6 @@ namespace API.Repository
                 scope.Complete();
 
                 return jobCorrelationId;
-            }
-        }
-
-        public AudioTranscodingJob GetNextTranscodingJob()
-        {
-            int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
-            DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
-
-            var data = new
-            {
-                State = TranscodingJobState.InProgress,
-                Heartbeat = DateTimeOffset.UtcNow,
-                Timeout = timeout,
-                QueuedState = TranscodingJobState.Queued,
-                InProgressState = TranscodingJobState.InProgress
-            };
-            var parameters = new DynamicParameters(data);
-            parameters.Add("@Id", dbType: DbType.Int32, direction: ParameterDirection.Output);
-            parameters.Add("@Arguments", dbType: DbType.AnsiStringFixedLength, direction: ParameterDirection.Output, size: 500);
-            parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
-
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-                do
-                {
-                    try
-                    {
-                        using (var transaction = connection.BeginTransaction())
-                        {
-                            var rowsUpdated = connection.Execute(
-                                "UPDATE FfmpegAudioJobs SET State = @State, HeartBeat = @Heartbeat, Started = @Heartbeat, @Id = Id, @Arguments = Arguments, @JobCorrelationId = JobCorrelationId WHERE Id = (SELECT TOP 1 Id FROM FfmpegAudioJobs WHERE State = @QueuedState OR (State = @InProgressState AND HeartBeat < @Timeout) ORDER BY Needed ASC, Id ASC);",
-                                parameters, transaction);
-                            if (rowsUpdated == 0)
-                                return null;
-
-                            var job = new AudioTranscodingJob
-                            {
-                                Id = parameters.Get<int>("@Id"),
-                                Arguments = parameters.Get<string>("@Arguments"),
-                                JobCorrelationId = parameters.Get<Guid>("JobCorrelationId")
-                            };
-
-                            // Safety check to ensure that the data is being returned correctly in the SQL query
-                            if (job.Id < 0 || string.IsNullOrWhiteSpace(job.Arguments) || job.JobCorrelationId == Guid.Empty)
-                                throw new InvalidOperationException("One or more parameters were not set by SQL query.");
-
-                            transaction.Commit();
-
-                            return job;
-                        }
-                    }
-                    catch (SqlException e)
-                    {
-                        // Retry in case of deadlocks
-                        if (e.ErrorCode == 1205)
-                        {
-                            continue;
-                        }
-
-                        throw;
-                    }
-                } while (true);
             }
         }
 
@@ -165,7 +109,9 @@ namespace API.Repository
                 }
 
                 var jobs = connection.Query<AudioTranscodingJobDto>(
-                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs ORDER BY Id ASC;");
+                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegTasks AJ " +
+                    "INNER JOIN FfmpegJobs Jobs ON AJ.FfmpegJobs_id = Jobs.id " +
+                    "ORDER BY Id ASC;");
 
                 foreach (AudioTranscodingJobDto dto in jobs)
                 {
@@ -186,7 +132,9 @@ namespace API.Repository
                     new {JobCorrelationId = id});
 
                 request.Jobs = connection.Query<AudioTranscodingJobDto>(
-                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, Bitrate FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, Bitrate FROM FfmpegTasks AJ " +
+                        "INNER JOIN FfmpegJobs Jobs ON AJ.FfmpegJobs_id = Jobs.id " +
+                        "WHERE JobCorrelationId = @JobCorrelationId;",
                         new {JobCorrelationId = id})
                     .ToList();
 

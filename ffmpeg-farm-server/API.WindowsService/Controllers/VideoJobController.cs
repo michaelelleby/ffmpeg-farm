@@ -31,7 +31,7 @@ using Contract;
 //    /// Get next transcoding job
 //    /// </summary>
 //    /// <param name="machineName">Client's machine name used to stamp who took the job</param>
-//    /// <returns><see cref="TranscodingJob"/></returns>
+//    /// <returns><see cref="AudioTranscodingJob"/></returns>
 //    public HttpResponseMessage Get(string machineName)
 //    {
 //        if (string.IsNullOrWhiteSpace(machineName))
@@ -177,7 +177,7 @@ using Contract;
 //                value = duration;
 //            }
 
-//            var transcodingJob = TranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
+//            var transcodingJob = AudioTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
 //                extension, i, job.Inpoint.GetValueOrDefault());
 
 //            transcodingJobs.Add(transcodingJob);
@@ -198,7 +198,7 @@ using Contract;
 //        }
 //    }
 
-//    private static VideoTranscodingJob TranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
+//    private static VideoTranscodingJob AudioTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
 //        Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
 //        TimeSpan inpoint)
 //    {

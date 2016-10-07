@@ -1,11 +1,13 @@
-/****** Object:  User [ffmpegfarm]    Script Date: 06-10-2016 14:28:34 ******/
+USE [ffmpegfarm]
+GO
+/****** Object:  User [ffmpegfarm]    Script Date: 10-10-2016 16:46:40 ******/
 CREATE USER [ffmpegfarm] FOR LOGIN [ffmpegfarm] WITH DEFAULT_SCHEMA=[dbo]
 GO
 ALTER ROLE [db_datareader] ADD MEMBER [ffmpegfarm]
 GO
 ALTER ROLE [db_datawriter] ADD MEMBER [ffmpegfarm]
 GO
-/****** Object:  Table [dbo].[Clients]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[Clients]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -21,36 +23,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegAudioJobs]    Script Date: 06-10-2016 14:28:34 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-SET ANSI_PADDING ON
-GO
-CREATE TABLE [dbo].[FfmpegAudioJobs](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[JobCorrelationId] [uniqueidentifier] NOT NULL,
-	[Arguments] [varchar](500) NOT NULL,
-	[Needed] [datetimeoffset](7) NOT NULL,
-	[SourceFilename] [nvarchar](max) NOT NULL,
-	[State] [varchar](50) NOT NULL,
-	[Started] [datetimeoffset](7) NULL,
-	[Heartbeat] [datetimeoffset](7) NULL,
-	[HeartbeatMachineName] [varchar](50) NULL,
-	[Progress] [float] NULL,
-	[DestinationFilename] [varchar](500) NOT NULL,
-	[Bitrate] [int] NOT NULL,
- CONSTRAINT [PK_FfmpegAudioJobs] PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-
-GO
-SET ANSI_PADDING OFF
-GO
-/****** Object:  Table [dbo].[FfmpegAudioRequest]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegAudioRequest]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -74,7 +47,7 @@ CREATE TABLE [dbo].[FfmpegAudioRequest](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegAudioRequestTargets]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegAudioRequestTargets]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -96,7 +69,70 @@ CREATE TABLE [dbo].[FfmpegAudioRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoJobs]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegJobs]    Script Date: 10-10-2016 16:46:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FfmpegJobs](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[JobCorrelationId] [uniqueidentifier] NOT NULL,
+	[Needed] [datetimeoffset](7) NOT NULL,
+	[JobType] [tinyint] NOT NULL,
+	[JobState] [tinyint] NOT NULL,
+ CONSTRAINT [PK_FfmpegJobs] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+
+GO
+/****** Object:  Table [dbo].[FfmpegMuxRequest]    Script Date: 10-10-2016 16:46:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FfmpegMuxRequest](
+	[JobCorrelationId] [uniqueidentifier] NOT NULL,
+	[VideoSourceFilename] [nvarchar](max) NOT NULL,
+	[AudioSourceFilename] [nvarchar](max) NOT NULL,
+	[DestinationFilename] [nvarchar](max) NOT NULL,
+	[OutputFolder] [nvarchar](max) NOT NULL,
+	[Needed] [datetimeoffset](7) NOT NULL,
+	[Created] [datetimeoffset](7) NOT NULL,
+ CONSTRAINT [PK_FfmpegMuxRequest] PRIMARY KEY CLUSTERED 
+(
+	[JobCorrelationId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+/****** Object:  Table [dbo].[FfmpegTasks]    Script Date: 10-10-2016 16:46:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+SET ANSI_PADDING ON
+GO
+CREATE TABLE [dbo].[FfmpegTasks](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[FfmpegJobs_id] [int] NOT NULL,
+	[Arguments] [nvarchar](max) NOT NULL,
+	[TaskState] [tinyint] NOT NULL,
+	[Started] [datetimeoffset](7) NULL,
+	[Heartbeat] [datetimeoffset](7) NULL,
+	[HeartbeatMachineName] [varchar](50) NULL,
+	[Progress] [float] NULL,
+ CONSTRAINT [PK_FfmpegMuxTasks] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+SET ANSI_PADDING OFF
+GO
+/****** Object:  Table [dbo].[FfmpegVideoJobs]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -125,7 +161,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoMergeJobs]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegVideoMergeJobs]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -151,7 +187,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoParts]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegVideoParts]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -174,7 +210,7 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
 GO
-/****** Object:  Table [dbo].[FfmpegVideoRequest]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegVideoRequest]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -206,7 +242,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[FfmpegVideoRequestTargets]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[FfmpegVideoRequestTargets]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -231,7 +267,7 @@ CREATE TABLE [dbo].[FfmpegVideoRequestTargets](
 GO
 SET ANSI_PADDING OFF
 GO
-/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Table [dbo].[Mp4boxJobs]    Script Date: 10-10-2016 16:46:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -255,19 +291,7 @@ PRIMARY KEY CLUSTERED
 GO
 SET ANSI_PADDING OFF
 GO
-SET ANSI_PADDING ON
-
-GO
-/****** Object:  Index [IX_FfmpegAudioJobs]    Script Date: 06-10-2016 14:28:34 ******/
-CREATE NONCLUSTERED INDEX [IX_FfmpegAudioJobs] ON [dbo].[FfmpegAudioJobs]
-(
-	[id] ASC,
-	[State] ASC,
-	[Heartbeat] ASC,
-	[Needed] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_FfmpegAudioRequest]    Script Date: 06-10-2016 14:28:34 ******/
+/****** Object:  Index [IX_FfmpegAudioRequest]    Script Date: 10-10-2016 16:46:40 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [IX_FfmpegAudioRequest] ON [dbo].[FfmpegAudioRequest]
 (
 	[JobCorrelationId] ASC
@@ -284,6 +308,11 @@ GO
 ALTER TABLE [dbo].[FfmpegVideoRequest] ADD  CONSTRAINT [DF_FfmpegRequest_EnableTwoPass]  DEFAULT ((0)) FOR [EnableTwoPass]
 GO
 ALTER TABLE [dbo].[FfmpegVideoRequest] ADD  CONSTRAINT [DF_FfmpegRequest_EnablePsnr]  DEFAULT ((0)) FOR [EnablePsnr]
+GO
+ALTER TABLE [dbo].[FfmpegTasks]  WITH CHECK ADD  CONSTRAINT [FK_FfmpegMuxTasks_FfmpegJobs] FOREIGN KEY([FfmpegJobs_id])
+REFERENCES [dbo].[FfmpegJobs] ([id])
+GO
+ALTER TABLE [dbo].[FfmpegTasks] CHECK CONSTRAINT [FK_FfmpegMuxTasks_FfmpegJobs]
 GO
 ALTER TABLE [dbo].[FfmpegVideoJobs]  WITH CHECK ADD  CONSTRAINT [FK_FfmpegJobs_FfmpegRequest] FOREIGN KEY([JobCorrelationId])
 REFERENCES [dbo].[FfmpegVideoRequest] ([JobCorrelationId])

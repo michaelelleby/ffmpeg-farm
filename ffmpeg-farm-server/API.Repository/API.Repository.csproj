@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="AudioJobRepository.cs" />
     <Compile Include="JobRepository.cs" />
+    <Compile Include="MuxJobRepository.cs" />
     <Compile Include="VideoJobRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

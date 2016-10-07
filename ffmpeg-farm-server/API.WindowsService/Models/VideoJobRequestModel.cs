@@ -21,5 +21,9 @@ namespace API.WindowsService.Models
         public bool EnableTwoPass { get; set; }
 
         public bool EnablePsnr { get; set; }
+        public string DestinationFilenamePrefix { get; set; }
+
+        [Required]
+        public string SourceFilename { get; set; }
     }
 }

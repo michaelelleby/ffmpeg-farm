@@ -10,5 +10,10 @@ namespace API.WindowsService.Models
     {
         [Required]
         public AudioDestinationFormat[] Targets { get; set; }
+
+        public string DestinationFilenamePrefix { get; set; }
+
+        [Required]
+        public string SourceFilename { get; set; }
     }
 }
