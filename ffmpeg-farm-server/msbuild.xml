@@ -1,35 +1,32 @@
-<Project ToolsVersion="4.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="14.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
-		<ExtensionPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\MSBuild.ExtensionPack.tasks</ExtensionPath>
-		<ExtensionTasksPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\</ExtensionTasksPath>
-		<SlowCheetahToolsPath>$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\tools\</SlowCheetahToolsPath>
-		<User>$(ServiceUsername)</User>
-		<Password>$(ServicePassword)</Password>
-		<ServiceName>FFmpegServerAPI</ServiceName>
-		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\app.config</SourceConfigPath>
-		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\app.$(Environment).config</TransformFilePath>
+		<TPath>$(MSBuildExtensionsPath32)\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks</TPath>
+		<ServiceName>FFmpegFarm</ServiceName>
+		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\App.config</SourceConfigPath>
+		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\App.$(Environment).config</TransformFilePath>
 	</PropertyGroup>
-	<Import Project="$(ExtensionPath)"/>
-	<PropertyGroup>
-		<SlowCheetahTargets Condition=" '$(SlowCheetahTargets)'=='' ">$(MSBuildProjectDirectory)\packages\SlowCheetah.2.5.15\content\Properties\SlowCheetah\SlowCheetah.Transforms.targets</SlowCheetahTargets>
-	</PropertyGroup>
-	<Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" />
-
+	<Import Project="$(TPath)"/>
+	<Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v14.0\Web\Microsoft.Web.Publishing.targets" Condition="!Exists('$(VSToolsPath)\Web\Microsoft.Web.Publishing.targets')" />
 	<ItemGroup>
-		<TargetDeployPaths Include="$(DeployPath.Split(`;`))"/>
+		<RemoteMachines Include="$(DeployMachines.Split(`;`))"/>
 	</ItemGroup>
 
-	<Target Name="Default">
+	<Target Name="Default"  >
+		<MSBuild Projects="$(MSBuildProjectFile)" Properties="CurrentMachine=%(RemoteMachines.Identity)" Targets="Deploy"/>
+	</Target>
+	<Target Name="Deploy">
 		<!-- Check whether a service exists (this should return true in most cases) -->
-		<MSBuild.ExtensionPack.Computer.WindowsService TaskAction="CheckExists" ServiceName="$(ServiceName)">
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="CheckExists" ServiceName="$(ServiceName)"
+                                                   RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)">
 			<Output TaskParameter="Exists" PropertyName="DoesExist"/>
 		</MSBuild.ExtensionPack.Computer.WindowsService>
 
 		<!-- Stop a service on a Remote Machine -->
-		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)" />
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'" TaskAction="Stop" ServiceName="$(ServiceName)"
+                                                   RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"/>
 
 		<!-- Deploy files to destination -->
-		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\API.WindowsService\bin\Debug" Destination="%(TargetDeployPaths.Identity)" Files="*.*" Options="/MIR">
+		<MSBuild.ExtensionPack.FileSystem.RoboCopy Source="$(MSBuildProjectDirectory)\API.WindowsService\bin\$(Configuration)" Destination="\\$(CurrentMachine)\$(DeployPath)" Files="*.*" Options="/MIR">
 			<Output TaskParameter="ExitCode" PropertyName="Exit" />
 			<Output TaskParameter="ReturnCode" PropertyName="Return" />
 		</MSBuild.ExtensionPack.FileSystem.RoboCopy>
@@ -39,33 +36,32 @@
 			Condition="Exists('$(TransformFilePath)')"
 			Source="$(SourceConfigPath)"
 			Transform="$(TransformFilePath)"
-			Destination="%(TargetDeployPaths.Identity)\API.WindowsService.exe.config" />
+			Destination="\\$(CurrentMachine)\$(DeployPath)\API.WindowsService.exe.config" />
 
-		<XmlPoke
-			XmlInputPath="%(TargetDeployPaths.Identity)\API.WindowsService.exe.config"
-			Query="//configuration/connectionStrings/add[@name = 'mssql']/@connectionString"
-			Value="$(ConnectionString)" />
-
-			<!-- Install a service on a Remote Machine -->
+		<!-- Install a service on a Remote Machine -->
 		<MSBuild.ExtensionPack.Computer.WindowsService
 			Condition="!$(DoesExist) == 'true' and $(InstallService) == 'true'"
 			TaskAction="Install"
 			ServiceName="$(ServiceName)"
-			User="$(User)"
-			Password="$(password)"
-			ServicePath="%(TargetDeployPaths.Identity)\API.WindowsService.exe" />
+			User="$(ServiceUser)"
+			Password="$(ServicePassword)"
+			RemoteUser="$(RemoteUser)"
+			RemoteUserPassword="$(RemoteUserPassword)"
+			MachineName="$(CurrentMachine)"
+			ServicePath="$(LocalDeployPath)\API.WindowsService.exe" />
+
+		<MSBuild.ExtensionPack.Computer.WindowsService TaskAction="UpdateIdentity"
+                                                   Condition="$(DoesExist) == 'true' and $(InstallService) == 'true'"
+                                                   ServiceName="$(ServiceName)"
+                                                   User="$(ServiceUser)"
+                                                   Password="$(ServicePassword)"
+                                                   RemoteUser="$(RemoteUser)"
+                                                   RemoteUserPassword="$(RemoteUserPassword)"
+                                                   MachineName="$(CurrentMachine)"
+                                                   />
+
 		<!-- Start a service on a Remote Machine -->
-		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)" />
-	</Target>
-
-
-	<Target Name="UpdateXml">
-		<Message Text="Updating XML file at $(DestXmlFiles)" />
-		<Copy SourceFiles="$(SourceXmlFile)"
-          DestinationFiles="$(DestXmlFiles)" />
-		<!-- Now let's execute all the XML transformations -->
-		<XmlPoke XmlInputPath="$(DestXmlFiles)"
-             Query="%(XmlConfigUpdates.XPath)"
-             Value="%(XmlConfigUpdates.NewValue)"/>
+		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)"
+                                                   RemoteUser="$(RemoteUser)" RemoteUserPassword="$(RemoteUserPassword)" MachineName="$(CurrentMachine)"/>
 	</Target>
 </Project>
