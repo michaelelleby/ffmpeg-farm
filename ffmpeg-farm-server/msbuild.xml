@@ -1,7 +1,7 @@
 <Project ToolsVersion="14.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
 		<TPath>$(MSBuildExtensionsPath32)\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks</TPath>
-		<ServiceName>FFmpegFarm</ServiceName>
+		<ServiceName>FFmpegServerAPI</ServiceName>
 		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\App.config</SourceConfigPath>
 		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\App.$(Environment).config</TransformFilePath>
 	</PropertyGroup>
