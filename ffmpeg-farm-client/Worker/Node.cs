@@ -26,7 +26,7 @@ namespace FFmpegFarm.Worker
         private int _progressSpinner;
         private const int ProgressSkip = 5;
         private readonly StatusClient _statusClient;
-        private readonly JobClient _jobClient;
+        private readonly TaskClient _taskClient;
 
         private Node(string ffmpegPath, string apiUri, ILogger logger)
         {
@@ -42,7 +42,7 @@ namespace FFmpegFarm.Worker
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
-            _jobClient = new JobClient(apiUri);
+            _taskClient = new TaskClient(apiUri);
             _statusClient = new StatusClient(apiUri);
             _logger.Debug("Node started...");
         }
@@ -62,7 +62,7 @@ namespace FFmpegFarm.Worker
                 _cancellationToken = ct;
                 while (!ct.IsCancellationRequested)
                 {
-                    _currentTask = ApiWrapper(_jobClient.GetNextAsync, Environment.MachineName);
+                    _currentTask = ApiWrapper(_taskClient.GetNextAsync, Environment.MachineName);
                     if (_currentTask == null)
                     {
                         Task.Delay(TimeSpan.FromSeconds(5), ct).GetAwaiter().GetResult();
@@ -84,8 +84,8 @@ namespace FFmpegFarm.Worker
                         MachineName = Environment.MachineName,
                         Id = _currentTask.Id.Value,
                         Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c"),
-                        Failed = _currentTask.State.Value == FFmpegTaskDtoState.Failed,
-                        Done = _currentTask.State.Value == FFmpegTaskDtoState.Done
+                        Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                        Done = _currentTask.State == FFmpegTaskDtoState.Done
                     };
                     _statusClient.UpdateProgressAsync(model).GetAwaiter().GetResult(); // don't use wrapper since cancel has been called.
                 }
@@ -137,8 +137,8 @@ namespace FFmpegFarm.Worker
                     MachineName = Environment.MachineName,
                     Id = _currentTask.Id.Value,
                     Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c"),
-                    Failed = _currentTask.State.Value == FFmpegTaskDtoState.Failed,
-                    Done = _currentTask.State.Value == FFmpegTaskDtoState.Done
+                    Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                    Done = _currentTask.State == FFmpegTaskDtoState.Done
                 };
                 ApiWrapper(_statusClient.UpdateProgressAsync, model);
                 
@@ -194,8 +194,8 @@ namespace FFmpegFarm.Worker
             
             ApiWrapper(_statusClient.UpdateProgressAsync, new TaskProgressModel
             {
-                Done = _currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Done,
-                Failed = _currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed,
+                Done = _currentTask.State == FFmpegTaskDtoState.Done,
+                Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                 Id = _currentTask.Id.Value,
                 MachineName = _currentTask.HeartbeatMachineName,
                 Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
