@@ -2,18 +2,12 @@
 
 namespace Contract
 {
-    public class AudioJobRequest
+    public class AudioJobRequest : JobRequestBase
     {
         public string SourceFilename { get; set; }
 
         public TimeSpan Inpoint { get; set; }
 
         public AudioDestinationFormat[] Targets { get; set; }
-
-        public DateTimeOffset Needed { get; set; }
-
-        public string DestinationFilename { get; set; }
-
-        public string OutputFolder { get; set; }
     }
 } 

@@ -10,7 +10,7 @@ namespace FFmpegFarm.Worker.Client
         public static TimeSpan TimeOut => TimeSpan.FromSeconds(10);
     }
     
-    public partial class AudioJobClient
+    public partial class TaskClient
     {
         partial void PrepareRequest(HttpClient request, ref string url)
         {

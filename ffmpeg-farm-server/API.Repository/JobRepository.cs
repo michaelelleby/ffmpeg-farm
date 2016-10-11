@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Transactions;
-using API.Service;
 using Contract;
 using Contract.Dto;
 using Dapper;
@@ -23,7 +24,7 @@ namespace API.Repository
             Helper = helper;
         }
 
-        public bool DeleteJob(Guid jobId, JobType type)
+        public bool DeleteJob(Guid jobId)
         {
             using (var scope = new TransactionScope())
             {
@@ -33,114 +34,113 @@ namespace API.Repository
 
                     int rowsDeleted = -1;
 
-                    switch (type)
+                    JobType jobType = GetJobType(jobId, connection);
+
+                    switch (jobType)
                     {
                         case JobType.Audio:
-                            rowsDeleted = DeleteAudioJob(jobId, connection);
+                        case JobType.Mux:
+                            rowsDeleted = DeleteMuxJob(jobId, connection);
                             break;
                         case JobType.Video:
                             rowsDeleted = DeleteVideoJob(jobId, connection);
                             break;
                         case JobType.VideoMp4box:
-                            break;
                         case JobType.VideoMerge:
-                            break;
+                            throw new NotImplementedException();
+                        case JobType.Unknown:
+                            return false;
                         default:
-                            throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                            throw new InvalidOperationException();
                     }
 
                     scope.Complete();
 
-                    return rowsDeleted == 1;
+                    return rowsDeleted > 0;
                 }
             }
         }
 
-        public bool PauseJob(Guid jobId, JobType type)
+        private static JobType GetJobType(Guid jobId, IDbConnection connection)
+        {
+            return connection.QuerySingleOrDefault<JobType>("SELECT TOP 1 JobType FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                new {Id = jobId});
+        }
+
+        private static int DeleteMuxJob(Guid jobId, IDbConnection connection)
+        {
+            const string sql = "DELETE Tasks FROM FfmpegTasks Tasks INNER JOIN FFmpegjobs Jobs ON Tasks.FfmpegJobs_id = Jobs.id WHERE Jobs.JobCorrelationId = @Id;" +
+                               "DELETE FROM FfmpegMuxRequest WHERE JobCorrelationId = @Id;" +
+                               "DELETE FROM FfmpegJobs WHERE JobCorrelationId = @Id;";
+
+            return connection.Execute(sql, new { Id = jobId });
+        }
+
+        public bool PauseJob(Guid jobId)
         {
             using (var scope = new TransactionScope())
             {
                 using (var conn = Helper.GetConnection())
                 {
-                    bool result = false;
+                    JobType jobType = GetJobType(jobId, conn);
 
-                    switch (type)
+                    string sql = "UPDATE FfmpegJobs SET JobState = @PausedState WHERE JobCorrelationId = @Id AND JobState = @QueuedState;";
+                    switch (jobType)
                     {
                         case JobType.Audio:
-                            result = PauseAudioJob(jobId, conn);
+                        case JobType.Mux:
+                            sql += "UPDATE Tasks SET Tasks.TaskState = @PausedState FROM FfmpegTasks Tasks INNER JOIN FfmpegJobs Jobs ON Jobs.id = Tasks.FfmpegJobs_Id WHERE Jobs.JobCorrelationId = @Id AND Tasks.TaskState = @QueuedState;";
                             break;
                         case JobType.Video:
-                            result = PauseVideoJob(jobId, conn);
-                            break;
                         case JobType.VideoMp4box:
                         case JobType.VideoMerge:
                             throw new NotImplementedException();
                         case JobType.Unknown:
                         default:
-                            throw new ArgumentOutOfRangeException($"Job type {type} is not supported");
+                            throw new ArgumentOutOfRangeException();
                     }
+                    int updatedRows = conn.Execute(sql,
+                        new {Id = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
 
                     scope.Complete();
 
-                    return result;
+                    return updatedRows > 0;
                 }
             }
         }
 
-        public bool ResumeJob(Guid jobId, JobType type)
+        public bool ResumeJob(Guid jobId)
         {
             using (var scope = new TransactionScope())
             {
                 using (var conn = Helper.GetConnection())
                 {
-                    bool result = false;
+                    JobType jobType = GetJobType(jobId, conn);
 
-                    switch (type)
+                    string sql = "UPDATE FfmpegJobs SET JobState = @QueuedState WHERE JobCorrelationId = @Id AND State = @PausedState;";
+
+                    switch (jobType)
                     {
                         case JobType.Audio:
-                            result = ResumeAudioJob(jobId, conn);
+                        case JobType.Mux:
+                            sql += "UPDATE Tasks SET Tasks.TaskState = @QueuedState FROM FfmpegTasks Tasks INNER JOIN FfmpegJobs Jobs ON Jobs.id = Tasks.FfmpegJobs_Id WHERE Jobs.JobCorrelationId = @Id AND Tasks.TaskState = @PausedState;";
                             break;
                         case JobType.Video:
-                            result = ResumeVideoJob(jobId, conn);
-                            break;
                         case JobType.VideoMp4box:
                         case JobType.VideoMerge:
                             throw new NotImplementedException();
                         case JobType.Unknown:
                         default:
-                            throw new ArgumentOutOfRangeException($"Job type {type} is not supported");
+                            throw new ArgumentOutOfRangeException();
                     }
+
+                    int updatedRows = conn.Execute(sql,
+                        new {Id = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
 
                     scope.Complete();
 
-                    return result;
+                    return updatedRows > 0;
                 }
-            }
-        }
-
-        public IEnumerable<AudioJobRequestDto> Get()
-        {
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-                IDictionary<Guid, AudioJobRequestDto> requests = new ConcurrentDictionary<Guid, AudioJobRequestDto>();
-
-                var rows = connection.Query<AudioJobRequestDto>(
-                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest ORDER BY Id ASC;");
-                foreach (AudioJobRequestDto requestDto in rows)
-                {
-                    requests.Add(requestDto.JobCorrelationId, requestDto);
-                }
-
-                var jobs = connection.Query<AudioTranscodingJobDto>(
-                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegAudioJobs ORDER BY Id ASC;");
-
-                foreach (AudioTranscodingJobDto dto in jobs)
-                {
-                    requests[dto.JobCorrelationId].Jobs.Add(dto);
-                }
-
-                return requests.Values;
             }
         }
 
@@ -159,40 +159,211 @@ namespace API.Repository
                             .ToList();
                     jobs =
                         connection.Query<TranscodingJobDto>(
-                                "SELECT * FROM FfmpegAudioJobs WHERE JobCorrelationId = @JobCorrelationId;",
+                                "SELECT * FROM FfmpegTasks WHERE JobCorrelationId = @JobCorrelationId;",
                                 new {JobCorrelationId = jobCorrelationId})
                             .ToList();
                 }
                 else
                 {
                     requests = connection.Query<JobRequestDto>("SELECT * from FfmpegAudioRequest").ToList();
-                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegAudioJobs").ToList();
+                    jobs = connection.Query<TranscodingJobDto>("SELECT * FROM FfmpegTasks").ToList();
                 }
             }
 
             return requests;
         }
 
-        public void SaveProgress(BaseJob job)
+        public void SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
         {
-            using (var connection = Helper.GetConnection())
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-
-                int isVideo = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM FfmpegVideoRequest WHERE JobCorrelationId = @JobCorrelationId;",
-                    new {job.JobCorrelationId});
-                if (isVideo == 1)
+                using (var connection = Helper.GetConnection())
                 {
-                    UpdateVideoJob(job, connection);
-                    return;
-                }
+                    connection.Open();
 
-                int isAudio = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
-                    new {job.JobCorrelationId});
-                if (isAudio == 1)
-                {
-                    UpdateAudioJob(job, connection);
+                    TranscodingJobState jobState = failed
+                        ? TranscodingJobState.Failed
+                        : done
+                            ? TranscodingJobState.Done
+                            : TranscodingJobState.InProgress;
+
+                    int updatedRows = connection.Execute(
+                        "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                        new
+                        {
+                            Id = jobId,
+                            Progress = progress.TotalSeconds,
+                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                            State = jobState,
+                            machineName
+                        });
+
+                    if (updatedRows != 1)
+                        throw new Exception($"Failed to update progress for job id {jobId}");
+
+                    scope.Complete();
                 }
+            }
+        }
+
+        public FFmpegTaskDto GetNextJob()
+        {
+            int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
+            DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
+            var data = new
+            {
+                State = TranscodingJobState.InProgress,
+                Heartbeat = DateTimeOffset.UtcNow,
+                Timeout = timeout,
+                QueuedState = TranscodingJobState.Queued,
+                InProgressState = TranscodingJobState.InProgress
+            };
+            
+            using (var scope = new TransactionScope())
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    connection.Open();
+                    do
+                    {
+                        try
+                        {
+                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>(
+                                "SELECT TOP 1 Tasks.id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename" +
+                                " FROM FfmpegTasks Tasks" +
+                                " INNER JOIN ffmpegfarm.dbo.FfmpegJobs Jobs ON Tasks.FfmpegJobs_id = Jobs.id" +
+                                " WHERE Tasks.TaskState = @QueuedState OR" +
+                                " (Tasks.TaskState = @InProgressState AND Tasks.HeartBeat < @Timeout)" +
+                                " ORDER BY Jobs.Needed ASC, Jobs.Id ASC;",
+                                data);
+                            if (task == null)
+                                return null;
+
+                            // Safety check to ensure that the data is being returned correctly in the SQL query
+                            if (task.Id < 0 || task.FfmpegJobsId < 0 || string.IsNullOrWhiteSpace(task.Arguments))
+                                throw new InvalidOperationException("One or more parameters were not set by SQL query.");
+
+                            var parameters = new DynamicParameters(data);
+                            parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+                            parameters.Add("@JobType", dbType: DbType.Int32, direction: ParameterDirection.Output, size: 50);
+                            parameters.Add("@Id", task.FfmpegJobsId, DbType.Int32, ParameterDirection.Input);
+
+                            var rowsUpdated = connection.Execute(
+                                "UPDATE FfmpegJobs SET JobState = @State, @JobCorrelationId = JobCorrelationId, @JobType = JobType WHERE Id = @Id;",
+                                parameters);
+                            if (rowsUpdated == 0)
+                                throw new InvalidOperationException($"Missing row in FfmpegJobs with id {task.FfmpegJobsId}");
+
+                            rowsUpdated = connection.Execute("UPDATE FfmpegTasks SET TaskState = @State, Started = @Timestamp WHERE Id = @Id;",
+                                new {task.Id, State = TranscodingJobState.InProgress, Timestamp = DateTimeOffset.UtcNow});
+                            if (rowsUpdated == 0)
+                                throw new InvalidOperationException($"Missing row in FfmpegTasks with id {task.Id}");
+
+                            scope.Complete();
+
+                            return task;
+                        }
+                        catch (SqlException e)
+                        {
+                            // Retry in case of deadlocks
+                            if (e.ErrorCode == 1205)
+                            {
+                                continue;
+                            }
+
+                            throw;
+                        }
+                    } while (true);
+                }
+            }
+        }
+
+        public ICollection<FFmpegJobDto> Get()
+        {
+            IDictionary<int, ICollection<FFmpegTaskDto>> jobsDictionary = new ConcurrentDictionary<int, ICollection<FFmpegTaskDto>>();
+
+            using (var scope = new TransactionScope())
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    ICollection<FFmpegJobDto> jobs = connection.Query<FFmpegJobDto>(
+                        "SELECT id, JobCorrelationId, Created, Needed, JobType, JobState AS State FROM FfmpegJobs;")
+                        .ToList();
+
+                    if (jobs == null)
+                        return null;
+
+                    ICollection<FFmpegTaskDto> tasks = connection.Query<FFmpegTaskDto>(
+                            "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks;")
+                        .ToList();
+
+                    foreach (FFmpegTaskDto task in tasks)
+                    {
+                        if (!jobsDictionary.ContainsKey(task.FfmpegJobsId))
+                        {
+                            jobsDictionary.Add(task.FfmpegJobsId, new List<FFmpegTaskDto>());
+                        }
+
+                        jobsDictionary[task.FfmpegJobsId].Add(task);
+                    }
+
+                    foreach (FFmpegJobDto job in jobs.Where(x => jobsDictionary.ContainsKey(x.Id)))
+                    {
+                        job.Tasks = jobsDictionary[job.Id];
+                    }
+
+                    scope.Complete();
+
+                    return jobs;
+                }
+            }
+        }
+
+        public FFmpegJobDto Get(Guid id)
+        {
+            if (id == Guid.Empty) throw new ArgumentOutOfRangeException("id");
+
+            using (var scope = new TransactionScope())
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    var job = connection.QuerySingle<FFmpegJobDto>(
+                        "SELECT id, JobCorrelationId, Needed, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                        new {id});
+
+                    if (job == null)
+                        return null;
+
+                    job.Tasks = connection.Query<FFmpegTaskDto>(
+                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id",
+                        new {job.Id})
+                        .ToList();
+
+                    scope.Complete();
+
+                    return job;
+                }
+            }
+        }
+
+        private string GetJobArguments(JobType jobType, int id, IDbConnection connection)
+        {
+            switch (jobType)
+            {
+                case JobType.Audio:
+                    return connection.ExecuteScalar<string>("SELECT Arguments FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
+                        new {id});
+                case JobType.Video:
+                case JobType.VideoMp4box:
+                case JobType.VideoMerge:
+                    throw new NotImplementedException();
+                case JobType.Mux:
+                    return connection.ExecuteScalar<string>("SELECT Arguments FROM FfmpegTasks WHERE FfmpegJobs_Id = @Id;",
+                        new {id});
+                case JobType.Unknown:
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(jobType), jobType, null);
             }
         }
 
@@ -204,40 +375,12 @@ namespace API.Repository
             return rowsUpdated > 0;
         }
 
-        private static bool PauseAudioJob(Guid jobId, IDbConnection conn)
-        {
-            var rowsUpdated = conn.Execute("UPDATE FfmpegAudioJobs SET State = @PausedState WHERE JobCorrelationId = @JobId AND State = @QueuedState",
-                new {JobId = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued});
-
-            return rowsUpdated > 0;
-        }
-
         private static bool ResumeVideoJob(Guid jobId, IDbConnection conn)
         {
             var rowsUpdated = conn.Execute("UPDATE FfmpegVideoJobs SET State = @QueuedState WHERE JobCorrelationId = @JobId AND State = @PausedState;",
                 new { JobId = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued });
 
             return rowsUpdated > 0;
-        }
-
-        private static bool ResumeAudioJob(Guid jobId, IDbConnection conn)
-        {
-            var rowsUpdated = conn.Execute("UPDATE FfmpegAudioJobs SET State = @QueuedState WHERE JobCorrelationId = @JobId AND State = @PausedState;",
-                new { JobId = jobId, PausedState = TranscodingJobState.Paused, QueuedState = TranscodingJobState.Queued });
-
-            return rowsUpdated > 0;
-        }
-
-        private static int DeleteAudioJob(Guid jobId, IDbConnection connection)
-        {
-            connection.Execute("DELETE FROM FfmpegAudioJobs WHERE JobCorrelationId = @Id;", new {Id = jobId});
-
-            connection.Execute("DELETE FROM FfmpegAudioRequestTargets WHERE JobCorrelationId = @Id;", new {Id = jobId});
-
-            int rowsDeleted = connection.Execute("DELETE FROM FfmpegAudioRequest WHERE JobCorrelationId = @Id;",
-                new {Id = jobId});
-
-            return rowsDeleted;
         }
 
         private static int DeleteVideoJob(Guid jobId, IDbConnection connection)
@@ -256,34 +399,6 @@ namespace API.Repository
             int rowsDeleted = connection.Execute("DELETE FROM FfmpegVideoRequest WHERE JobCorrelationId = @Id;",
                 new {Id = jobId});
             return rowsDeleted;
-        }
-
-        private static void UpdateAudioJob(BaseJob job, IDbConnection  connection)
-        {
-            using (var scope = new TransactionScope())
-            {
-                TranscodingJobState jobState = job.Failed
-                    ? TranscodingJobState.Failed
-                    : job.Done
-                        ? TranscodingJobState.Done
-                        : TranscodingJobState.InProgress;
-
-                int updatedRows = connection.Execute(
-                    "UPDATE FfmpegAudioJobs SET Progress = @Progress, Heartbeat = @Heartbeat, State = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
-                    new
-                    {
-                        Id = job.Id,
-                        Progress = job.Progress.TotalSeconds,
-                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                        State = jobState,
-                        MachineName = job.MachineName
-                    });
-
-                if (updatedRows != 1)
-                    throw new Exception($"Failed to update progress for job id {job.Id}");
-
-                scope.Complete();
-            }
         }
 
         private static void UpdateVideoJob(BaseJob job, IDbConnection connection)

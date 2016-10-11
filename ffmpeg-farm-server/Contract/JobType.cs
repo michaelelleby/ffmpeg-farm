@@ -6,6 +6,7 @@ namespace Contract
         Audio,
         Video,
         VideoMp4box,
-        VideoMerge
+        VideoMerge,
+        Mux
     }
 }

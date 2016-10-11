@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace API.WindowsService.Models
 {
-    public class JobStatus
+    public enum Command
     {
+        Unknown = 0,
+        Pause,
+        Resume
     }
 }

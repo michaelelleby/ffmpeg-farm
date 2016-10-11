@@ -10,6 +10,9 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    /// <summary>
+    /// Receives audio jobs orders.
+    /// </summary>
     public class AudioJobController : ApiController
     {
         private readonly IAudioJobRepository _repository;
@@ -24,22 +27,13 @@ namespace API.WindowsService.Controllers
             _helper = helper;
         }
 
-        public AudioTranscodingJob Get(string machineName)
-        {
-            if (string.IsNullOrWhiteSpace(machineName))
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
-
-            _helper.InsertClientHeartbeat(machineName);
-
-            return _repository.GetNextTranscodingJob();
-        }
-
         /// <summary>
         /// Create a new job
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public Guid Post(AudioJobRequestModel input)
+        [HttpPost]
+        public Guid CreateNew(AudioJobRequestModel input)
         {
             if (!ModelState.IsValid)
             {
@@ -47,20 +41,6 @@ namespace API.WindowsService.Controllers
             }
 
             return HandleNewAudioJob(input);
-        }
-
-        /// <summary>
-        /// Delete a job
-        /// </summary>
-        /// <param name="jobId">Job id returned when creating new job</param>
-        public void Delete(Guid jobId)
-        {
-            if (jobId == Guid.Empty)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Job id must be a valid GUID."));
-
-            bool deleteJob = _repository.DeleteJob(jobId, JobType.Audio);
-            if (deleteJob == false)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found"));
         }
 
         private Guid HandleNewAudioJob(AudioJobRequestModel request)
