@@ -38,6 +38,11 @@
 			Transform="$(TransformFilePath)"
 			Destination="\\$(CurrentMachine)\$(DeployPath)\API.WindowsService.exe.config" />
 
+		<XmlPoke
+			XmlInputPath="\\$(CurrentMachine)\$(DeployPath)\API.WindowsService.exe.config"
+			Query="//configuration/connectionStrings/add[@name = 'mssql']/@connectionString"
+			Value="$(ConnectionString)" />
+
 		<!-- Install a service on a Remote Machine -->
 		<MSBuild.ExtensionPack.Computer.WindowsService
 			Condition="!$(DoesExist) == 'true' and $(InstallService) == 'true'"
@@ -59,6 +64,7 @@
                                                    RemoteUserPassword="$(RemoteUserPassword)"
                                                    MachineName="$(CurrentMachine)"
                                                    />
+
 
 		<!-- Start a service on a Remote Machine -->
 		<MSBuild.ExtensionPack.Computer.WindowsService Condition="$(InstallService) == 'true'" TaskAction="Start" ServiceName="$(ServiceName)"
