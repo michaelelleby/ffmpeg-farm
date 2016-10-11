@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace API.WindowsService.Models
 {
-    public class JobRequestModel
+    public abstract class JobRequestModel
     {
         [Required]
         public string OutputFolder { get; set; }

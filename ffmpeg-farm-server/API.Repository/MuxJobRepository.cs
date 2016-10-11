@@ -8,6 +8,9 @@ using Dapper;
 
 namespace API.Repository
 {
+    /// <summary>
+    /// Receives mux'ing preprocess jobs orders.
+    /// </summary>
     public class MuxJobRepository : JobRepository, IMuxJobRepository
     {
         private readonly string _connectionString;

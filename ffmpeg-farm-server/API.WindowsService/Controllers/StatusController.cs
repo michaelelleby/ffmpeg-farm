@@ -96,18 +96,18 @@ namespace API.WindowsService.Controllers
 
             if (transcodingJobs.All(x => x.State == TranscodingJobState.Done))
                 return TranscodingJobState.Done;
-
-            if (transcodingJobs.All(j => j.State == TranscodingJobState.Queued))
-                return TranscodingJobState.Queued;
-
+  
             if (transcodingJobs.Any(j => j.State == TranscodingJobState.Failed))
                 return TranscodingJobState.Failed;
 
-            if (transcodingJobs.All(j => j.State == TranscodingJobState.Paused))
+            if (transcodingJobs.Any(j => j.State == TranscodingJobState.Paused))
                 return TranscodingJobState.Paused;
 
             if (transcodingJobs.Any(j => j.State == TranscodingJobState.InProgress))
                 return TranscodingJobState.InProgress;
+
+            if (transcodingJobs.Any(j => j.State == TranscodingJobState.Queued))
+                return TranscodingJobState.Queued;
 
             return TranscodingJobState.Unknown;
         }

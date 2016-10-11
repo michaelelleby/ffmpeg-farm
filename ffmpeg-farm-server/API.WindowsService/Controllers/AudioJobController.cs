@@ -10,6 +10,9 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    /// <summary>
+    /// Receives audio jobs orders.
+    /// </summary>
     public class AudioJobController : ApiController
     {
         private readonly IAudioJobRepository _repository;

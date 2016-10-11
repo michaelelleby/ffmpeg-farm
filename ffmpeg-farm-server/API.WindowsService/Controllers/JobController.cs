@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.WindowsService.Models;
 using Contract;
 using Contract.Dto;
 
@@ -21,19 +22,6 @@ namespace API.WindowsService.Controllers
             _repository = repository;
         }
 
-        [HttpGet]
-        public FFmpegTaskDto GetNext(string machineName)
-        {
-            if (string.IsNullOrWhiteSpace(machineName))
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
-            }
-
-            _helper.InsertClientHeartbeat(machineName);
-
-            return _repository.GetNextJob();
-        }
-
         [HttpDelete]
         public bool DeleteJob(Guid jobCorrelationId)
         {
@@ -46,27 +34,23 @@ namespace API.WindowsService.Controllers
         }
 
         [HttpPatch]
-        [Route("api/job/pause/{jobCorrelationId}")]
-        public bool PauseJob(Guid jobCorrelationId)
+        public bool PatchJob(Guid jobCorrelationId, Command command)
         {
             if (jobCorrelationId == Guid.Empty)
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Specified jobCorrelationId is invalid"));
             }
 
-            return _repository.PauseJob(jobCorrelationId);
-        }
-
-        [HttpPatch]
-        [Route("api/job/resume/{jobCorrelationId}")]
-        public bool ResumeJob(Guid jobCorrelationId)
-        {
-            if (jobCorrelationId == Guid.Empty)
+            switch (command)
             {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Specified jobCorrelationId is invalid"));
+                case Command.Pause:
+                    return _repository.PauseJob(jobCorrelationId);
+                case Command.Resume:
+                    return _repository.ResumeJob(jobCorrelationId);
+                case Command.Unknown:
+                default:
+                    throw new ArgumentException($"unsupported {command}", nameof(command));
             }
-
-            return _repository.ResumeJob(jobCorrelationId);
         }
     }
 }
