@@ -4,6 +4,7 @@ using System.Web.Http;
 using API.WindowsService.Controllers;
 using API.WindowsService.Test.Helpers;
 using Contract;
+using Contract.Dto;
 using Moq;
 using NUnit.Framework;
 using Ploeh.AutoFixture;
@@ -33,11 +34,11 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IAudioJobRepository>>();
+            var repository = fixture.Freeze<Mock<IJobRepository>>();
             var sut = fixture.Create<StatusController>();
 
             repository.Setup(m => m.Get(It.IsAny<Guid>()))
-                .Returns((AudioJobRequestDto) null);
+                .Returns((FFmpegJobDto) null);
 
             // Act
             var exception = Assert.Throws<HttpResponseException>(() => sut.Get(Guid.NewGuid()));

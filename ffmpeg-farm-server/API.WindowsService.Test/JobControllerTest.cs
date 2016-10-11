@@ -2,6 +2,7 @@
 using System.Net;
 using System.Web.Http;
 using API.WindowsService.Controllers;
+using API.WindowsService.Models;
 using API.WindowsService.Test.Helpers;
 using Contract;
 using Moq;
@@ -14,20 +15,6 @@ namespace API.WindowsService.Test
     [TestFixture]
     public class JobControllerTest
     {
-        [Test]
-        public void GetInsertsClientHeartbeat()
-        {
-            // Arrange
-            var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            Mock<IHelper> mockHelper = fixture.Freeze<Mock<IHelper>>();
-            var sut = fixture.Create<JobController>();
-
-            // Act
-            sut.GetNext("TESTMACHINE");
-
-            // Assert
-            mockHelper.Verify(m => m.InsertClientHeartbeat("TESTMACHINE"));
-        }
 
         [Test]
         public void DeleteThrowsForInvalidJobId()
@@ -69,7 +56,7 @@ namespace API.WindowsService.Test
             var sut = fixture.Create<JobController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.ResumeJob(Guid.Empty));
+            var exception = Assert.Throws<HttpResponseException>(() => sut.PatchJob(Guid.Empty, Command.Resume));
 
             // Assert
             Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
@@ -87,7 +74,7 @@ namespace API.WindowsService.Test
                 .Returns(false);
 
             // Act
-            var result = sut.ResumeJob(Guid.NewGuid());
+            var result = sut.PatchJob(Guid.NewGuid(), Command.Resume);
 
             // Assert
             Assert.That(result, Is.False);
@@ -101,7 +88,7 @@ namespace API.WindowsService.Test
             var sut = fixture.Create<JobController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.PauseJob(Guid.Empty));
+            var exception = Assert.Throws<HttpResponseException>(() => sut.PatchJob(Guid.Empty, Command.Pause));
 
             // Assert
             Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
@@ -119,7 +106,7 @@ namespace API.WindowsService.Test
                 .Returns(false);
 
             // Act
-            var result = sut.PauseJob(Guid.NewGuid());
+            var result = sut.PatchJob(Guid.NewGuid(), Command.Pause);
 
             // Assert
             Assert.That(result, Is.False);

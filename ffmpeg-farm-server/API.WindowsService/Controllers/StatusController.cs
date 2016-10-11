@@ -122,6 +122,10 @@ namespace API.WindowsService.Controllers
         [HttpPatch]
         public void UpdateProgress(TaskProgressModel model)
         {
+            if (model == null)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "model null"));
+            }
             if (!ModelState.IsValid)
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
