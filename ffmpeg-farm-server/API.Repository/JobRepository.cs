@@ -329,14 +329,14 @@ namespace API.Repository
                 using (var connection = Helper.GetConnection())
                 {
                     var job = connection.QuerySingle<FFmpegJobDto>(
-                        "SELECT id, JobCorrelationId, Needed, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                        "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
                         new {id});
 
                     if (job == null)
                         return null;
 
                     job.Tasks = connection.Query<FFmpegTaskDto>(
-                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id",
+                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
                         .ToList();
 
