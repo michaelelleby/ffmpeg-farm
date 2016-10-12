@@ -11,7 +11,7 @@ namespace FFmpegFarm.WindowsService
 {
     public partial class Service : ServiceBase
     {
-        private IList<Task> _tasks;
+        private Task[] _tasks;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly ILogger _logger;
         public Service()
@@ -24,7 +24,7 @@ namespace FFmpegFarm.WindowsService
         protected override void OnStart(string[] args)
         {
             _logger.Information($"Starting service\n{Settings.Default.FFmpegPath}\n{Settings.Default.ControllerApi}\n{Settings.Default.Threads} threads.");
-            _tasks = new List<Task>();
+            _tasks = new Task[Settings.Default.Threads];
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
 
@@ -35,26 +35,23 @@ namespace FFmpegFarm.WindowsService
                     _cancellationTokenSource.Token);
 
                 task.Start();
-                _tasks.Add(task);
+                _tasks[x] = task;
             }
         }
 
         protected override void OnStop()
         {
             _cancellationTokenSource.Cancel();
-            foreach (var task in _tasks)
+            try
             {
-                try
-                {
-                    // ReSharper disable once MethodSupportsCancellation
-                    task.Wait();
-                }
-                catch (Exception e)
-                {
-                    if (!(e.InnerException?.GetType() == typeof(OperationCanceledException)
-                        || e.InnerException?.GetType() == typeof(TaskCanceledException)))
-                        throw;
-                }
+                // ReSharper disable once MethodSupportsCancellation
+                Task.WaitAll(_tasks);
+            }
+            catch (Exception e)
+            {
+                if (!(e.InnerException?.GetType() == typeof(OperationCanceledException)
+                    || e.InnerException?.GetType() == typeof(TaskCanceledException)))
+                    throw;
             }
             _logger.Information("Stopped");
         }

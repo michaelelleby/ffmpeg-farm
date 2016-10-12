@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.Worker.Client;
+using Nito.AsyncEx.Synchronous;
 
 namespace FFmpegFarm.Worker
 {
@@ -27,6 +28,7 @@ namespace FFmpegFarm.Worker
         private const int ProgressSkip = 5;
         private readonly StatusClient _statusClient;
         private readonly TaskClient _taskClient;
+        private readonly Stopwatch _stopwatch = new Stopwatch();
 
         private Node(string ffmpegPath, string apiUri, ILogger logger)
         {
@@ -49,7 +51,8 @@ namespace FFmpegFarm.Worker
 
         public static Task GetNodeTask(string ffmpegPath, string apiUri, ILogger logger, CancellationToken ct)
         {
-            return new Task(() => new Node(ffmpegPath,apiUri,logger).Run(ct));
+            var t = new Task(() => new Node(ffmpegPath,apiUri,logger).Run(ct));
+            return t;
         }
 
         private void Run(CancellationToken ct)
@@ -65,10 +68,10 @@ namespace FFmpegFarm.Worker
                     _currentTask = ApiWrapper(_taskClient.GetNextAsync, Environment.MachineName);
                     if (_currentTask == null)
                     {
-                        Task.Delay(TimeSpan.FromSeconds(5), ct).GetAwaiter().GetResult();
+                        Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
                         continue;
                     }
-                    ExecuteAudioTranscodingJob();
+                    ExecuteJob();
                     _output.Clear();
                 }
                 ct.ThrowIfCancellationRequested();
@@ -76,27 +79,28 @@ namespace FFmpegFarm.Worker
             finally {
                 if (_currentTask != null)
                 {
-                    _logger.Warn($"In progress job re-queued {_currentTask.Id.Value}");
+                    _logger.Warn($"In progress job re-queued {_currentTask.Id.GetValueOrDefault(0)}");
                     _currentTask.State = FFmpegTaskDtoState.Queued;
                     // ReSharper disable once MethodSupportsCancellation
                     var model = new TaskProgressModel
                     {
                         MachineName = Environment.MachineName,
-                        Id = _currentTask.Id.Value,
-                        Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c"),
+                        Id = _currentTask.Id.GetValueOrDefault(0),
+                        Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
                         Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                         Done = _currentTask.State == FFmpegTaskDtoState.Done
                     };
-                    _statusClient.UpdateProgressAsync(model).GetAwaiter().GetResult(); // don't use wrapper since cancel has been called.
+                    _statusClient.UpdateProgressAsync(model, CancellationToken.None).WaitWithoutException(CancellationToken.None); // don't use wrapper since cancel has been called.
                 }
                 _logger.Debug("Cancel recived shutting down...");
             }
         }
 
-        private void ExecuteAudioTranscodingJob()
+        private void ExecuteJob()
         {
             _currentTask.HeartbeatMachineName = Environment.MachineName;
-            _logger.Information($"New job recived {_currentTask.Id.Value}", _threadId);
+            _logger.Information($"New job recived {_currentTask.Id}", _threadId);
+            _stopwatch.Start();
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -124,19 +128,20 @@ namespace FFmpegFarm.Worker
                 if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
                 {
                     _currentTask.State = FFmpegTaskDtoState.Failed;
-                    _logger.Warn(_output.ToString());
-                    _logger.Warn($"Job failed {_currentTask.Id}", _threadId);
+                    _logger.Warn($"Job failed {_currentTask.Id}."+
+                        $"Time elapsed : {_stopwatch.Elapsed:g}"+
+                        $"\n\tffmpeg process output:\n\n{_output}", _threadId);
                 }
                 else
                 {
                     _currentTask.State = FFmpegTaskDtoState.Done;
-                    _logger.Information($"Job done {_currentTask.Id.Value}", _threadId);
+                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
                 }
                 var model = new TaskProgressModel
                 {
                     MachineName = Environment.MachineName,
-                    Id = _currentTask.Id.Value,
-                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c"),
+                    Id = _currentTask.Id.GetValueOrDefault(0),
+                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
                     Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                     Done = _currentTask.State == FFmpegTaskDtoState.Done
                 };
@@ -146,6 +151,7 @@ namespace FFmpegFarm.Worker
                 Monitor.Enter(_lock); // lock before dispose
             }
             _commandlineProcess = null;
+            _stopwatch.Stop();
             Monitor.Exit(_lock);
         }
 
@@ -196,13 +202,13 @@ namespace FFmpegFarm.Worker
             {
                 Done = _currentTask.State == FFmpegTaskDtoState.Done,
                 Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                Id = _currentTask.Id.Value,
+                Id = _currentTask.Id.GetValueOrDefault(0),
                 MachineName = _currentTask.HeartbeatMachineName,
                 Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
             });
 
             if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
-                _logger.Debug(_progress.ToString("c"), _threadId);
+                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
 
             _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
@@ -256,7 +262,7 @@ namespace FFmpegFarm.Worker
         /// </summary>
         private TRes ApiWrapper<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
         {
-            return ApiWrapper(() => apiCall(arg, CancellationToken.None).GetAwaiter().GetResult());
+            return ApiWrapper(() => apiCall(arg, CancellationToken.None).WaitAndUnwrapException());
         }
 
         /// <summary>
@@ -266,7 +272,7 @@ namespace FFmpegFarm.Worker
         {
             ApiWrapper(
                 new Func<object> (()=>{
-                    apiCall(arg, CancellationToken.None).GetAwaiter().GetResult();
+                    apiCall(arg, CancellationToken.None).WaitAndUnwrapException();
                     return null;
                 }));
         }

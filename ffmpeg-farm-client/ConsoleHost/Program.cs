@@ -36,8 +36,8 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 cancelSource.Cancel();
             };
             var logger = new ConsoleLogger();
-            var tasks = new List<Task>();
-            for (var x = 0; x < int.Parse(cfg["threads"]); x++)
+            var tasks = new Task[int.Parse(cfg["threads"])];
+            for (var x = 0; x < tasks.Length; x++)
             {
                 var task = Worker.Node.GetNodeTask(
                     cfg["FFmpegPath"],
@@ -45,7 +45,7 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                     logger,
                     cancelSource.Token);
                 task.Start();
-                tasks.Add(task);
+                tasks[x] = task;
             }
             ConsoleKeyInfo keyInfo;
             while (!cancelSource.IsCancellationRequested &&
@@ -58,20 +58,17 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 cancelSource.Cancel();
             Console.WriteLine("Shutting down....");
 
-            foreach (var task in tasks)
+            try
             {
-                try
-                {
-                    // ReSharper disable once MethodSupportsCancellation
-                    task.Wait();
-                }
-                catch (Exception e)
-                {
-                    if (!(e.InnerException?.GetType() == typeof(OperationCanceledException) 
-                        || e.InnerException?.GetType() == typeof(TaskCanceledException)))
-                        throw;
-                }
+                Task.WaitAll(tasks);
             }
+            catch (Exception e)
+            {
+                if (!(e.InnerException?.GetType() == typeof(OperationCanceledException)
+                    || e.InnerException?.GetType() == typeof(TaskCanceledException)))
+                    throw;
+            }
+           
             #if DEBUG
             Console.WriteLine("\nShut done completed... Press any key.");
             Console.ReadKey();

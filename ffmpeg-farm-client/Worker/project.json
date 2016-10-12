@@ -5,6 +5,7 @@
     "AutoMapper": "5.1.1",
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
+    "Nito.AsyncEx.Tasks": "1.1.0",
     "System.ComponentModel.Annotations": "4.1.0",
     "System.Diagnostics.Process": "4.1.0",
     "System.Runtime.Serialization.Primitives": "4.1.1",
@@ -18,5 +19,8 @@
   },
   "configurations": {
     "Development": {}
+  },
+  "buildOptions": {
+    "define": []
   }
 }
