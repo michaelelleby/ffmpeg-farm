@@ -209,18 +209,11 @@ namespace API.Repository
         public FFmpegTaskDto GetNextJob()
         {
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
-            DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+            var now = DateTimeOffset.UtcNow;
 
-            var data = new
-            {
-                State = TranscodingJobState.InProgress,
-                Heartbeat = DateTimeOffset.UtcNow,
-                Timeout = timeout,
-                QueuedState = TranscodingJobState.Queued,
-                InProgressState = TranscodingJobState.InProgress
-            };
-            
-            using (var scope = new TransactionScope())
+            DateTimeOffset timeout = now.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
+
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -229,36 +222,46 @@ namespace API.Repository
                     {
                         try
                         {
-                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>(
-                                "SELECT TOP 1 Tasks.id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename" +
-                                " FROM FfmpegTasks Tasks" +
-                                " INNER JOIN ffmpegfarm.dbo.FfmpegJobs Jobs ON Tasks.FfmpegJobs_id = Jobs.id" +
-                                " WHERE Tasks.TaskState = @QueuedState OR" +
-                                " (Tasks.TaskState = @InProgressState AND Tasks.HeartBeat < @Timeout)" +
-                                " ORDER BY Jobs.Needed ASC, Jobs.Id ASC;",
-                                data);
-                            if (task == null)
+                            var data = new
+                            {
+                                QueuedState = TranscodingJobState.Queued,
+                                InProgressState = TranscodingJobState.InProgress,
+                            };
+                            var parameters = new DynamicParameters(data);
+                            parameters.Add("@TaskId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                            parameters.Add("@JobId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                            parameters.Add("@Timeout", timeout, DbType.DateTimeOffset);
+                            parameters.Add("@Timestamp", now, DbType.DateTimeOffset);
+
+                            connection.Execute("sp_GetNextTask", parameters, commandType: CommandType.StoredProcedure);
+                            int? taskId = parameters.Get<int?>("@TaskId");
+
+                            // taskId will be null if no tasks are ready to be processed
+                            if (taskId.HasValue == false)
                                 return null;
+
+                            var task = connection.QuerySingle<FFmpegTaskDto>(
+                                "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE Id = @Id;",
+                                new {Id = taskId});
 
                             // Safety check to ensure that the data is being returned correctly in the SQL query
                             if (task.Id < 0 || task.FfmpegJobsId < 0 || string.IsNullOrWhiteSpace(task.Arguments))
                                 throw new InvalidOperationException("One or more parameters were not set by SQL query.");
 
-                            var parameters = new DynamicParameters(data);
-                            parameters.Add("@JobCorrelationId", dbType: DbType.Guid, direction: ParameterDirection.Output);
-                            parameters.Add("@JobType", dbType: DbType.Int32, direction: ParameterDirection.Output, size: 50);
-                            parameters.Add("@Id", task.FfmpegJobsId, DbType.Int32, ParameterDirection.Input);
-
                             var rowsUpdated = connection.Execute(
-                                "UPDATE FfmpegJobs SET JobState = @State, @JobCorrelationId = JobCorrelationId, @JobType = JobType WHERE Id = @Id;",
-                                parameters);
+                                "UPDATE FfmpegJobs SET JobState = @State WHERE Id = @Id;",
+                                new
+                                {
+                                    Id = task.FfmpegJobsId,
+                                    State = TranscodingJobState.InProgress,
+                                    Heartbeat = now,
+                                    Timeout = timeout,
+                                    QueuedState = TranscodingJobState.Queued,
+                                    InProgressState = TranscodingJobState.InProgress
+                                });
+
                             if (rowsUpdated == 0)
                                 throw new InvalidOperationException($"Missing row in FfmpegJobs with id {task.FfmpegJobsId}");
-
-                            rowsUpdated = connection.Execute("UPDATE FfmpegTasks SET TaskState = @State, Started = @Timestamp WHERE Id = @Id;",
-                                new {task.Id, State = TranscodingJobState.InProgress, Timestamp = DateTimeOffset.UtcNow});
-                            if (rowsUpdated == 0)
-                                throw new InvalidOperationException($"Missing row in FfmpegTasks with id {task.Id}");
 
                             scope.Complete();
 
@@ -267,7 +270,7 @@ namespace API.Repository
                         catch (SqlException e)
                         {
                             // Retry in case of deadlocks
-                            if (e.ErrorCode == 1205)
+                            if (e.Number == 1205)
                             {
                                 continue;
                             }
