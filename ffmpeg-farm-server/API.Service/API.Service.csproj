@@ -56,7 +56,6 @@
   <ItemGroup>
     <Compile Include="ContainerHelper.cs" />
     <Compile Include="Helper.cs" />
-    <Compile Include="JobStateChanger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

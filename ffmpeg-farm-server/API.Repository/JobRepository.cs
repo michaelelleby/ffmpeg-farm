@@ -26,7 +26,7 @@ namespace API.Repository
 
         public bool DeleteJob(Guid jobId)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -78,7 +78,7 @@ namespace API.Repository
 
         public bool PauseJob(Guid jobId)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var conn = Helper.GetConnection())
                 {
@@ -111,7 +111,7 @@ namespace API.Repository
 
         public bool ResumeJob(Guid jobId)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var conn = Helper.GetConnection())
                 {
@@ -175,7 +175,7 @@ namespace API.Repository
 
         public void SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -282,7 +282,7 @@ namespace API.Repository
         {
             IDictionary<int, ICollection<FFmpegTaskDto>> jobsDictionary = new ConcurrentDictionary<int, ICollection<FFmpegTaskDto>>();
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -323,7 +323,7 @@ namespace API.Repository
         {
             if (id == Guid.Empty) throw new ArgumentOutOfRangeException("id");
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -414,7 +414,7 @@ namespace API.Repository
                     new {Id = job.JobCorrelationId})
                 .ToArray();
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 Type jobType = job.GetType();
                 TranscodingJobState jobState = job.Failed
@@ -499,7 +499,7 @@ namespace API.Repository
                 scope.Complete();
             }
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 ICollection<TranscodingJobState> totalJobs = connection.Query<TranscodingJobState>(
                         "SELECT State FROM FfmpegVideoJobs WHERE JobCorrelationId = @Id;",

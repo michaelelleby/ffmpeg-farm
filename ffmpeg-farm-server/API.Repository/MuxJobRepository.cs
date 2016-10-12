@@ -29,7 +29,7 @@ namespace API.Repository
 
             Guid jobCorrelationId = Guid.NewGuid();
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {

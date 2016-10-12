@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Transactions;
 using Contract;
 using Dapper;
 
@@ -12,15 +8,12 @@ namespace API.Repository
     public class AudioJobRepository : JobRepository, IAudioJobRepository
     {
         private readonly IHelper _helper;
-        private readonly string _connectionString;
 
-        public AudioJobRepository(IHelper helper, string connectionString) : base(helper)
+        public AudioJobRepository(IHelper helper) : base(helper)
         {
             if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException("connectionString");
 
             _helper = helper;
-            _connectionString = connectionString;
         }
 
         public Guid Add(AudioJobRequest request, ICollection<AudioTranscodingJob> jobs)
@@ -31,7 +24,7 @@ namespace API.Repository
 
             Guid jobCorrelationId = Guid.NewGuid();
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = _helper.GetConnection())
                 {
@@ -88,57 +81,6 @@ namespace API.Repository
                 scope.Complete();
 
                 return jobCorrelationId;
-            }
-        }
-
-        public IEnumerable<AudioJobRequestDto> Get()
-        {
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-
-                // The dictionary is used for performance reasons, since we can add the specific jobs to each request
-                // by using the job id as kesy
-                IDictionary<Guid, AudioJobRequestDto> requests = new ConcurrentDictionary<Guid, AudioJobRequestDto>();
-
-                var rows = connection.Query<AudioJobRequestDto>(
-                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest ORDER BY Id ASC;");
-                foreach (AudioJobRequestDto requestDto in rows)
-                {
-                    requests.Add(requestDto.JobCorrelationId, requestDto);
-                }
-
-                var jobs = connection.Query<AudioTranscodingJobDto>(
-                    "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress FROM FfmpegTasks AJ " +
-                    "INNER JOIN FfmpegJobs Jobs ON AJ.FfmpegJobs_id = Jobs.id " +
-                    "ORDER BY Id ASC;");
-
-                foreach (AudioTranscodingJobDto dto in jobs)
-                {
-                    requests[dto.JobCorrelationId].Jobs.Add(dto);
-                }
-
-                return requests.Values;
-            }
-        }
-
-        public AudioJobRequestDto Get(Guid id)
-        {
-            using (var connection = Helper.GetConnection())
-            {
-                connection.Open();
-                var request = connection.QuerySingle<AudioJobRequestDto>(
-                    "SELECT JobCorrelationId, SourceFilename, DestinationFilename, Needed, Created, OutputFolder FROM FfmpegAudioRequest WHERE JobCorrelationId = @JobCorrelationId;",
-                    new {JobCorrelationId = id});
-
-                request.Jobs = connection.Query<AudioTranscodingJobDto>(
-                        "SELECT Arguments, JobCorrelationId, Needed, SourceFilename, State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, Bitrate FROM FfmpegTasks AJ " +
-                        "INNER JOIN FfmpegJobs Jobs ON AJ.FfmpegJobs_id = Jobs.id " +
-                        "WHERE JobCorrelationId = @JobCorrelationId;",
-                        new {JobCorrelationId = id})
-                    .ToList();
-
-                return request;
             }
         }
     }

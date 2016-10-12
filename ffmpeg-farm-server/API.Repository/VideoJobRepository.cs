@@ -22,7 +22,7 @@ namespace API.Repository
             DateTime timeout =
                 DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -81,7 +81,7 @@ namespace API.Repository
 
         public MergeJob GetNextMergeJob()
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
@@ -126,7 +126,7 @@ namespace API.Repository
 
         public Mp4boxJob GetNextDashJob()
         {
-            using (var scope = new TransactionScope())
+            using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
                 {
