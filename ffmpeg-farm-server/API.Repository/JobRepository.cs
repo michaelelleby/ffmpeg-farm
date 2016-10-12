@@ -213,13 +213,13 @@ namespace API.Repository
 
             DateTimeOffset timeout = now.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            do
             {
-                using (var connection = Helper.GetConnection())
+                using (var scope = TransactionUtils.CreateTransactionScope())
                 {
-                    connection.Open();
-                    do
+                    using (var connection = Helper.GetConnection())
                     {
+                        connection.Open();
                         try
                         {
                             var data = new
@@ -273,9 +273,9 @@ namespace API.Repository
 
                             throw;
                         }
-                    } while (true);
+                    }
                 }
-            }
+            } while (true);
         }
 
         public ICollection<FFmpegJobDto> Get()
