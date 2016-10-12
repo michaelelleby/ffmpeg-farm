@@ -253,11 +253,7 @@ namespace API.Repository
                                 new
                                 {
                                     Id = task.FfmpegJobsId,
-                                    State = TranscodingJobState.InProgress,
-                                    Heartbeat = now,
-                                    Timeout = timeout,
-                                    QueuedState = TranscodingJobState.Queued,
-                                    InProgressState = TranscodingJobState.InProgress
+                                    State = TranscodingJobState.InProgress
                                 });
 
                             if (rowsUpdated == 0)
