@@ -21,7 +21,7 @@ namespace Worker.Test
             var dto = new FFmpegTaskDto
             {
                 Arguments =
-                    string.Format("-i {0}{1}Data{1}Test.wav -f mp4 -b:a 192k -y NUL", TestContext.CurrentContext.TestDirectory,
+                    string.Format("-xerror -i {0}{1}Data{1}Test.wav -f mp4 -b:a 192k -y NUL", TestContext.CurrentContext.TestDirectory,
                         Path.DirectorySeparatorChar),
                 FfmpegJobsId = 1,
                 Id = 10,
@@ -63,7 +63,7 @@ namespace Worker.Test
             var dto = new FFmpegTaskDto
             {
                 Arguments =
-                    string.Format("-i {0}{1}Data{1}Test_invalid.wav -f mp4 -b:a 192k -y NUL", TestContext.CurrentContext.TestDirectory,
+                    string.Format("-xerror -i {0}{1}Data{1}Test_invalid.wav -f mp4 -b:a 192k -y NUL", TestContext.CurrentContext.TestDirectory,
                         Path.DirectorySeparatorChar),
                 FfmpegJobsId = 1,
                 Id = 10,
