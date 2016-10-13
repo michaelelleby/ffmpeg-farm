@@ -127,7 +127,7 @@ namespace FFmpegFarm.Worker
                 _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
 
                 _commandlineProcess.WaitForExit();
-
+                
                 if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
                 {
                     _currentTask.State = FFmpegTaskDtoState.Failed;
@@ -160,9 +160,14 @@ namespace FFmpegFarm.Worker
 
         private bool FfmpegDetectedError()
         {
+            // FFmpeg will return exit code 0 even when writing to the output the following:
+            // Error while decoding stream #0:0: Invalid data found when processing input
+            // so we need to check if there is a line beginning with the word Error
 
             return Regex.IsMatch(_output.ToString(), @"\] Error",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)
+                || Regex.IsMatch(_output.ToString(), @"^Error",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.Multiline);
         }
         
         private void KillProcess(string reason)
