@@ -42,7 +42,7 @@ namespace API.WindowsService.Controllers
             {
                 arguments += $"-ss {model.Inpoint:g} ";
             }
-            arguments += $@"-i ""{model.VideoSourceFilename}"" -i ""{model.AudioSourceFilename}"" -map 0:v:0 -map 1:a:0 -c copy -y ""{outputFilename}""";
+            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -i ""{model.AudioSourceFilename}"" -map 0:v:0 -map 1:a:0 -c copy -y ""{outputFilename}""";
             var jobs = new List<FFmpegJob>
             {
                 new MuxJob

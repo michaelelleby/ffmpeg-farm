@@ -78,7 +78,7 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued,
                     DestinationFilename = destinationFilename,
                     Bitrate = target.Bitrate,
-                    Arguments = $@"-y -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                    Arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
                         .Bitrate}k -vn ""{destinationFilename}"""
                 };
 
