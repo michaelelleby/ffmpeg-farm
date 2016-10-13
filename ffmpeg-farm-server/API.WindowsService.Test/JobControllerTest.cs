@@ -24,10 +24,10 @@ namespace API.WindowsService.Test
             var sut = fixture.Create<JobController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.DeleteJob(Guid.Empty));
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => sut.DeleteJob(Guid.Empty));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.ParamName, Is.EqualTo("jobCorrelationId"));
         }
 
         [Test]
@@ -56,10 +56,10 @@ namespace API.WindowsService.Test
             var sut = fixture.Create<JobController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.PatchJob(Guid.Empty, Command.Resume));
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => sut.PatchJob(Guid.Empty, Command.Resume));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.ParamName, Is.EqualTo("jobCorrelationId"));
         }
 
         [Test]
@@ -88,10 +88,10 @@ namespace API.WindowsService.Test
             var sut = fixture.Create<JobController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.PatchJob(Guid.Empty, Command.Pause));
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => sut.PatchJob(Guid.Empty, Command.Pause));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.ParamName, Is.EqualTo("jobCorrelationId"));
         }
 
         [Test]

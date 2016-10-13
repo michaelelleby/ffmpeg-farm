@@ -26,9 +26,7 @@ namespace API.WindowsService.Controllers
         public bool DeleteJob(Guid jobCorrelationId)
         {
             if (jobCorrelationId == Guid.Empty)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Specified jobCorrelationId is invalid"));
-            }
+                throw new ArgumentOutOfRangeException(nameof(jobCorrelationId), "Specified jobCorrelationId is invalid");
 
             return _repository.DeleteJob(jobCorrelationId);
         }
@@ -37,9 +35,8 @@ namespace API.WindowsService.Controllers
         public bool PatchJob(Guid jobCorrelationId, Command command)
         {
             if (jobCorrelationId == Guid.Empty)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Specified jobCorrelationId is invalid"));
-            }
+                throw new ArgumentOutOfRangeException(nameof(jobCorrelationId), "Specified jobCorrelationId is invalid");
+
 
             switch (command)
             {
@@ -49,7 +46,7 @@ namespace API.WindowsService.Controllers
                     return _repository.ResumeJob(jobCorrelationId);
                 case Command.Unknown:
                 default:
-                    throw new ArgumentException($"unsupported {command}", nameof(command));
+                    throw new ArgumentOutOfRangeException(nameof(command), $"unsupported {command}", nameof(command));
             }
         }
     }

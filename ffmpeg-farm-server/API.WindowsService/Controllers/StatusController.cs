@@ -58,11 +58,11 @@ namespace API.WindowsService.Controllers
         public JobStatus Get(Guid id)
         {
             if (id == Guid.Empty)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "ID must be a valid GUID"));
+                throw new ArgumentOutOfRangeException(nameof(id), "ID must be a valid GUID");
 
             FFmpegJobDto job = _repository.Get(id);
             if (job == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"No job found with id {id:B}"));
+                throw new ArgumentException($"No job found with id {id:B}", "id");
 
             JobStatus result = new JobStatus
             {
@@ -123,9 +123,8 @@ namespace API.WindowsService.Controllers
         public void UpdateProgress(TaskProgressModel model)
         {
             if (model == null)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "model null"));
-            }
+                throw new ArgumentNullException("model");
+
             if (!ModelState.IsValid)
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));

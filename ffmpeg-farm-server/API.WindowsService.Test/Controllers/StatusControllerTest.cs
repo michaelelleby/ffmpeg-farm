@@ -23,10 +23,10 @@ namespace API.WindowsService.Test.Controllers
             var sut = fixture.Create<StatusController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.Get(Guid.Empty));
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => sut.Get(Guid.Empty));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.ParamName, Is.EqualTo("id"));
         }
 
         [Test]
@@ -41,10 +41,10 @@ namespace API.WindowsService.Test.Controllers
                 .Returns((FFmpegJobDto) null);
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.Get(Guid.NewGuid()));
+            var exception = Assert.Throws<ArgumentException>(() => sut.Get(Guid.NewGuid()));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(exception.ParamName, Is.EqualTo("id"));
         }
 
         [Test]
@@ -55,10 +55,10 @@ namespace API.WindowsService.Test.Controllers
             var sut = fixture.Create<StatusController>();
 
             // Act
-            var exception = Assert.Throws<HttpResponseException>(() => sut.UpdateProgress(null));
+            var exception = Assert.Throws<ArgumentNullException>(() => sut.UpdateProgress(null));
 
             // Assert
-            Assert.That(exception.Response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.ParamName, Is.EqualTo("model"));
         }
     }
 }

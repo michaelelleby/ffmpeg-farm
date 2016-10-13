@@ -327,10 +327,9 @@ namespace API.Repository
             {
                 using (var connection = Helper.GetConnection())
                 {
-                    var job = connection.QuerySingle<FFmpegJobDto>(
+                    var job = connection.QuerySingleOrDefault<FFmpegJobDto>(
                         "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
                         new {id});
-
                     if (job == null)
                         return null;
 

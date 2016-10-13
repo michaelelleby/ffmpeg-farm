@@ -29,9 +29,7 @@ namespace API.WindowsService.Controllers
         public FFmpegTaskDto GetNext(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName))
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified"));
-            }
+                throw new ArgumentNullException(nameof(machineName));
 
             _helper.InsertClientHeartbeat(machineName);
 
