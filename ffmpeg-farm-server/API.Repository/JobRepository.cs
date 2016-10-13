@@ -226,38 +226,17 @@ namespace API.Repository
                             {
                                 QueuedState = TranscodingJobState.Queued,
                                 InProgressState = TranscodingJobState.InProgress,
+                                Timeout = timeout,
+                                Timestamp = now
                             };
-                            var parameters = new DynamicParameters(data);
-                            parameters.Add("@TaskId", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                            parameters.Add("@JobId", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                            parameters.Add("@Timeout", timeout, DbType.DateTimeOffset);
-                            parameters.Add("@Timestamp", now, DbType.DateTimeOffset);
 
-                            connection.Execute("sp_GetNextTask", parameters, commandType: CommandType.StoredProcedure);
-                            int? taskId = parameters.Get<int?>("@TaskId");
-
-                            // taskId will be null if no tasks are ready to be processed
-                            if (taskId.HasValue == false)
+                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
+                            if (task == null)
                                 return null;
-
-                            var task = connection.QuerySingle<FFmpegTaskDto>(
-                                "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE Id = @Id;",
-                                new {Id = taskId});
 
                             // Safety check to ensure that the data is being returned correctly in the SQL query
                             if (task.Id < 0 || task.FfmpegJobsId < 0 || string.IsNullOrWhiteSpace(task.Arguments))
                                 throw new InvalidOperationException("One or more parameters were not set by SQL query.");
-
-                            var rowsUpdated = connection.Execute(
-                                "UPDATE FfmpegJobs SET JobState = @State WHERE Id = @Id;",
-                                new
-                                {
-                                    Id = task.FfmpegJobsId,
-                                    State = TranscodingJobState.InProgress
-                                });
-
-                            if (rowsUpdated == 0)
-                                throw new InvalidOperationException($"Missing row in FfmpegJobs with id {task.FfmpegJobsId}");
 
                             scope.Complete();
 
