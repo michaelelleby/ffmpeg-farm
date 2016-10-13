@@ -26,11 +26,10 @@ namespace FFmpegFarm.Worker
         private int? _threadId; // main thread id, used for logging in child threads.
         private int _progressSpinner;
         private const int ProgressSkip = 5;
-        private readonly StatusClient _statusClient;
-        private readonly TaskClient _taskClient;
         private readonly Stopwatch _stopwatch = new Stopwatch();
-
-        private Node(string ffmpegPath, string apiUri, ILogger logger)
+        private IApiWrapper _apiWrapper;
+        
+        private Node(string ffmpegPath, string apiUri, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -44,14 +43,18 @@ namespace FFmpegFarm.Worker
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
-            _taskClient = new TaskClient(apiUri);
-            _statusClient = new StatusClient(apiUri);
+            _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
         }
 
-        public static Task GetNodeTask(string ffmpegPath, string apiUri, ILogger logger, CancellationToken ct)
+        public static Task GetNodeTask(string ffmpegPath, 
+            string apiUri, 
+            ILogger logger, 
+            CancellationToken ct,
+            IApiWrapper apiWrapper = null)
         {
-            var t = new Task(() => new Node(ffmpegPath,apiUri,logger).Run(ct));
+            var t = new Task(() => new Node(ffmpegPath,apiUri,logger,
+                apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct));
             return t;
         }
 
@@ -59,13 +62,13 @@ namespace FFmpegFarm.Worker
         {
             try
             {
-                _threadId = Thread.CurrentThread.ManagedThreadId;
+                _apiWrapper.ThreadId = _threadId = Thread.CurrentThread.ManagedThreadId;
                 ct.ThrowIfCancellationRequested();
                 ct.Register(() => KillProcess("Canceled"));
                 _cancellationToken = ct;
-                while (!ct.IsCancellationRequested)
+                while (!_cancellationToken.IsCancellationRequested)
                 {
-                    _currentTask = ApiWrapper(_taskClient.GetNextAsync, Environment.MachineName);
+                    _currentTask = _apiWrapper.GetNext(Environment.MachineName);
                     if (_currentTask == null)
                     {
                         Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
@@ -90,7 +93,7 @@ namespace FFmpegFarm.Worker
                         Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                         Done = _currentTask.State == FFmpegTaskDtoState.Done
                     };
-                    _statusClient.UpdateProgressAsync(model, CancellationToken.None).WaitWithoutException(CancellationToken.None); // don't use wrapper since cancel has been called.
+                    _apiWrapper.UpdateProgress(model, true);
                 }
                 _logger.Debug("Cancel recived shutting down...");
             }
@@ -145,7 +148,7 @@ namespace FFmpegFarm.Worker
                     Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                     Done = _currentTask.State == FFmpegTaskDtoState.Done
                 };
-                ApiWrapper(_statusClient.UpdateProgressAsync, model);
+                _apiWrapper.UpdateProgress(model);
                 
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
                 Monitor.Enter(_lock); // lock before dispose
@@ -197,8 +200,8 @@ namespace FFmpegFarm.Worker
                 Convert.ToInt32(match.Groups[4].Value) * 25);
 
             _currentTask.Progress = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
-            
-            ApiWrapper(_statusClient.UpdateProgressAsync, new TaskProgressModel
+
+            _apiWrapper.UpdateProgress(new TaskProgressModel
             {
                 Done = _currentTask.State == FFmpegTaskDtoState.Done,
                 Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
@@ -211,70 +214,6 @@ namespace FFmpegFarm.Worker
                 _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
 
             _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
-        }
-
-        /// <summary>
-        /// Retries and ignores exceptions.
-        /// </summary>
-        private TRes ApiWrapper<TRes>(Func<TRes> func)
-        {
-            const int retryCount = 3;
-            Exception exception = null;
-            SwaggerException swaggerException = null;
-            for (var x = 0; !_cancellationToken.IsCancellationRequested && x < retryCount; x++)
-            {
-                #if DEBUGAPI
-                var timer = new Stopwatch();
-                timer.Start();
-                #endif
-                try
-                {
-                    return func();
-                }
-                catch (Exception e)
-                {
-                    exception = e;
-                    swaggerException = e as SwaggerException;
-                    #if DEBUGAPI
-                    if (swaggerException != null)
-                        _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}", _threadId);
-                    _logger.Exception(e, _threadId);
-                    #endif
-                }
-                #if DEBUGAPI
-                finally
-                {
-                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms", _threadId);
-                    timer.Stop();
-                }
-                #endif
-                Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
-            }
-            if (swaggerException != null)
-                _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}",_threadId);
-            _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), _threadId);
-            return default(TRes);
-        }
-
-
-        /// <summary>
-        /// Retries and ignores exceptions.
-        /// </summary>
-        private TRes ApiWrapper<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
-        {
-            return ApiWrapper(() => apiCall(arg, CancellationToken.None).WaitAndUnwrapException());
-        }
-
-        /// <summary>
-        /// Retries and ignores exceptions.
-        /// </summary>
-        private void ApiWrapper<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
-        {
-            ApiWrapper(
-                new Func<object> (()=>{
-                    apiCall(arg, CancellationToken.None).WaitAndUnwrapException();
-                    return null;
-                }));
         }
     }
 }
