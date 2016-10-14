@@ -7,6 +7,5 @@ namespace Contract
         IDbConnection GetConnection();
         Mediainfo GetMediainfo(string sourceFilename);
         int GetDuration(string sourceFilename);
-        void InsertClientHeartbeat(string machineName);
     }
 }

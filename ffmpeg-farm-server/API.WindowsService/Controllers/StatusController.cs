@@ -130,8 +130,6 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            _helper.InsertClientHeartbeat(model.MachineName);
-
             _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
         }
     }

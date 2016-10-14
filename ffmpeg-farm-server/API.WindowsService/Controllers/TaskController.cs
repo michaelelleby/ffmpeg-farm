@@ -31,9 +31,7 @@ namespace API.WindowsService.Controllers
             if (string.IsNullOrWhiteSpace(machineName))
                 throw new ArgumentNullException(nameof(machineName));
 
-            _helper.InsertClientHeartbeat(machineName);
-
-            return _repository.GetNextJob();
+            return _repository.GetNextJob(machineName);
         }
     }
 }

@@ -85,29 +85,5 @@ namespace API.Service
 
             return Convert.ToInt32(mediaInfoProcess.StandardOutput.ReadToEnd())/1000;
         }
-
-        public void InsertClientHeartbeat(string machineName)
-        {
-            using (var scope = new TransactionScope())
-            {
-                using (var connection = GetConnection())
-                {
-                    connection.Open();
-
-                    var updatedRows = connection.Execute(
-                        "UPDATE Clients SET LastHeartbeat = @Heartbeat WHERE MachineName = @MachineName;",
-                        new {MachineName = machineName, HeartBeat = DateTime.UtcNow});
-
-                    if (updatedRows == 0)
-                    {
-                        connection.Execute(
-                            "INSERT INTO Clients (MachineName, LastHeartbeat) VALUES(@MachineName, @Heartbeat);",
-                            new {MachineName = machineName, Heartbeat = DateTime.UtcNow});
-                    }
-
-                    scope.Complete();
-                }
-            }
-        }
     }
 }

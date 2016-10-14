@@ -175,6 +175,8 @@ namespace API.Repository
 
         public void SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
         {
+            InsertClientHeartbeat(machineName);
+
             using (var scope = TransactionUtils.CreateTransactionScope())
             {
                 using (var connection = Helper.GetConnection())
@@ -206,8 +208,12 @@ namespace API.Repository
             }
         }
 
-        public FFmpegTaskDto GetNextJob()
+        public FFmpegTaskDto GetNextJob(string machineName)
         {
+            if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
+
+            InsertClientHeartbeat(machineName);
+
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             var now = DateTimeOffset.UtcNow;
 
@@ -220,6 +226,7 @@ namespace API.Repository
                     using (var connection = Helper.GetConnection())
                     {
                         connection.Open();
+
                         try
                         {
                             var data = new
@@ -321,6 +328,23 @@ namespace API.Repository
 
                     return job;
                 }
+            }
+        }
+
+        private void InsertClientHeartbeat(string machineName)
+        {
+            if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
+
+            using (var connection = Helper.GetConnection())
+            {
+                int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
+                {
+                    MachineName = machineName,
+                    Timestamp = DateTimeOffset.UtcNow
+                }, commandType: CommandType.StoredProcedure);
+
+                if (rowsAffected != 1)
+                    throw new Exception($"sp_InsertClientHeartbeat affected {rowsAffected} rows, should only affect 1 row!");
             }
         }
 
