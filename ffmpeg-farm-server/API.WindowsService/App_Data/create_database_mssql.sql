@@ -86,6 +86,9 @@ END
 
 
 GO
+
+GRANT EXECUTE ON [sp_InsertClientHeartbeat] TO ffmpegfarm
+GO
 /****** Object:  Table [dbo].[Clients]    Script Date: 14-10-2016 14:27:25 ******/
 SET ANSI_NULLS ON
 GO
