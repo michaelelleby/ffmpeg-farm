@@ -6,6 +6,6 @@ namespace Contract
     {
         public string MachineName { get; set; }
 
-        public DateTime LastHeartbeat { get; set; }
+        public DateTimeOffset LastHeartbeat { get; set; }
     }
 }
