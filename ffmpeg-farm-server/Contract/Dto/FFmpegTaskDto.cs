@@ -20,6 +20,8 @@ namespace Contract.Dto
 
         public double Progress { get; set; }
 
+        public int DestinationDurationSeconds { get; set; }
+
         public string DestinationFilename { get; set; }
     }
 }

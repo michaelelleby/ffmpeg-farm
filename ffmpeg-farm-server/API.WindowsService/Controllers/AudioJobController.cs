@@ -61,6 +61,8 @@ namespace API.WindowsService.Controllers
 
             string sourceFilename = request.SourceFilename;
 
+            var frameCount = _helper.GetDuration(sourceFilename);
+
             var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
             {
@@ -79,7 +81,8 @@ namespace API.WindowsService.Controllers
                     DestinationFilename = destinationFilename,
                     Bitrate = target.Bitrate,
                     Arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn ""{destinationFilename}"""
+                        .Bitrate}k -vn ""{destinationFilename}""",
+                    DestinationDurationSeconds = frameCount
                 };
 
                 jobs.Add(transcodingJob);

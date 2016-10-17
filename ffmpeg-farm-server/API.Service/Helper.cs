@@ -72,7 +72,7 @@ namespace API.Service
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $@"--inform=Video;%Duration% ""{sourceFilename}""",
+                    Arguments = $@"--inform=General;%Duration% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -83,7 +83,8 @@ namespace API.Service
             if (mediaInfoProcess.ExitCode != 0)
                 throw new Exception($@"MediaInfo returned non-zero exit code: {mediaInfoProcess.ExitCode}");
 
-            return Convert.ToInt32(mediaInfoProcess.StandardOutput.ReadToEnd())/1000;
+            string value = mediaInfoProcess.StandardOutput.ReadToEnd();
+            return Convert.ToInt32(value)/1000;
         }
     }
 }

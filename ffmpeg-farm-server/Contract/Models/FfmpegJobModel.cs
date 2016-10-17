@@ -20,17 +20,17 @@ namespace Contract.Models
                 if (Tasks.All(x => x.State == TranscodingJobState.Done))
                     return TranscodingJobState.Done;
 
-                if (Tasks.All(j => j.State == TranscodingJobState.Queued))
-                    return TranscodingJobState.Queued;
-
                 if (Tasks.Any(j => j.State == TranscodingJobState.Failed))
                     return TranscodingJobState.Failed;
 
-                if (Tasks.All(j => j.State == TranscodingJobState.Paused))
+                if (Tasks.Any(j => j.State == TranscodingJobState.Paused))
                     return TranscodingJobState.Paused;
 
                 if (Tasks.Any(j => j.State == TranscodingJobState.InProgress))
                     return TranscodingJobState.InProgress;
+
+                if (Tasks.Any(j => j.State == TranscodingJobState.Queued))
+                    return TranscodingJobState.Queued;
 
                 return TranscodingJobState.Unknown;
             }

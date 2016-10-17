@@ -280,7 +280,7 @@ namespace API.Repository
                         return null;
 
                     ICollection<FFmpegTaskDto> tasks = connection.Query<FFmpegTaskDto>(
-                            "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks;")
+                            "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename FROM FfmpegTasks;")
                         .ToList();
 
                     foreach (FFmpegTaskDto task in tasks)
@@ -320,7 +320,7 @@ namespace API.Repository
                         return null;
 
                     job.Tasks = connection.Query<FFmpegTaskDto>(
-                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
+                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
                         .ToList();
 

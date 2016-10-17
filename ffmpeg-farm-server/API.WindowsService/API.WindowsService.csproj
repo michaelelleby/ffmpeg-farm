@@ -136,7 +136,6 @@
     <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\MuxJobController.cs" />
-    <Compile Include="Models\FfmpegTaskModel.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="Models\JobCommandEnum.cs" />
     <Compile Include="Models\MuxJobRequestModel.cs" />
