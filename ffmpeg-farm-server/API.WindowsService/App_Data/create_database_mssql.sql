@@ -210,6 +210,7 @@ CREATE TABLE [dbo].[FfmpegTasks](
 	[FfmpegJobs_id] [int] NOT NULL,
 	[Arguments] [nvarchar](max) NOT NULL,
 	[TaskState] [tinyint] NOT NULL,
+	[DestinationDurationSeconds] [int] NOT NULL,
 	[Started] [datetimeoffset](7) NULL,
 	[Heartbeat] [datetimeoffset](7) NULL,
 	[HeartbeatMachineName] [varchar](50) NULL,

@@ -116,7 +116,6 @@
     <Compile Include="Mediainfo.cs" />
     <Compile Include="MergeJob.cs" />
     <Compile Include="Models\FfmpegJobModel.cs" />
-    <Compile Include="Models\JobStatus.cs" />
     <Compile Include="Models\ServiceStatus.cs" />
     <Compile Include="Models\FfmpegTaskModel.cs" />
     <Compile Include="Models\WorkerStatus.cs" />
