@@ -12,12 +12,15 @@ namespace API.WindowsService.Controllers
     public class MuxJobController : ApiController
     {
         private readonly IMuxJobRepository _repository;
+        private readonly IHelper _helper;
 
-        public MuxJobController(IMuxJobRepository repository)
+        public MuxJobController(IMuxJobRepository repository, IHelper helper)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
 
             _repository = repository;
+            _helper = helper;
         }
 
         [HttpPost]
@@ -36,6 +39,7 @@ namespace API.WindowsService.Controllers
             if (model == null) throw new ArgumentNullException(nameof(model));
 
             var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
+            var frameCount = _helper.GetDuration(model.VideoSourceFilename);
 
             string arguments = string.Empty;
             if (model.Inpoint > TimeSpan.Zero)
@@ -49,7 +53,8 @@ namespace API.WindowsService.Controllers
                 {
                     Arguments = arguments,
                     State = TranscodingJobState.Queued,
-                    DestinationFilename = outputFilename
+                    DestinationFilename = outputFilename,
+                    DestinationDurationSeconds = frameCount
                 }
             };
             var request = new MuxJobRequest
