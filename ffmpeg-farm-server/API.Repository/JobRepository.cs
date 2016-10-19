@@ -264,7 +264,7 @@ namespace API.Repository
             } while (true);
         }
 
-        public ICollection<FFmpegJobDto> Get()
+        public ICollection<FFmpegJobDto> Get(int take = 10)
         {
             IDictionary<int, ICollection<FFmpegTaskDto>> jobsDictionary = new ConcurrentDictionary<int, ICollection<FFmpegTaskDto>>();
 
@@ -273,14 +273,23 @@ namespace API.Repository
                 using (var connection = Helper.GetConnection())
                 {
                     ICollection<FFmpegJobDto> jobs = connection.Query<FFmpegJobDto>(
-                        "SELECT id, JobCorrelationId, Created, Needed, JobType, JobState AS State FROM FfmpegJobs;")
+                        "SELECT top(" + take + @") id, JobCorrelationId, Created, Needed, JobType, JobState AS State
+                        FROM FfmpegJobs
+                        ORDER BY Created DESC"
+                    )
                         .ToList();
 
                     if (jobs == null)
                         return null;
 
+                    List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
+                    string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
+
                     ICollection<FFmpegTaskDto> tasks = connection.Query<FFmpegTaskDto>(
-                            "SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename FROM FfmpegTasks;")
+                            @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename 
+                              FROM FfmpegTasks
+                              WHERE FfmpegJobs_id in " + jobidSql
+                        )
                         .ToList();
 
                     foreach (FFmpegTaskDto task in tasks)
