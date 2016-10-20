@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Web.Http;
 using API.WindowsService.Models;
 using Contract;
 using Contract.Dto;
 using Contract.Models;
+using WebApi.OutputCache.V2;
+
 //using FfmpegTaskModel = Contract.Models.FfmpegTaskModel;
 
 namespace API.WindowsService.Controllers
@@ -30,6 +33,8 @@ namespace API.WindowsService.Controllers
         /// Get status for all jobs
         /// </summary>
         /// <returns></returns>
+        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [HttpGet]
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
             ICollection<FFmpegJobDto> jobStatuses = _repository.Get(take);
@@ -40,13 +45,14 @@ namespace API.WindowsService.Controllers
 
             return new List<FfmpegJobModel>();
         }
-
         
         /// <summary>
         /// Get status for a specific job
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
         /// <returns></returns>
+        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [HttpGet]
         public FfmpegJobModel Get(Guid id)
         {
             if (id == Guid.Empty)
