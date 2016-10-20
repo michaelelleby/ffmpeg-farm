@@ -155,6 +155,7 @@ namespace FFmpegFarm.Worker
             }
             _commandlineProcess = null;
             _stopwatch.Stop();
+           _currentTask = null;
             Monitor.Exit(_lock);
         }
 

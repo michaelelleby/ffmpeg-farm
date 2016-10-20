@@ -14,7 +14,7 @@ namespace Worker.Test
     public class NodeTest
     {
         [Test]
-        public void CanEncodeAudio()
+        public async Task CanEncodeAudio()
         {
             // Arrange
             string ffmpegPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Data", "ffmpeg.exe");
@@ -40,7 +40,7 @@ namespace Worker.Test
 
             try
             {
-                task.Wait(cancelSource.Token);
+                await task;
             }
             catch (TaskCanceledException)
             {
@@ -56,7 +56,7 @@ namespace Worker.Test
         }
 
         [Test]
-        public void FailsIfSourceFileIsInvalid()
+        public async Task FailsIfSourceFileIsInvalid()
         {
             // Arrange
             string ffmpegPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Data", "ffmpeg.exe");
@@ -82,7 +82,7 @@ namespace Worker.Test
 
             try
             {
-                task.Wait(cancelSource.Token);
+                await task;
             }
             catch (TaskCanceledException)
             {
@@ -95,6 +95,49 @@ namespace Worker.Test
 
             // Assert
             Assert.That(apiWrapper.IsFailed, Is.True);
+        }
+
+        [Test]
+        public async Task ShouldNotSetTaskToQueuedIfTaskIsFailedAndWorkerIsStopped()
+        {
+            // Arrange
+            string ffmpegPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Data", "ffmpeg.exe");
+            var dto = new FFmpegTaskDto
+            {
+                Arguments =
+                    string.Format("-xerror -i {0}{1}Data{1}Test_invalid.wav -f mp4 -b:a 192k -y NUL", TestContext.CurrentContext.TestDirectory,
+                        Path.DirectorySeparatorChar),
+                FfmpegJobsId = 1,
+                Id = 10,
+                State = FFmpegTaskDtoState.InProgress
+            };
+
+            Mock<ILogger> mockLogger = new Mock<ILogger>();
+            var cancelSource = new CancellationTokenSource();
+            var apiWrapper = new FakeApiWrapper(cancelSource);
+
+            apiWrapper.Tasks.Push(dto);
+
+            // Act
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
+            task.Start();
+
+            try
+            {
+                await task;
+            }
+            catch (TaskCanceledException)
+            {
+                // Ignore task was cancelled, because we cancel it in FakeApiWrapper.UpdateProgress()
+            }
+            catch (OperationCanceledException)
+            {
+                // Ignore task was cancelled, because we cancel it in FakeApiWrapper.UpdateProgress()
+            }
+
+            // Assert
+            Assert.That(apiWrapper.IsFailed, Is.True);
+            Assert.That(apiWrapper.IsDone, Is.False);
         }
 
         class FakeApiWrapper : IApiWrapper
