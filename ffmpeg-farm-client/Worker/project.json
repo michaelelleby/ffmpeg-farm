@@ -18,7 +18,8 @@
     "net461": {}
   },
   "configurations": {
-    "Development": {}
+    "Development": {},
+    "Test": {}
   },
   "buildOptions": {
     "define": []
