@@ -104,6 +104,11 @@ namespace FFmpegFarm.Worker
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Start();
+
+            var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
+            if (!Directory.Exists(destDir))
+                Directory.CreateDirectory(destDir);
+
             using (_commandlineProcess = new Process())
             {
                 _commandlineProcess.StartInfo = new ProcessStartInfo

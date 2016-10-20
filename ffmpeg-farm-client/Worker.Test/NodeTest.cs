@@ -25,7 +25,8 @@ namespace Worker.Test
                         Path.DirectorySeparatorChar),
                 FfmpegJobsId = 1,
                 Id = 10,
-                State = FFmpegTaskDtoState.InProgress
+                State = FFmpegTaskDtoState.InProgress,
+                DestinationFilename = "C:\\temp\\unit-test\\lol.mp4"
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
@@ -67,7 +68,8 @@ namespace Worker.Test
                         Path.DirectorySeparatorChar),
                 FfmpegJobsId = 1,
                 Id = 10,
-                State = FFmpegTaskDtoState.InProgress
+                State = FFmpegTaskDtoState.InProgress,
+                DestinationFilename = "C:\\temp\\unit-test\\lol.mp4"
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
@@ -109,7 +111,8 @@ namespace Worker.Test
                         Path.DirectorySeparatorChar),
                 FfmpegJobsId = 1,
                 Id = 10,
-                State = FFmpegTaskDtoState.InProgress
+                State = FFmpegTaskDtoState.InProgress,
+                DestinationFilename = "C:\\temp\\unit-test\\lol.mp4"
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
