@@ -13,5 +13,6 @@ namespace Contract.Models
         public string HeartbeatMachine { get; set; }
 
         public string DestinationFilename { get; set; }
+        public DateTimeOffset? Started { get; set; }
     }
 }

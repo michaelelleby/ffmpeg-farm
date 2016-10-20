@@ -89,6 +89,7 @@ namespace API.WindowsService.Controllers
                 Created = dto.Created,
                 Tasks = dto.Tasks.Select(j => new FfmpegTaskModel
                 {
+                    Started = j.Started,
                     Heartbeat = j.Heartbeat,
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,
