@@ -33,9 +33,12 @@ namespace API.WindowsService.Controllers
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
             ICollection<FFmpegJobDto> jobStatuses = _repository.Get(take);
-            IEnumerable<FfmpegJobModel> requestModels = jobStatuses.Select(MapDtoToModel);
+            if (jobStatuses.Count > 0)
+            {
+                return jobStatuses.Select(MapDtoToModel);
+            }
 
-            return requestModels;
+            return new List<FfmpegJobModel>();
         }
 
         

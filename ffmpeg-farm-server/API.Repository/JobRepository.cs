@@ -279,8 +279,8 @@ namespace API.Repository
                     )
                         .ToList();
 
-                    if (jobs == null)
-                        return null;
+                    if (jobs == null || jobs.Count == 0)
+                        return new List<FFmpegJobDto>();
 
                     List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
                     string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
