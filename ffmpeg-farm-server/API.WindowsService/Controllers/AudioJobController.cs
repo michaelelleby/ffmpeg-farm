@@ -72,6 +72,19 @@ namespace API.WindowsService.Controllers
                     $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{target
                         .Bitrate}.{extension}";
 
+                string arguments = string.Empty;
+
+                if (target.Format == ContainerFormat.MP4)
+                {
+                    arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                        .Bitrate}k -vn -movflags +faststart ""{destinationFilename}""";
+                }
+                else
+                {
+                    arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                        .Bitrate}k -vn ""{destinationFilename}""";
+                }
+
                 var transcodingJob = new AudioTranscodingJob
                 {
                     JobCorrelationId = jobCorrelationId,
@@ -80,8 +93,7 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued,
                     DestinationFilename = destinationFilename,
                     Bitrate = target.Bitrate,
-                    Arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn ""{destinationFilename}""",
+                    Arguments = arguments,
                     DestinationDurationSeconds = frameCount
                 };
 
