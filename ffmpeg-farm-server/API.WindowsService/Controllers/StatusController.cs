@@ -67,7 +67,7 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="model"></param>
         [HttpPatch]
-        public void UpdateProgress(TaskProgressModel model)
+        public TranscodingJobState UpdateProgress(TaskProgressModel model)
         {
             if (model == null)
                 throw new ArgumentNullException("model");
@@ -77,7 +77,7 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
+            return _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
         }
 
         private static FfmpegJobModel MapDtoToModel(FFmpegJobDto dto)

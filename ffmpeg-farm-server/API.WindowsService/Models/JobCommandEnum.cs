@@ -10,6 +10,7 @@ namespace API.WindowsService.Models
     {
         Unknown = 0,
         Pause,
-        Resume
+        Resume,
+        Cancel
     }
 }

@@ -489,9 +489,9 @@ namespace FFmpegFarm.Worker.Client
         /// 
         /// This also serves as a heartbeat, to tell the server
         /// that the client is still working actively on the job</summary>
-        /// <returns>No Content</returns>
+        /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public Task UpdateProgressAsync(TaskProgressModel model)
+        public Task<Response> UpdateProgressAsync(TaskProgressModel model)
         {
             return UpdateProgressAsync(model, CancellationToken.None);
         }
@@ -501,9 +501,9 @@ namespace FFmpegFarm.Worker.Client
         /// This also serves as a heartbeat, to tell the server
         /// that the client is still working actively on the job</summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>No Content</returns>
+        /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public async Task UpdateProgressAsync(TaskProgressModel model, CancellationToken cancellationToken)
+        public async Task<Response> UpdateProgressAsync(TaskProgressModel model, CancellationToken cancellationToken)
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status");
     
@@ -521,10 +521,19 @@ namespace FFmpegFarm.Worker.Client
             var responseData_ = await response_.Content.ReadAsByteArrayAsync().ConfigureAwait(false); 
             var status_ = ((int)response_.StatusCode).ToString();
     
-            if (status_ == "204") 
+            if (status_ == "200") 
             {
-                return;     
-     
+                var result_ = default(Response); 
+                try
+                {
+                    if (responseData_.Length > 0)
+                        result_ = JsonConvert.DeserializeObject<Response>(Encoding.UTF8.GetString(responseData_, 0, responseData_.Length));                                
+                    return result_; 
+                } 
+                catch (Exception exception) 
+                {
+                    throw new SwaggerException("Could not deserialize the response body.", status_, responseData_, exception);
+                }
             }
             else
             {
@@ -537,7 +546,7 @@ namespace FFmpegFarm.Worker.Client
         /// <param name="id">ID of job to get status of</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public Task<JobStatus> GetAsync(Guid id)
+        public Task<FfmpegJobModel> GetAsync(Guid id)
         {
             return GetAsync(id, CancellationToken.None);
         }
@@ -547,7 +556,7 @@ namespace FFmpegFarm.Worker.Client
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public async Task<JobStatus> GetAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<FfmpegJobModel> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status/{id}");
     
@@ -568,11 +577,11 @@ namespace FFmpegFarm.Worker.Client
     
             if (status_ == "200") 
             {
-                var result_ = default(JobStatus); 
+                var result_ = default(FfmpegJobModel); 
                 try
                 {
                     if (responseData_.Length > 0)
-                        result_ = JsonConvert.DeserializeObject<JobStatus>(Encoding.UTF8.GetString(responseData_, 0, responseData_.Length));                                
+                        result_ = JsonConvert.DeserializeObject<FfmpegJobModel>(Encoding.UTF8.GetString(responseData_, 0, responseData_.Length));                                
                     return result_; 
                 } 
                 catch (Exception exception) 
@@ -690,7 +699,8 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
-        [JsonProperty("DestinationFilenamePrefix", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("DestinationFilenamePrefix", Required = Required.Always)]
+        [Required]
         public string DestinationFilenamePrefix
         {
             get { return _destinationFilenamePrefix; }
@@ -1250,7 +1260,8 @@ namespace FFmpegFarm.Worker.Client
         private double? _progress; 
         private FfmpegTaskModelState? _state; 
         private DateTime? _heartbeat; 
-        private string _heartbeatMachine;
+        private string _heartbeatMachine; 
+        private string _destinationFilename;
     
         [JsonProperty("Progress", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public double? Progress
@@ -1304,6 +1315,20 @@ namespace FFmpegFarm.Worker.Client
                 if (_heartbeatMachine != value)
                 {
                     _heartbeatMachine = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("DestinationFilename", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public string DestinationFilename
+        {
+            get { return _destinationFilename; }
+            set 
+            {
+                if (_destinationFilename != value)
+                {
+                    _destinationFilename = value; 
                     RaisePropertyChanged();
                 }
             }
@@ -1433,92 +1458,6 @@ namespace FFmpegFarm.Worker.Client
     
     [JsonObject(MemberSerialization.OptIn)]
     [GeneratedCode("NJsonSchema", "4.26.6123.28532")]
-    public partial class JobStatus : INotifyPropertyChanged
-    { 
-        private Guid? _jobCorrelationId; 
-        private JobStatusState? _state; 
-        private DateTime? _created; 
-        private ObservableCollection<string> _outputFiles;
-    
-        [JsonProperty("JobCorrelationId", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public Guid? JobCorrelationId
-        {
-            get { return _jobCorrelationId; }
-            set 
-            {
-                if (_jobCorrelationId != value)
-                {
-                    _jobCorrelationId = value; 
-                    RaisePropertyChanged();
-                }
-            }
-        }
-    
-        [JsonProperty("State", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public JobStatusState? State
-        {
-            get { return _state; }
-            set 
-            {
-                if (_state != value)
-                {
-                    _state = value; 
-                    RaisePropertyChanged();
-                }
-            }
-        }
-    
-        [JsonProperty("Created", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public DateTime? Created
-        {
-            get { return _created; }
-            set 
-            {
-                if (_created != value)
-                {
-                    _created = value; 
-                    RaisePropertyChanged();
-                }
-            }
-        }
-    
-        [JsonProperty("OutputFiles", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public ObservableCollection<string> OutputFiles
-        {
-            get { return _outputFiles; }
-            set 
-            {
-                if (_outputFiles != value)
-                {
-                    _outputFiles = value; 
-                    RaisePropertyChanged();
-                }
-            }
-        }
-    
-        public event PropertyChangedEventHandler PropertyChanged;
-    
-        public string ToJson() 
-        {
-            return JsonConvert.SerializeObject(this);
-        }
-        
-        public static JobStatus FromJson(string data)
-        {
-            return JsonConvert.DeserializeObject<JobStatus>(data);
-        }
-        
-        protected virtual void RaisePropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            var handler = PropertyChanged;
-            if (handler != null) 
-                handler(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-    
-    [JsonObject(MemberSerialization.OptIn)]
-    [GeneratedCode("NJsonSchema", "4.26.6123.28532")]
     public partial class FFmpegTaskDto : INotifyPropertyChanged
     { 
         private int? _id; 
@@ -1529,6 +1468,7 @@ namespace FFmpegFarm.Worker.Client
         private DateTime? _heartbeat; 
         private string _heartbeatMachineName; 
         private double? _progress; 
+        private int? _destinationDurationSeconds; 
         private string _destinationFilename;
     
         [JsonProperty("Id", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
@@ -1644,6 +1584,20 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        [JsonProperty("DestinationDurationSeconds", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public int? DestinationDurationSeconds
+        {
+            get { return _destinationDurationSeconds; }
+            set 
+            {
+                if (_destinationDurationSeconds != value)
+                {
+                    _destinationDurationSeconds = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
         [JsonProperty("DestinationFilename", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public string DestinationFilename
         {
@@ -1689,6 +1643,35 @@ namespace FFmpegFarm.Worker.Client
     
         [EnumMember(Value = "Resume")]
         Resume = 2,
+    
+        [EnumMember(Value = "Cancel")]
+        Cancel = 3,
+    
+    }
+    
+    [GeneratedCode("NJsonSchema", "4.26.6123.28532")]
+    public enum Response
+    {
+        [EnumMember(Value = "Unknown")]
+        Unknown = 0,
+    
+        [EnumMember(Value = "Queued")]
+        Queued = 1,
+    
+        [EnumMember(Value = "Paused")]
+        Paused = 2,
+    
+        [EnumMember(Value = "InProgress")]
+        InProgress = 3,
+    
+        [EnumMember(Value = "Done")]
+        Done = 4,
+    
+        [EnumMember(Value = "Failed")]
+        Failed = 5,
+    
+        [EnumMember(Value = "Canceled")]
+        Canceled = 6,
     
     }
     
@@ -1775,6 +1758,9 @@ namespace FFmpegFarm.Worker.Client
         [EnumMember(Value = "Failed")]
         Failed = 5,
     
+        [EnumMember(Value = "Canceled")]
+        Canceled = 6,
+    
     }
     
     [GeneratedCode("NJsonSchema", "4.26.6123.28532")]
@@ -1798,28 +1784,8 @@ namespace FFmpegFarm.Worker.Client
         [EnumMember(Value = "Failed")]
         Failed = 5,
     
-    }
-    
-    [GeneratedCode("NJsonSchema", "4.26.6123.28532")]
-    public enum JobStatusState
-    {
-        [EnumMember(Value = "Unknown")]
-        Unknown = 0,
-    
-        [EnumMember(Value = "Queued")]
-        Queued = 1,
-    
-        [EnumMember(Value = "Paused")]
-        Paused = 2,
-    
-        [EnumMember(Value = "InProgress")]
-        InProgress = 3,
-    
-        [EnumMember(Value = "Done")]
-        Done = 4,
-    
-        [EnumMember(Value = "Failed")]
-        Failed = 5,
+        [EnumMember(Value = "Canceled")]
+        Canceled = 6,
     
     }
     
@@ -1843,6 +1809,9 @@ namespace FFmpegFarm.Worker.Client
     
         [EnumMember(Value = "Failed")]
         Failed = 5,
+    
+        [EnumMember(Value = "Canceled")]
+        Canceled = 6,
     
     }
 

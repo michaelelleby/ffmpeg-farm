@@ -144,6 +144,26 @@ namespace API.Repository
             }
         }
 
+        public bool CancelJob(Guid jobId)
+        {
+            using (var scope = TransactionUtils.CreateTransactionScope())
+            {
+                using (var conn = Helper.GetConnection())
+                {
+                    string sql = "UPDATE FfmpegJobs SET JobState = @CanceledState WHERE JobCorrelationId = @Id AND jobState <> @DoneState AND jobState <> @FailedState;";
+                    sql += "UPDATE Tasks SET Tasks.TaskState = @CanceledState FROM FfmpegTasks Tasks INNER JOIN FfmpegJobs Jobs ON Jobs.id = Tasks.FfmpegJobs_Id " +  
+                           "WHERE Jobs.JobCorrelationId = @Id AND Tasks.TaskState <> @DoneState AND Tasks.TaskState <> @FailedState;";
+                    
+                    int updatedRows = conn.Execute(sql,
+                        new { Id = jobId, CanceledState = TranscodingJobState.Canceled, DoneState = TranscodingJobState.Done, FailedState = TranscodingJobState.Failed });
+
+                    scope.Complete();
+
+                    return updatedRows > 0;
+                }
+            }
+        }
+
         public IEnumerable<JobRequestDto> GetJobStatuses(Guid jobCorrelationId = default(Guid))
         {
             IEnumerable<TranscodingJobDto> jobs;
@@ -173,9 +193,12 @@ namespace API.Repository
             return requests;
         }
 
-        public void SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
+        public TranscodingJobState SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
         {
             InsertClientHeartbeat(machineName);
+
+            TranscodingJobState jobState = failed ? TranscodingJobState.Failed : done ? TranscodingJobState.Done
+                                                    : TranscodingJobState.InProgress;
 
             using (var scope = TransactionUtils.CreateTransactionScope())
             {
@@ -183,29 +206,32 @@ namespace API.Repository
                 {
                     connection.Open();
 
-                    TranscodingJobState jobState = failed
-                        ? TranscodingJobState.Failed
-                        : done
-                            ? TranscodingJobState.Done
-                            : TranscodingJobState.InProgress;
-
                     int updatedRows = connection.Execute(
-                        "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id;",
+                        "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
+                        " AND TaskState <> @CanceledState;",
                         new
                         {
                             Id = jobId,
                             Progress = progress.TotalSeconds,
                             Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                             State = jobState,
+                            CanceledState = TranscodingJobState.Canceled,
                             machineName
                         });
 
-                    if (updatedRows != 1)
+                    jobState = (TranscodingJobState)connection.QuerySingle<int>("SELECT TaskState FROM FfmpegTasks WHERE id = @Id;",
+                        new
+                        {
+                            Id = jobId
+                        });
+                    
+                    if (updatedRows != 1 && jobState != TranscodingJobState.Canceled)
                         throw new Exception($"Failed to update progress for job id {jobId}");
 
                     scope.Complete();
                 }
             }
+            return jobState;
         }
 
         public FFmpegTaskDto GetNextJob(string machineName)
