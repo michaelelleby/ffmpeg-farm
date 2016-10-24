@@ -4,6 +4,7 @@ using System.Web.Http;
 using API.Service;
 using Contract;
 using Dapper;
+using WebApi.OutputCache.V2;
 
 namespace API.WindowsService.Controllers
 {
@@ -18,6 +19,8 @@ namespace API.WindowsService.Controllers
             _helper = helper;
         }
 
+        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [HttpGet]
         public IEnumerable<ClientHeartbeat> Get()
         {
             using (var connection = _helper.GetConnection())

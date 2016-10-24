@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Web.Http;
 using Contract;
 using Contract.Dto;
+using WebApi.OutputCache.V2;
 
 namespace API.WindowsService.Controllers
 {
@@ -26,6 +27,7 @@ namespace API.WindowsService.Controllers
         /// </summary>
         /// <param name="machineName">Caller-id</param>
         [HttpGet]
+        [CacheOutput(NoCache = true)]
         public FFmpegTaskDto GetNext(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName))

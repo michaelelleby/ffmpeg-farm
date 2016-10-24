@@ -20,6 +20,7 @@
     }
   },
   "configurations": {
-    "Development": {}
+    "Development": {},
+    "Test": {}
   }
 }

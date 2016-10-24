@@ -110,7 +110,7 @@ GO
 CREATE TABLE [dbo].[Clients](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[MachineName] [nvarchar](50) NOT NULL,
-	[LastHeartbeat] [datetime] NOT NULL,
+	[LastHeartbeat] [datetimeoffset](7) NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC

@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Web.Http;
 using API.WindowsService.Models;
 using Contract;
 using Contract.Dto;
 using Contract.Models;
+using WebApi.OutputCache.V2;
+
 //using FfmpegTaskModel = Contract.Models.FfmpegTaskModel;
 
 namespace API.WindowsService.Controllers
@@ -30,20 +33,26 @@ namespace API.WindowsService.Controllers
         /// Get status for all jobs
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<FfmpegJobModel> Get()
+        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [HttpGet]
+        public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
-            ICollection<FFmpegJobDto> jobStatuses = _repository.Get();
-            IEnumerable<FfmpegJobModel> requestModels = jobStatuses.Select(MapDtoToModel);
+            ICollection<FFmpegJobDto> jobStatuses = _repository.Get(take);
+            if (jobStatuses.Count > 0)
+            {
+                return jobStatuses.Select(MapDtoToModel);
+            }
 
-            return requestModels;
+            return new List<FfmpegJobModel>();
         }
-
         
         /// <summary>
         /// Get status for a specific job
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
         /// <returns></returns>
+        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [HttpGet]
         public FfmpegJobModel Get(Guid id)
         {
             if (id == Guid.Empty)
@@ -89,6 +98,7 @@ namespace API.WindowsService.Controllers
                 Created = dto.Created,
                 Tasks = dto.Tasks.Select(j => new FfmpegTaskModel
                 {
+                    Started = j.Started,
                     Heartbeat = j.Heartbeat,
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,

@@ -13,6 +13,6 @@ namespace Contract
         TranscodingJobState SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName);
         FFmpegTaskDto GetNextJob(string machineName);
         FFmpegJobDto Get(Guid id);
-        ICollection<FFmpegJobDto> Get();
+        ICollection<FFmpegJobDto> Get(int take = 10);
     }
 }
