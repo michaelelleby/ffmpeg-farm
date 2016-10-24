@@ -123,54 +123,60 @@ namespace FFmpegFarm.Worker
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Start();
 
-            var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
-            if (!Directory.Exists(destDir))
-                Directory.CreateDirectory(destDir);
-
-            using (_commandlineProcess = new Process())
+            try
             {
-                _commandlineProcess.StartInfo = new ProcessStartInfo
+                var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
+                if (!Directory.Exists(destDir))
+                    Directory.CreateDirectory(destDir);
+
+                using (_commandlineProcess = new Process())
                 {
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    FileName = _ffmpegPath,
-                    Arguments = _currentTask.Arguments
-                };
+                    _commandlineProcess.StartInfo = new ProcessStartInfo
+                    {
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        FileName = _ffmpegPath,
+                        Arguments = _currentTask.Arguments
+                    };
 
-                _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                    _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
 
-                _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
-                _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
-                
-                _commandlineProcess.Start();
-                _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
-                _commandlineProcess.BeginErrorReadLine();
+                    _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                    _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
 
-                _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+                    _commandlineProcess.Start();
+                    _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                    _commandlineProcess.BeginErrorReadLine();
 
-                _commandlineProcess.WaitForExit();
-                
-                if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Failed;
-                    _logger.Warn($"Job failed {_currentTask.Id}."+
-                        $"Time elapsed : {_stopwatch.Elapsed:g}"+
-                        $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                    _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+
+                    _commandlineProcess.WaitForExit();
+
+                    if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Failed;
+                        _logger.Warn($"Job failed {_currentTask.Id}." +
+                                     $"Time elapsed : {_stopwatch.Elapsed:g}" +
+                                     $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                    }
+                    else
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Done;
+                        _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
+                    }
+                    UpdateTask(_currentTask);
+
+                    _timeSinceLastUpdate.Change(-1, TimeOut); //stop
+                    Monitor.Enter(_lock); // lock before dispose
                 }
-                else
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Done;
-                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
-                }
-                UpdateTask(_currentTask);
-
-                _timeSinceLastUpdate.Change(-1, TimeOut); //stop
-                Monitor.Enter(_lock); // lock before dispose
+            }
+            finally
+            {
+                _stopwatch.Stop();
             }
             _commandlineProcess = null;
-            _stopwatch.Stop();
-           _currentTask = null;
+            _currentTask = null;
             Monitor.Exit(_lock);
         }
 
