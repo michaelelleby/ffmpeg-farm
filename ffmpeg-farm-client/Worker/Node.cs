@@ -74,7 +74,25 @@ namespace FFmpegFarm.Worker
                         Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
                         continue;
                     }
-                    ExecuteJob();
+                    try
+                    {
+                        ExecuteJob();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
+                             $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
+                             $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+
+                        Monitor.Enter(_lock);
+                        if (_currentTask != null)
+                        {
+                            _currentTask.State = FFmpegTaskDtoState.Failed;
+                            UpdateTask(_currentTask);
+                            _currentTask = null;
+                        }
+                        Monitor.Exit(_lock);
+                    }
                     _output.Clear();
                 }
                 ct.ThrowIfCancellationRequested();
@@ -145,16 +163,8 @@ namespace FFmpegFarm.Worker
                     _currentTask.State = FFmpegTaskDtoState.Done;
                     _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
                 }
-                var model = new TaskProgressModel
-                {
-                    MachineName = Environment.MachineName,
-                    Id = _currentTask.Id.GetValueOrDefault(0),
-                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
-                    Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                    Done = _currentTask.State == FFmpegTaskDtoState.Done
-                };
-                _apiWrapper.UpdateProgress(model);
-                
+                UpdateTask(_currentTask);
+
                 _timeSinceLastUpdate.Change(-1, TimeOut); //stop
                 Monitor.Enter(_lock); // lock before dispose
             }
@@ -162,6 +172,19 @@ namespace FFmpegFarm.Worker
             _stopwatch.Stop();
            _currentTask = null;
             Monitor.Exit(_lock);
+        }
+
+        private void UpdateTask(FFmpegTaskDto task)
+        {
+            var model = new TaskProgressModel
+            {
+                MachineName = Environment.MachineName,
+                Id = task.Id.GetValueOrDefault(0),
+                Progress = TimeSpan.FromSeconds(task.Progress.GetValueOrDefault(0)).ToString("c"),
+                Failed = task.State == FFmpegTaskDtoState.Failed,
+                Done = task.State == FFmpegTaskDtoState.Done
+            };
+            _apiWrapper.UpdateProgress(model);
         }
 
         private bool FfmpegDetectedError()
