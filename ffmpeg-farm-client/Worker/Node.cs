@@ -123,6 +123,8 @@ namespace FFmpegFarm.Worker
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Start();
 
+            bool acquiredLock = false;
+
             try
             {
                 var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
@@ -168,16 +170,21 @@ namespace FFmpegFarm.Worker
                     UpdateTask(_currentTask);
 
                     _timeSinceLastUpdate.Change(-1, TimeOut); //stop
-                    Monitor.Enter(_lock); // lock before dispose
+                    Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
                 }
             }
             finally
             {
                 _stopwatch.Stop();
+
+                if (acquiredLock)
+                {
+                    _commandlineProcess = null;
+                    _currentTask = null;
+
+                    Monitor.Exit(_lock);
+                }
             }
-            _commandlineProcess = null;
-            _currentTask = null;
-            Monitor.Exit(_lock);
         }
 
         private void UpdateTask(FFmpegTaskDto task)
