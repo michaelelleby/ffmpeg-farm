@@ -74,7 +74,25 @@ namespace FFmpegFarm.Worker
                         Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
                         continue;
                     }
-                    ExecuteJob();
+                    try
+                    {
+                        ExecuteJob();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
+                             $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
+                             $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+
+                        Monitor.Enter(_lock);
+                        if (_currentTask != null)
+                        {
+                            _currentTask.State = FFmpegTaskDtoState.Failed;
+                            UpdateTask(_currentTask);
+                            _currentTask = null;
+                        }
+                        Monitor.Exit(_lock);
+                    }
                     _output.Clear();
                 }
                 ct.ThrowIfCancellationRequested();
@@ -105,63 +123,81 @@ namespace FFmpegFarm.Worker
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Start();
 
-            var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
-            if (!Directory.Exists(destDir))
-                Directory.CreateDirectory(destDir);
+            bool acquiredLock = false;
 
-            using (_commandlineProcess = new Process())
+            try
             {
-                _commandlineProcess.StartInfo = new ProcessStartInfo
+                var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
+                if (!Directory.Exists(destDir))
+                    Directory.CreateDirectory(destDir);
+
+                using (_commandlineProcess = new Process())
                 {
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    FileName = _ffmpegPath,
-                    Arguments = _currentTask.Arguments
-                };
+                    _commandlineProcess.StartInfo = new ProcessStartInfo
+                    {
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        FileName = _ffmpegPath,
+                        Arguments = _currentTask.Arguments
+                    };
 
-                _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                    _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
 
-                _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
-                _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
-                
-                _commandlineProcess.Start();
-                _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
-                _commandlineProcess.BeginErrorReadLine();
+                    _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                    _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
 
-                _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+                    _commandlineProcess.Start();
+                    _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                    _commandlineProcess.BeginErrorReadLine();
 
-                _commandlineProcess.WaitForExit();
-                
-                if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Failed;
-                    _logger.Warn($"Job failed {_currentTask.Id}."+
-                        $"Time elapsed : {_stopwatch.Elapsed:g}"+
-                        $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                    _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+
+                    _commandlineProcess.WaitForExit();
+
+                    if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Failed;
+                        _logger.Warn($"Job failed {_currentTask.Id}." +
+                                     $"Time elapsed : {_stopwatch.Elapsed:g}" +
+                                     $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                    }
+                    else
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Done;
+                        _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
+                    }
+                    UpdateTask(_currentTask);
+
+                    _timeSinceLastUpdate.Change(-1, TimeOut); //stop
+                    Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
                 }
-                else
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Done;
-                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
-                }
-                var model = new TaskProgressModel
-                {
-                    MachineName = Environment.MachineName,
-                    Id = _currentTask.Id.GetValueOrDefault(0),
-                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
-                    Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                    Done = _currentTask.State == FFmpegTaskDtoState.Done
-                };
-                _apiWrapper.UpdateProgress(model);
-                
-                _timeSinceLastUpdate.Change(-1, TimeOut); //stop
-                Monitor.Enter(_lock); // lock before dispose
             }
-            _commandlineProcess = null;
-            _stopwatch.Stop();
-           _currentTask = null;
-            Monitor.Exit(_lock);
+            finally
+            {
+                _stopwatch.Stop();
+
+                if (acquiredLock)
+                {
+                    _commandlineProcess = null;
+                    _currentTask = null;
+
+                    Monitor.Exit(_lock);
+                }
+            }
+        }
+
+        private void UpdateTask(FFmpegTaskDto task)
+        {
+            var model = new TaskProgressModel
+            {
+                MachineName = Environment.MachineName,
+                Id = task.Id.GetValueOrDefault(0),
+                Progress = TimeSpan.FromSeconds(task.Progress.GetValueOrDefault(0)).ToString("c"),
+                Failed = task.State == FFmpegTaskDtoState.Failed,
+                Done = task.State == FFmpegTaskDtoState.Done
+            };
+            _apiWrapper.UpdateProgress(model);
         }
 
         private bool FfmpegDetectedError()
@@ -211,8 +247,8 @@ namespace FFmpegFarm.Worker
                 Convert.ToInt32(match.Groups[4].Value) * 25);
 
             _currentTask.Progress = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
-
-            _apiWrapper.UpdateProgress(new TaskProgressModel
+            
+            var state = _apiWrapper.UpdateProgress(new TaskProgressModel
             {
                 Done = _currentTask.State == FFmpegTaskDtoState.Done,
                 Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
@@ -220,6 +256,11 @@ namespace FFmpegFarm.Worker
                 MachineName = _currentTask.HeartbeatMachineName,
                 Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
             });
+
+            if (state == Response.Canceled)
+            {
+                KillProcess("Canceled from ffmpeg server");
+            }
 
             if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
                 _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);

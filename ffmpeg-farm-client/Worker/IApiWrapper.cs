@@ -10,6 +10,6 @@ namespace FFmpegFarm.Worker
     {
         int? ThreadId { get; set; } // main thread id, used for logging in child threads.
         FFmpegTaskDto GetNext(string machineName);
-        void UpdateProgress(TaskProgressModel model, bool ignoreCancel = false);
+        Response UpdateProgress(TaskProgressModel model, bool ignoreCancel = false);
     }
 }

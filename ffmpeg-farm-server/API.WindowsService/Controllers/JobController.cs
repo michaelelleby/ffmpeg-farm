@@ -44,6 +44,8 @@ namespace API.WindowsService.Controllers
                     return _repository.PauseJob(jobCorrelationId);
                 case Command.Resume:
                     return _repository.ResumeJob(jobCorrelationId);
+                case Command.Cancel:
+                    return _repository.CancelJob(jobCorrelationId);
                 case Command.Unknown:
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), $"unsupported {command}", nameof(command));

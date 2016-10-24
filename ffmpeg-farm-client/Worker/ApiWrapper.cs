@@ -29,14 +29,22 @@ namespace FFmpegFarm.Worker
             return Wrap(_taskClient.GetNextAsync, machineName);
         }
 
-        public void UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
+        public Response UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
         {
+            Task<Response> stateTask;
+            Response state;
+                
             if (ignoreCancel)
+            {
                 // don't use wrapper since cancel has been called. 
-                _statusClient.UpdateProgressAsync(model, CancellationToken.None)
-                    .WaitWithoutException(CancellationToken.None);
+                (stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None)).WaitWithoutException(
+                    CancellationToken.None);
+                state = stateTask.Result;
+            }
             else
-                Wrap(_statusClient.UpdateProgressAsync, model);
+                state = Wrap(_statusClient.UpdateProgressAsync, model);
+
+            return state;
         }
 
         /// <summary>

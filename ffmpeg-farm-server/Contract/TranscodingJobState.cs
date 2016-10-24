@@ -7,6 +7,7 @@ namespace Contract
         Paused = 2,
         InProgress = 3,
         Done = 4,
-        Failed = 5
+        Failed = 5,
+        Canceled = 6
     }
 }
