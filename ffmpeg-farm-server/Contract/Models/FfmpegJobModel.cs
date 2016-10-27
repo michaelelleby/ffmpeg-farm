@@ -32,6 +32,9 @@ namespace Contract.Models
                 if (Tasks.Any(j => j.State == TranscodingJobState.Queued))
                     return TranscodingJobState.Queued;
 
+                if (Tasks.Any(j => j.State == TranscodingJobState.Canceled))
+                    return TranscodingJobState.Canceled;
+
                 return TranscodingJobState.Unknown;
             }
         }
