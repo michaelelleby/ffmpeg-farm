@@ -1,14 +1,3 @@
-USE [ffmpegfarm]
-GO
-/****** Object:  User [ffmpegfarm]    Script Date: 17-10-2016 13:13:20 ******/
-CREATE USER [ffmpegfarm] FOR LOGIN [ffmpegfarm] WITH DEFAULT_SCHEMA=[dbo]
-GO
-ALTER ROLE [db_datareader] ADD MEMBER [ffmpegfarm]
-GO
-ALTER ROLE [db_datawriter] ADD MEMBER [ffmpegfarm]
-GO
-GRANT CONNECT TO [ffmpegfarm] AS [dbo]
-GO
 /****** Object:  StoredProcedure [dbo].[sp_GetNextTask]    Script Date: 17-10-2016 13:13:20 ******/
 SET ANSI_NULLS ON
 GO
@@ -41,7 +30,7 @@ BEGIN
 	;WITH Tasks AS (
 		SELECT TOP 1 FfmpegTasks.Id, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, Jobs.id AS FfmpegJobs_Id
 		FROM FfmpegTasks
-		INNER JOIN ffmpegfarm.dbo.FfmpegJobs Jobs ON FfmpegTasks.FfmpegJobs_id = Jobs.id
+		INNER JOIN FfmpegJobs Jobs ON FfmpegTasks.FfmpegJobs_id = Jobs.id
 		WHERE TaskState = @QueuedState OR (TaskState = @InProgressState AND HeartBeat < @Timeout)
 		ORDER BY Jobs.Needed ASC, Jobs.Id ASC
 	)
@@ -62,7 +51,7 @@ END
 
 
 GO
-GRANT EXECUTE ON [dbo].[sp_GetNextTask] TO [ffmpegfarm] AS [dbo]
+GRANT EXECUTE ON [dbo].[sp_GetNextTask] TO [ffmpeg_RW] AS [dbo]
 GO
 /****** Object:  StoredProcedure [dbo].[sp_InsertClientHeartbeat]    Script Date: 17-10-2016 13:13:20 ******/
 SET ANSI_NULLS ON
@@ -100,7 +89,7 @@ END
 
 
 GO
-GRANT EXECUTE ON [dbo].[sp_InsertClientHeartbeat] TO [ffmpegfarm] AS [dbo]
+GRANT EXECUTE ON [dbo].[sp_InsertClientHeartbeat] TO [ffmpeg_RW] AS [dbo]
 GO
 /****** Object:  Table [dbo].[Clients]    Script Date: 17-10-2016 13:13:20 ******/
 SET ANSI_NULLS ON
