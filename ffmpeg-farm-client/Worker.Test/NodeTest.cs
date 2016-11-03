@@ -36,7 +36,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
             task.Start();
 
             try
@@ -79,7 +79,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
             task.Start();
 
             try
@@ -122,7 +122,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
             task.Start();
 
             try

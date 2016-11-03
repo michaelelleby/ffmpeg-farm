@@ -31,6 +31,7 @@ namespace FFmpegFarm.WindowsService
                 var task = Node.GetNodeTask(
                     Settings.Default.FFmpegPath,
                     Settings.Default.ControllerApi,
+                    Settings.Default.FFmpegLogPath,
                     _logger,
                     _cancellationTokenSource.Token);
 
