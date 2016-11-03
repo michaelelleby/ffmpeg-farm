@@ -15,6 +15,7 @@ namespace FFmpegFarm.Worker
     {
         private readonly object _lock = new object();
         private readonly string _ffmpegPath;
+        private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
@@ -29,7 +30,7 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         
-        private Node(string ffmpegPath, string apiUri, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string apiUri, string logfilesPath, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -45,15 +46,17 @@ namespace FFmpegFarm.Worker
             _logger = logger;
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
+            _logfilesPath = logfilesPath;
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
             string apiUri, 
+            string logfilesPath,
             ILogger logger, 
             CancellationToken ct,
             IApiWrapper apiWrapper = null)
         {
-            var t = new Task(() => new Node(ffmpegPath,apiUri,logger,
+            var t = new Task(() => new Node(ffmpegPath,apiUri, logfilesPath, logger,
                 apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct));
             return t;
         }
@@ -155,6 +158,9 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
+
+                    WriteOutputToLogfile();
+
                     if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
                     {
                         _currentTask.State = FFmpegTaskDtoState.Failed;
@@ -184,6 +190,28 @@ namespace FFmpegFarm.Worker
 
                     Monitor.Exit(_lock);
                 }
+            }
+        }
+
+        private void WriteOutputToLogfile()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_logfilesPath) || !Directory.Exists(_logfilesPath))
+                    return;
+
+                string logPath = Path.Combine(_logfilesPath, $@"task_{_currentTask.Id}_output.txt");
+                using (Stream file = File.Create(logPath))
+                {
+                    using (var logWriter = new StreamWriter(file))
+                    {
+                        logWriter.Write(_output.ToString());
+                    }
+                }
+            }
+            catch
+            {
+                // Prevent this from ever crashing the worker
             }
         }
 

@@ -25,16 +25,6 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.WebServiceUrl)]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://od01udv:9000")]
-        public string ControllerApi {
-            get {
-                return ((string)(this["ControllerApi"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\ffmpeg\\bin\\ffmpeg.exe")]
         public string FFmpegPath {
             get {
@@ -48,6 +38,25 @@ namespace FFmpegFarm.WindowsService.Properties {
         public int Threads {
             get {
                 return ((int)(this["Threads"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\logfiles")]
+        public string FFmpegLogPath {
+            get {
+                return ((string)(this["FFmpegLogPath"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.WebServiceUrl)]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://od01udv:9000")]
+        public string ControllerApi {
+            get {
+                return ((string)(this["ControllerApi"]));
             }
         }
     }

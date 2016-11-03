@@ -42,6 +42,7 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 var task = Worker.Node.GetNodeTask(
                     cfg["FFmpegPath"],
                     cfg["ControllerApi"],
+                    cfg["FFmpegLogPath"],
                     logger,
                     cancelSource.Token);
                 task.Start();
