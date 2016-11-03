@@ -77,12 +77,12 @@ namespace API.WindowsService.Controllers
                 if (target.Format == ContainerFormat.MP4)
                 {
                     arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn -movflags +faststart ""{destinationFilename}""";
+                        .Bitrate}k -vn -movflags +faststart -map_metadata -1 ""{destinationFilename}""";
                 }
                 else
                 {
                     arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn ""{destinationFilename}""";
+                        .Bitrate}k -vn -map_metadata -1 ""{destinationFilename}""";
                 }
 
                 var transcodingJob = new AudioTranscodingJob
