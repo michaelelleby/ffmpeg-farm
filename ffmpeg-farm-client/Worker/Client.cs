@@ -440,18 +440,21 @@ namespace FFmpegFarm.Worker.Client
         /// <summary>Get status for all jobs</summary>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public Task<ObservableCollection<FfmpegJobModel>> GetAllAsync()
+        public Task<ObservableCollection<FfmpegJobModel>> GetAllAsync(int? take)
         {
-            return GetAllAsync(CancellationToken.None);
+            return GetAllAsync(take, CancellationToken.None);
         }
     
         /// <summary>Get status for all jobs</summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="SwaggerException">A server side error occurred.</exception>
-        public async Task<ObservableCollection<FfmpegJobModel>> GetAllAsync(CancellationToken cancellationToken)
+        public async Task<ObservableCollection<FfmpegJobModel>> GetAllAsync(int? take, CancellationToken cancellationToken)
         {
-            var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status");
+            var url_ = string.Format("{0}/{1}?", BaseUrl, "api/Status");
+    
+            if (take != null)
+                url_ += string.Format("take={0}&", Uri.EscapeDataString(take.Value.ToString()));
     
             var client_ = new HttpClient();
             var request_ = new HttpRequestMessage();
@@ -1261,7 +1264,8 @@ namespace FFmpegFarm.Worker.Client
         private FfmpegTaskModelState? _state; 
         private DateTime? _heartbeat; 
         private string _heartbeatMachine; 
-        private string _destinationFilename;
+        private string _destinationFilename; 
+        private DateTime? _started;
     
         [JsonProperty("Progress", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public double? Progress
@@ -1329,6 +1333,20 @@ namespace FFmpegFarm.Worker.Client
                 if (_destinationFilename != value)
                 {
                     _destinationFilename = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("Started", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public DateTime? Started
+        {
+            get { return _started; }
+            set 
+            {
+                if (_started != value)
+                {
+                    _started = value; 
                     RaisePropertyChanged();
                 }
             }
@@ -1469,7 +1487,8 @@ namespace FFmpegFarm.Worker.Client
         private string _heartbeatMachineName; 
         private double? _progress; 
         private int? _destinationDurationSeconds; 
-        private string _destinationFilename;
+        private string _destinationFilename; 
+        private bool? _verifyOutput;
     
         [JsonProperty("Id", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public int? Id
@@ -1607,6 +1626,20 @@ namespace FFmpegFarm.Worker.Client
                 if (_destinationFilename != value)
                 {
                     _destinationFilename = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [JsonProperty("VerifyOutput", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public bool? VerifyOutput
+        {
+            get { return _verifyOutput; }
+            set 
+            {
+                if (_verifyOutput != value)
+                {
+                    _verifyOutput = value; 
                     RaisePropertyChanged();
                 }
             }

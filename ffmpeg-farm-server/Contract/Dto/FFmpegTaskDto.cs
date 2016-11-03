@@ -23,5 +23,7 @@ namespace Contract.Dto
         public int DestinationDurationSeconds { get; set; }
 
         public string DestinationFilename { get; set; }
+
+        public bool VerifyOutput { get; set; }
     }
 }

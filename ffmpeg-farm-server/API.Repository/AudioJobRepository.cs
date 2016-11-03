@@ -67,14 +67,15 @@ namespace API.Repository
                     foreach (AudioTranscodingJob transcodingJob in jobs)
                     {
                         connection.Execute(
-                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds);",
+                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
                             new
                             {
                                 FfmpegJobsId = jobId,
                                 transcodingJob.Arguments,
                                 TaskState = TranscodingJobState.Queued,
                                 transcodingJob.DestinationFilename,
-                                transcodingJob.DestinationDurationSeconds
+                                transcodingJob.DestinationDurationSeconds,
+                                VerifyOutput = true
                             });
                     }
                 }

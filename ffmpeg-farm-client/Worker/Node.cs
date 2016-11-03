@@ -134,6 +134,7 @@ namespace FFmpegFarm.Worker
                 if (!Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
 
+                int exitCode = -1;
                 using (_commandlineProcess = new Process())
                 {
                     _commandlineProcess.StartInfo = new ProcessStartInfo
@@ -158,26 +159,62 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
-
-                    WriteOutputToLogfile();
-
-                    if (_commandlineProcess.ExitCode != 0 || FfmpegDetectedError())
-                    {
-                        _currentTask.State = FFmpegTaskDtoState.Failed;
-                        _logger.Warn($"Job failed {_currentTask.Id}." +
-                                     $"Time elapsed : {_stopwatch.Elapsed:g}" +
-                                     $"\n\tffmpeg process output:\n\n{_output}", _threadId);
-                    }
-                    else
-                    {
-                        _currentTask.State = FFmpegTaskDtoState.Done;
-                        _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
-                    }
-                    UpdateTask(_currentTask);
-
-                    _timeSinceLastUpdate.Change(-1, TimeOut); //stop
-                    Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
+                    exitCode = _commandlineProcess.ExitCode;
                 }
+                _commandlineProcess = null;
+
+                // VerifyOutput is a bool? and will default to false, if it is null
+                if (_currentTask.VerifyOutput.GetValueOrDefault() && exitCode == 0)
+                {
+                    // Check that output file is not corrupt, meaning FFmpeg can read the file
+
+                    using (_commandlineProcess = new Process())
+                    {
+                        _commandlineProcess.StartInfo = new ProcessStartInfo
+                        {
+                            RedirectStandardError = true,
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            FileName = _ffmpegPath,
+                            Arguments = $@"-xerror -i ""{_currentTask.DestinationFilename}"" -f null -"
+                        };
+
+                        _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+
+                        _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                        _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
+
+                        _commandlineProcess.Start();
+                        _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                        _commandlineProcess.BeginErrorReadLine();
+
+                        _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+
+                        _commandlineProcess.WaitForExit();
+
+                        exitCode = _commandlineProcess.ExitCode;
+                    }
+                    _commandlineProcess = null;
+                }
+
+                WriteOutputToLogfile();
+
+                if (exitCode != 0 || FfmpegDetectedError())
+                {
+                    _currentTask.State = FFmpegTaskDtoState.Failed;
+                    _logger.Warn($"Job failed {_currentTask.Id}." +
+                                 $"Time elapsed : {_stopwatch.Elapsed:g}" +
+                                 $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                }
+                else
+                {
+                    _currentTask.State = FFmpegTaskDtoState.Done;
+                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
+                }
+                UpdateTask(_currentTask);
+
+                _timeSinceLastUpdate.Change(-1, TimeOut); //stop
+                Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
             }
             finally
             {

@@ -60,14 +60,15 @@ namespace API.Repository
                             });
 
                         connection.Execute(
-                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds) VALUES(@FfmpegJobsId, @Arguments, @QueuedState, @DestinationFilename, @DestinationDurationSeconds);",
+                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId, @Arguments, @QueuedState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
                             new
                             {
                                 FfmpegJobsId = jobId,
                                 job.Arguments,
                                 QueuedState = TranscodingJobState.Queued,
                                 job.DestinationFilename,
-                                job.DestinationDurationSeconds
+                                job.DestinationDurationSeconds,
+                                VerifyOutput = false
                             });
                     }
                 }
