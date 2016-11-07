@@ -313,8 +313,11 @@ namespace FFmpegFarm.Worker
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
             if (!match.Success) return;
-            _timeSinceLastUpdate.Change(-1, TimeOut); //stop
 
+            _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite); //stop
+
+            // TODO Change hardcoded value 25 to actual FPS of input video
+            // and handle audio not having any FPS value
             _progress = new TimeSpan(0, Convert.ToInt32(match.Groups[1].Value),
                 Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
                 Convert.ToInt32(match.Groups[4].Value) * 25);
