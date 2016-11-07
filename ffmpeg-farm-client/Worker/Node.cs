@@ -22,7 +22,7 @@ namespace FFmpegFarm.Worker
         private Process _commandlineProcess;
         private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
-        private static readonly int TimeOut = (int) TimeSpan.FromSeconds(20).TotalMilliseconds;
+        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(1).TotalMilliseconds;
         private readonly ILogger _logger;
         private int? _threadId; // main thread id, used for logging in child threads.
         private int _progressSpinner;
@@ -159,6 +159,11 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
+                    // Disable timer to prevet accidentally killing the ffmpeg process
+                    // which verifies output
+                    // We will restart the timer once that process is started
+                    _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
+
                     exitCode = _commandlineProcess.ExitCode;
                 }
                 _commandlineProcess = null;
@@ -192,6 +197,10 @@ namespace FFmpegFarm.Worker
 
                         _commandlineProcess.WaitForExit();
 
+                        // Disable timer to prevent trying to kill a process
+                        // which has already exited
+                        _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
+
                         exitCode = _commandlineProcess.ExitCode;
                     }
                     _commandlineProcess = null;
@@ -213,7 +222,6 @@ namespace FFmpegFarm.Worker
                 }
                 UpdateTask(_currentTask);
 
-                _timeSinceLastUpdate.Change(-1, TimeOut); //stop
                 Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
             }
             finally
