@@ -208,14 +208,14 @@ namespace API.Repository
 
                     int updatedRows = connection.Execute(
                         "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
-                        " AND TaskState <> @CanceledState;",
+                        " AND TaskState = @InProgressState;",
                         new
                         {
                             Id = jobId,
                             Progress = progress.TotalSeconds,
                             Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                             State = jobState,
-                            CanceledState = TranscodingJobState.Canceled,
+                            InProgressState = TranscodingJobState.InProgress,
                             machineName
                         });
 

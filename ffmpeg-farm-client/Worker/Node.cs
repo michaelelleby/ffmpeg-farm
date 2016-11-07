@@ -323,19 +323,26 @@ namespace FFmpegFarm.Worker
                 Convert.ToInt32(match.Groups[4].Value) * 25);
 
             _currentTask.Progress = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
-            
-            var state = _apiWrapper.UpdateProgress(new TaskProgressModel
-            {
-                Done = _currentTask.State == FFmpegTaskDtoState.Done,
-                Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                Id = _currentTask.Id.GetValueOrDefault(0),
-                MachineName = _currentTask.HeartbeatMachineName,
-                Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
-            });
 
-            if (state == Response.Canceled)
+            try
             {
-                KillProcess("Canceled from ffmpeg server");
+                Response state = _apiWrapper.UpdateProgress(new TaskProgressModel
+                {
+                    Done = _currentTask.State == FFmpegTaskDtoState.Done,
+                    Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                    Id = _currentTask.Id.GetValueOrDefault(0),
+                    MachineName = _currentTask.HeartbeatMachineName,
+                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
+                });
+
+                if (state == Response.Canceled)
+                {
+                    KillProcess("Canceled from ffmpeg server");
+                }
+            }
+            catch (Exception)
+            {
+                
             }
 
             if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
