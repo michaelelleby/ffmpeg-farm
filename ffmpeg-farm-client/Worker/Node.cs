@@ -159,6 +159,9 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
+                    _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
+                    _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
+
                     // Disable timer to prevet accidentally killing the ffmpeg process
                     // which verifies output
                     // We will restart the timer once that process is started
@@ -196,6 +199,9 @@ namespace FFmpegFarm.Worker
                         _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
 
                         _commandlineProcess.WaitForExit();
+
+                        _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
+                        _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
 
                         // Disable timer to prevent trying to kill a process
                         // which has already exited
