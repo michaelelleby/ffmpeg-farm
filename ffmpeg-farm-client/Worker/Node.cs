@@ -103,18 +103,27 @@ namespace FFmpegFarm.Worker
             finally {
                 if (_currentTask != null)
                 {
-                    _logger.Warn($"In progress job re-queued {_currentTask.Id.GetValueOrDefault(0)}");
-                    _currentTask.State = FFmpegTaskDtoState.Queued;
-                    // ReSharper disable once MethodSupportsCancellation
-                    var model = new TaskProgressModel
+                    try
                     {
-                        MachineName = Environment.MachineName,
-                        Id = _currentTask.Id.GetValueOrDefault(0),
-                        Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
-                        Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                        Done = _currentTask.State == FFmpegTaskDtoState.Done
-                    };
-                    _apiWrapper.UpdateProgress(model, true);
+                        _logger.Warn($"In progress job re-queued {_currentTask.Id.GetValueOrDefault(0)}");
+                        _currentTask.State = FFmpegTaskDtoState.Queued;
+                        // ReSharper disable once MethodSupportsCancellation
+                        var model = new TaskProgressModel
+                        {
+                            MachineName = Environment.MachineName,
+                            Id = _currentTask.Id.GetValueOrDefault(0),
+                            Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
+                            Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                            Done = _currentTask.State == FFmpegTaskDtoState.Done
+                        };
+                        _apiWrapper.UpdateProgress(model, true);
+                    }
+                    catch (Exception e)
+                    {
+                        // Prevent uncaught exceptions in the finally {} block
+                        // since this will bring down the entire worker service
+                        _logger.Exception(e, _threadId);
+                    }
                 }
                 _logger.Debug("Cancel recived shutting down...");
             }
