@@ -42,6 +42,7 @@ namespace FFmpegFarm.WindowsService
 
         protected override void OnStop()
         {
+            _logger.Information("Stopping service..");
             _cancellationTokenSource.Cancel();
             try
             {
@@ -54,7 +55,7 @@ namespace FFmpegFarm.WindowsService
                     || e.InnerException?.GetType() == typeof(TaskCanceledException)))
                     throw;
             }
-            _logger.Information("Stopped");
+            _logger.Information("Service stopped");
         }
     }
 }

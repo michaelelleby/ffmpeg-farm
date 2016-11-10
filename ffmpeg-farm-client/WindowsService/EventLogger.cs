@@ -20,24 +20,53 @@ namespace FFmpegFarm.WindowsService
 
         public void Debug(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
-            #if DEBUG
-            _eventLog.WriteEntry($"DEBUG: {memberName} : {text}", EventLogEntryType.Information, GetId(threadId));
-            #endif
+#if DEBUG
+            try
+            {
+                _eventLog.WriteEntry($"DEBUG: {memberName} : {text}", EventLogEntryType.Information, GetId(threadId));
+            }
+            catch
+            {
+
+            }
+#endif
         }
 
         public void Information(string text, int? threadId = null, string memberName = "")
         {
-            _eventLog.WriteEntry($"{memberName} : {text}", EventLogEntryType.Information, GetId(threadId));
+            try
+            {
+                _eventLog.WriteEntry($"{memberName} : {text}", EventLogEntryType.Information, GetId(threadId));
+            }
+            catch
+            {
+                
+            }
         }
 
         public void Warn(string text, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
-            _eventLog.WriteEntry($"{memberName} : {text}", EventLogEntryType.Warning, GetId(threadId));
+            try
+            {
+                _eventLog.WriteEntry($"{memberName} : {text}", EventLogEntryType.Warning, GetId(threadId));
+            }
+            catch
+            {
+                
+            }
         }
 
         public void Exception(Exception exception, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
-            _eventLog.WriteEntry($"{memberName} : {exception.Message} \n StackTrace : {exception.StackTrace}", EventLogEntryType.Error, GetId(threadId));
+            try
+            {
+                _eventLog.WriteEntry($"{memberName} : {exception.Message} \n StackTrace : {exception.StackTrace}", EventLogEntryType.Error,
+                    GetId(threadId));
+            }
+            catch
+            {
+                
+            }
         }
     }
 }
