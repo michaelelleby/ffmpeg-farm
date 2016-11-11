@@ -146,13 +146,28 @@ namespace FFmpegFarm.Worker
                 int exitCode = -1;
                 using (_commandlineProcess = new Process())
                 {
+                    string outputFullPath = string.Empty;
+                    string arguments = _currentTask.Arguments;
+
+                    // <TEMP> as output filename means we should transcode the file to the local disk
+                    // and move it to destination path after it is done transcoding
+                    if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
+                    {
+                        outputFullPath = Path.GetTempFileName();
+                        arguments = arguments.Replace(@"|TEMP|", outputFullPath);
+                    }
+                    else
+                    {
+                        outputFullPath = _currentTask.DestinationFilename;
+                    }
+
                     _commandlineProcess.StartInfo = new ProcessStartInfo
                     {
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         UseShellExecute = false,
                         FileName = _ffmpegPath,
-                        Arguments = _currentTask.Arguments
+                        Arguments = arguments
                     };
 
                     _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
@@ -168,13 +183,18 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
+                    // Disable timer to prevet accidentally aborting the ffmpeg task
+                    // due to moving the file taking several seconds without any
+                    // status updates
+                    _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
+
+                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
+                    {
+                        File.Move(outputFullPath, _currentTask.DestinationFilename);
+                    }
+
                     _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
                     _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
-
-                    // Disable timer to prevet accidentally killing the ffmpeg process
-                    // which verifies output
-                    // We will restart the timer once that process is started
-                    _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
 
                     exitCode = _commandlineProcess.ExitCode;
                 }

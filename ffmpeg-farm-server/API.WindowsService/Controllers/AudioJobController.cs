@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -68,21 +69,22 @@ namespace API.WindowsService.Controllers
             {
                 string extension = ContainerHelper.GetExtension(target.Format);
 
-                string destinationFilename =
-                    $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{target
-                        .Bitrate}.{extension}";
-
+                string destinationFilename = $@"{request.DestinationFilenamePrefix}_{target.Bitrate}.{extension}";
+                string destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
                 string arguments = string.Empty;
+                string outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
+                    ? @"|TEMP|"
+                    : destinationFullPath;
 
                 if (target.Format == ContainerFormat.MP4)
                 {
                     arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn -movflags +faststart -map_metadata -1 ""{destinationFilename}""";
+                        .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                 }
                 else
                 {
                     arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn -map_metadata -1 ""{destinationFilename}""";
+                        .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                 }
 
                 var transcodingJob = new AudioTranscodingJob
@@ -91,7 +93,7 @@ namespace API.WindowsService.Controllers
                     SourceFilename = sourceFilename,
                     Needed = request.Needed.DateTime,
                     State = TranscodingJobState.Queued,
-                    DestinationFilename = destinationFilename,
+                    DestinationFilename = destinationFullPath,
                     Bitrate = target.Bitrate,
                     Arguments = arguments,
                     DestinationDurationSeconds = frameCount
