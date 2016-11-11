@@ -25,15 +25,6 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\ffmpeg\\bin\\ffmpeg.exe")]
-        public string FFmpegPath {
-            get {
-                return ((string)(this["FFmpegPath"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("4")]
         public int Threads {
             get {
@@ -57,6 +48,15 @@ namespace FFmpegFarm.WindowsService.Properties {
         public string ControllerApi {
             get {
                 return ((string)(this["ControllerApi"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\ffmpeg-3.2-win64-static\\bin\\ffmpeg.exe")]
+        public string FFmpegPath {
+            get {
+                return ((string)(this["FFmpegPath"]));
             }
         }
     }

@@ -2,9 +2,6 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="FFmpegFarm.WindowsService.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01\MediaCache\ffmpeg-farm\ffmpeg\bin\ffmpeg.exe</Value>
-    </Setting>
     <Setting Name="Threads" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">4</Value>
     </Setting>
@@ -13,6 +10,9 @@
     </Setting>
     <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
       <Value Profile="(Default)">http://od01udv:9000</Value>
+    </Setting>
+    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\ondnas01\MediaCache\ffmpeg-farm\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
     </Setting>
   </Settings>
 </SettingsFile>
