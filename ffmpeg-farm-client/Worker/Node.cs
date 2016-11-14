@@ -263,6 +263,20 @@ namespace FFmpegFarm.Worker
             {
                 _stopwatch.Stop();
 
+                // Cleanup when job fails
+                try
+                {
+                    if (_currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed
+                        && File.Exists(_currentTask.DestinationFilename))
+                    {
+                        File.Delete(_currentTask.DestinationFilename);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.Exception(e, _threadId);
+                }
+
                 if (acquiredLock)
                 {
                     _commandlineProcess = null;
