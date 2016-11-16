@@ -77,6 +77,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="Worker">
       <HintPath Condition="Exists('..\Worker\bin\Release\net461\')">..\Worker\bin\Release\net461\Worker.dll</HintPath>
+      <HintPath Condition="Exists('..\Worker\bin\Test\net461\')">..\Worker\bin\Test\net461\Worker.dll</HintPath>
       <HintPath Condition="Exists('..\Worker\bin\Debug\net461\')">..\Worker\bin\Debug\net461\Worker.dll</HintPath>
     </Reference>
   </ItemGroup>
