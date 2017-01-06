@@ -97,7 +97,7 @@ using Contract;
 //            EnableTwoPass = request.EnableTwoPass,
 //            Inpoint = request.Inpoint,
 //            Targets = request.Targets,
-//            VideoSourceFilename = request.SourceFilename,
+//            VideoSourceFilename = request.SourceFilenames,
 //            X264Preset = request.FFmpegPreset,
 //            DestinationFilename = Path.Combine(request.DestinationFilenamePrefix, extension)
 //        };
@@ -127,7 +127,7 @@ using Contract;
 //        VideoTranscodingJob audioJob = new VideoTranscodingJob
 //        {
 //            JobCorrelationId = jobCorrelationId,
-//            SourceFilename = source,
+//            SourceFilenames = source,
 //            Needed = job.Needed,
 //            State = TranscodingJobState.Queued
 //        };
@@ -142,7 +142,7 @@ using Contract;
 //            audioJob.Chunks.Add(
 //                new FfmpegPart
 //                {
-//                    SourceFilename = source,
+//                    SourceFilenames = source,
 //                    JobCorrelationId = jobCorrelationId,
 //                    Filename = chunkFilename,
 //                    Target = 0,
@@ -207,7 +207,7 @@ using Contract;
 //        var transcodingJob = new VideoTranscodingJob
 //        {
 //            JobCorrelationId = jobCorrelationId,
-//            SourceFilename = job.SourceFilename,
+//            SourceFilenames = job.SourceFilenames,
 //            Needed = job.Needed,
 //            State = TranscodingJobState.Queued,
 //        };
@@ -217,7 +217,7 @@ using Contract;
 //        if (job.EnableTwoPass)
 //        {
 //            arguments.Append(
-//                $@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+//                $@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilenames}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
 //            arguments.Append($"split={resolutions.Count}");
 //            for (int j = 0; j < resolutions.Count; j++)
@@ -249,7 +249,7 @@ using Contract;
 //        }
 
 //        arguments.Clear();
-//        arguments.Append($@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+//        arguments.Append($@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilenames}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
 //        arguments.Append($"split={resolutions.Count}");
 //        for (int j = 0; j < resolutions.Count; j++)
@@ -302,7 +302,7 @@ using Contract;
 //                transcodingJob.Chunks.Add(new FfmpegPart
 //                {
 //                    JobCorrelationId = jobCorrelationId,
-//                    SourceFilename = job.SourceFilename,
+//                    SourceFilenames = job.SourceFilenames,
 //                    Filename = chunkFilename,
 //                    Target = quality.Target,
 //                    Number = i

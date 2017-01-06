@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using API.WindowsService.Validators;
 using Contract;
 using FluentValidation.Attributes;
@@ -15,6 +16,6 @@ namespace API.WindowsService.Models
         public string DestinationFilenamePrefix { get; set; }
 
         [Required]
-        public string SourceFilename { get; set; }
+        public List<string> SourceFilenames { get; set; }
     }
 }

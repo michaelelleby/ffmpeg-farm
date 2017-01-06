@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -54,13 +55,13 @@ namespace API.WindowsService.Controllers
                 Needed = request.Needed.LocalDateTime,
                 Inpoint = request.Inpoint,
                 Targets = request.Targets,
-                SourceFilename = request.SourceFilename,
+                SourceFilename = request.SourceFilenames.First(),
                 OutputFolder = request.OutputFolder,
                 DestinationFilename = request.DestinationFilenamePrefix
             };
             Guid jobCorrelationId = Guid.NewGuid();
 
-            string sourceFilename = request.SourceFilename;
+            string sourceFilename = request.SourceFilenames.First();
 
             var frameCount = _helper.GetDuration(sourceFilename);
 

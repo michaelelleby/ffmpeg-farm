@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using API.WindowsService.Models;
 using FluentValidation;
 using FluentValidation.Results;
@@ -16,8 +17,8 @@ namespace API.WindowsService.Validators
             Custom(x => Directory.Exists(x.OutputFolder) == false
                 ? new ValidationFailure("OutputFolder", "Folder must be an existing folder")
                 : null);
-            Custom(x => File.Exists(x.SourceFilename) == false
-                ? new ValidationFailure("SourceFilename", "File does not exist")
+            Custom(x => File.Exists(x.SourceFilenames.First()) == false
+                ? new ValidationFailure("SourceFilenames", "File does not exist")
                 : null);
         }
     }
