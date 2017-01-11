@@ -36,12 +36,14 @@ namespace API.Repository
                             $"A job already exists with filename {request.DestinationFilename} to folder {request.OutputFolder}");
                     }
 
+
+
                     connection.Execute(
                         "INSERT INTO FfmpegAudioRequest (JobCorrelationId, SourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @SourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
-                            request.SourceFilename,
+                            SourceFilename = string.Join(" ", request.SourceFilenames),
                             request.DestinationFilename,
                             request.Needed,
                             request.OutputFolder,

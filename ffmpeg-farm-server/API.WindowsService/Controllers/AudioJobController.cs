@@ -55,7 +55,7 @@ namespace API.WindowsService.Controllers
                 Needed = request.Needed.LocalDateTime,
                 Inpoint = request.Inpoint,
                 Targets = request.Targets,
-                SourceFilename = request.SourceFilenames.First(),
+                SourceFilenames = request.SourceFilenames,
                 OutputFolder = request.OutputFolder,
                 DestinationFilename = request.DestinationFilenamePrefix
             };
@@ -77,15 +77,50 @@ namespace API.WindowsService.Controllers
                     ? @"|TEMP|"
                     : destinationFullPath;
 
-                if (target.Format == ContainerFormat.MP4)
+                if (jobRequest.SourceFilenames.Count == 1)
                 {
-                    arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    if (target.Format == ContainerFormat.MP4)
+                    {
+                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                                .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    }
+                    else
+                    {
+                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                                .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    }
                 }
                 else
                 {
-                    arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                        .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    /*RESULT:
+                     * -y -xerror
+                     * -i "\\ondnas01\MediaCache\Test\test.mp3" -i "\\ondnas01\MediaCache\Test\radioavis.mp3" -i "\\ondnas01\MediaCache\Test\temp.mp3"
+                     * -filter_complex
+                     * [0:0][1:0][2:0]concat=n=3:a=1:v=0
+                     * -c:a mp3 -b:a 64k -vn -map_metadata -1 -f MP3 \\ondnas01\MediaCache\Test\marvin\ffmpeg\test2.mp3
+                    */
+                    string filenameArguments = String.Empty, streams = String.Empty;
+                    int streamCount = 0;
+                    foreach (var filename in jobRequest.SourceFilenames)
+                    {
+                        filenameArguments += $@" -i ""{filename}"" ";
+                        streams = $"{streams}[{streamCount++}:0]";
+                    }
+
+                    streams = $"{streams}concat=n={streamCount}:a=1:v=0";
+
+                    if (target.Format == ContainerFormat.MP4)
+                    {
+                        arguments =
+                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                                .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    }
+                    else
+                    {
+                        arguments =
+                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
+                                .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    }
                 }
 
                 var transcodingJob = new AudioTranscodingJob

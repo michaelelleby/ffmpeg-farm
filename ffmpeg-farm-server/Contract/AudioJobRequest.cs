@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Contract
 {
     public class AudioJobRequest : JobRequestBase
     {
-        public string SourceFilename { get; set; }
+        public List<string> SourceFilenames { get; set; }
 
         public TimeSpan Inpoint { get; set; }
 
