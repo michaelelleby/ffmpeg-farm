@@ -59,6 +59,7 @@
                                                    RemoteUser="$(RemoteUser)"
                                                    RemoteUserPassword="$(RemoteUserPassword)"
                                                    MachineName="$(CurrentMachine)"
+												   StartupType="AutomaticDelayedStart"
                                                    />
 
 		<!-- Start a service on a Remote Machine -->
