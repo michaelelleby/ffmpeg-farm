@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,6 +20,7 @@ namespace API.WindowsService.Controllers
     {
         private readonly IJobRepository _repository;
         private readonly IHelper _helper;
+        private static readonly string _logPath = ConfigurationManager.AppSettings["FFmpegLogPath"];
 
         public StatusController(IJobRepository repository, IHelper helper)
         {
@@ -103,8 +105,9 @@ namespace API.WindowsService.Controllers
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,
                     Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    DestinationFilename = j.DestinationFilename
-                }),
+                    DestinationFilename = j.DestinationFilename,
+                    LogPath = j.Started != null ?  $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt" : string.Empty
+            }),
             };
         }
     }
