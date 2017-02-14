@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -45,7 +42,6 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                     cfg["FFmpegLogPath"],
                     logger,
                     cancelSource.Token);
-                task.Start();
                 tasks[x] = task;
             }
             ConsoleKeyInfo keyInfo;
