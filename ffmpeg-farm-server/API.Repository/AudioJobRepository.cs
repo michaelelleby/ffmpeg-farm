@@ -28,16 +28,6 @@ namespace API.Repository
             {
                 using (var connection = _helper.GetConnection())
                 {
-                    if (connection.ExecuteScalar<int>(
-                        "SELECT COUNT(*) FROM FfmpegAudioRequest WHERE DestinationFilename = @DestinationFilename AND OutputFolder = @OutputFolder;",
-                        new {request.DestinationFilename, request.OutputFolder}) > 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"A job already exists with filename {request.DestinationFilename} to folder {request.OutputFolder}");
-                    }
-
-
-
                     connection.Execute(
                         "INSERT INTO FfmpegAudioRequest (JobCorrelationId, SourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @SourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
