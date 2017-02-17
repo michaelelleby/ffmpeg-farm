@@ -14,5 +14,6 @@ namespace Contract.Models
 
         public string DestinationFilename { get; set; }
         public DateTimeOffset? Started { get; set; }
+        public string LogPath { get; set; } 
     }
 }
