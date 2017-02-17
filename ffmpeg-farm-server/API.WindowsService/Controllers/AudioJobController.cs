@@ -62,6 +62,7 @@ namespace API.WindowsService.Controllers
             Guid jobCorrelationId = Guid.NewGuid();
 
             string sourceFilename = request.SourceFilenames.First();
+            string uniqueNamePart = Guid.NewGuid().ToString();//Used to avoid file collisions when transcoding the same file multiple times to the same location
 
             var frameCount = _helper.GetDuration(sourceFilename);
 
@@ -70,7 +71,7 @@ namespace API.WindowsService.Controllers
             {
                 string extension = ContainerHelper.GetExtension(target.Format);
 
-                string destinationFilename = $@"{request.DestinationFilenamePrefix}_{target.Bitrate}.{extension}";
+                string destinationFilename = $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
                 string destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
                 string arguments = string.Empty;
                 string outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
