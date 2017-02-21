@@ -33,7 +33,7 @@ namespace API.Repository
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegHardSubtitlesRequest (JobCorrelationId, VideoSourceFilename, SubtilesFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
+                        "INSERT INTO FfmpegHardSubtitlesRequest (JobCorrelationId, VideoSourceFilename, SubtilesFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @SubtilesFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
