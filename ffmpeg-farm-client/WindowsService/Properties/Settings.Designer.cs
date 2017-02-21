@@ -34,7 +34,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\logfiles")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01.net.dr.dk\\MediaCache\\ffmpeg-farm\\logfiles")]
         public string FFmpegLogPath {
             get {
                 return ((string)(this["FFmpegLogPath"]));
@@ -44,7 +44,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.WebServiceUrl)]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://od01udv:9000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://od01udv.net.dr.dk:9000")]
         public string ControllerApi {
             get {
                 return ((string)(this["ControllerApi"]));
@@ -53,10 +53,21 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01\\MediaCache\\ffmpeg-farm\\ffmpeg-3.2-win64-static\\bin\\ffmpeg.exe")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01.net.dr.dk\\MediaCache\\ffmpeg-farm\\ffmpeg-3.2-win64-static\\bin\\ffmpeg.ex" +
+            "e")]
         public string FFmpegPath {
             get {
                 return ((string)(this["FFmpegPath"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("FC_CONFIG_DIR=\\\\ondnas01\\MediaCache\r\nFONTCONFIG_FILE=\\\\ondnas01\\MediaCache\\fonts." +
+            "conf\r\nFONTCONFIG_PATH=\\\\ondnas01\\MediaCache")]
+        public string EnvorimentVars {
+            get {
+                return ((string)(this["EnvorimentVars"]));
             }
         }
     }

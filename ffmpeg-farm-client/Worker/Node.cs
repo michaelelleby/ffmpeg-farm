@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -29,8 +30,9 @@ namespace FFmpegFarm.Worker
         private const int ProgressSkip = 5;
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
-        
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, ILogger logger, IApiWrapper apiWrapper)
+        private readonly IDictionary<string, string> _envorimentVars;
+
+        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -41,22 +43,26 @@ namespace FFmpegFarm.Worker
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
                 throw new ArgumentNullException(nameof(logger));
+            if(envorimentVars == null)
+                throw new ArgumentNullException(nameof(envorimentVars));
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
+            _envorimentVars = envorimentVars;
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
             string apiUri, 
             string logfilesPath,
-            ILogger logger, 
+            IDictionary<string, string> envorimentVars,
+            ILogger logger,
             CancellationToken ct,
             IApiWrapper apiWrapper = null)
         {
-            var t = new Task(() => new Node(ffmpegPath,apiUri, logfilesPath, logger,
+            var t = new Task(() => new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger,
                 apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct));
             return t;
         }
@@ -169,7 +175,11 @@ namespace FFmpegFarm.Worker
                         FileName = _ffmpegPath,
                         Arguments = arguments
                     };
-
+                    var env = _commandlineProcess.StartInfo.Environment;
+                    foreach (var e in _envorimentVars)
+                    {
+                        env[e.Key] = e.Value;
+                    }
                     _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
 
                     _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;

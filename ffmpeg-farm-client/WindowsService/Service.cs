@@ -25,6 +25,16 @@ namespace FFmpegFarm.WindowsService
         {
             _logger.Information($"Starting service\n{Settings.Default.FFmpegPath}\n{Settings.Default.ControllerApi}\n{Settings.Default.Threads} threads.");
             _tasks = new Task[Settings.Default.Threads];
+            var env = 
+                Settings.Default.EnvorimentVars
+                    .Split('\n')
+                    .Select(l =>
+                    {
+                        var pair = l.Split('=');
+                        return new KeyValuePair<string, string>(pair[0], pair[1]);
+                    })
+                    .ToDictionary(p=>p.Key,p=>p.Value);
+
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
 
@@ -32,6 +42,7 @@ namespace FFmpegFarm.WindowsService
                     Settings.Default.FFmpegPath,
                     Settings.Default.ControllerApi,
                     Settings.Default.FFmpegLogPath,
+                    env,
                     _logger,
                     _cancellationTokenSource.Token);
 
