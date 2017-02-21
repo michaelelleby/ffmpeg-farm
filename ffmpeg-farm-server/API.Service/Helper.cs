@@ -5,9 +5,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Transactions;
 using Contract;
-using Dapper;
 
 namespace API.Service
 {
@@ -33,7 +31,8 @@ namespace API.Service
                 StartInfo = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    Arguments = $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType%|%FrameCount% ""{sourceFilename}""",
+                    Arguments =
+                        $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType%|%FrameCount% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -48,7 +47,7 @@ namespace API.Service
 
             return new Mediainfo
             {
-                Duration = Convert.ToInt32(output[0])/1000, // Duration is reported in milliseconds
+                Duration = Convert.ToInt32(output[0]) / 1000, // Duration is reported in milliseconds
                 Framerate = float.Parse(output[1], NumberFormatInfo.InvariantInfo),
                 Width = Convert.ToInt32(output[2]),
                 Height = Convert.ToInt32(output[3]),
@@ -84,7 +83,13 @@ namespace API.Service
                 throw new Exception($@"MediaInfo returned non-zero exit code: {mediaInfoProcess.ExitCode}");
 
             string value = mediaInfoProcess.StandardOutput.ReadToEnd();
-            return Convert.ToInt32(value)/1000;
+            return Convert.ToInt32(value) / 1000;
+        }
+
+        public string HardSubtitlesStyle()
+        {
+            var cfgStyle = ConfigurationManager.AppSettings["SubtitlesStyle"];
+            return string.IsNullOrWhiteSpace(cfgStyle) ? "FontName=DejaVu Serif,PrimaryColour=&Hffffff,BorderStyle=3" : cfgStyle;
         }
     }
 }

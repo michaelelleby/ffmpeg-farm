@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Contract
+﻿namespace Contract
 {
     public class MuxJobRequest : JobRequestBase
     {
