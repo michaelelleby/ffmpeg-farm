@@ -81,7 +81,7 @@ namespace API.WindowsService
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
 
-                _.For<IHardSubtilesJobRepository>()
+                _.For<IHardSubtitlesJobRepository>()
                     .Use<HardSubtitlesJobRepository>()
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);

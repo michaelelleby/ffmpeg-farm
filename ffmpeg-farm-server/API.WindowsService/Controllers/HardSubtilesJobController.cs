@@ -11,10 +11,10 @@ namespace API.WindowsService.Controllers
 {
     public class HardSubtitlesJobController : ApiController
     {
-        private readonly IHardSubtilesJobRepository _repository;
+        private readonly IHardSubtitlesJobRepository _repository;
         private readonly IHelper _helper;
 
-        public HardSubtitlesJobController(IHardSubtilesJobRepository repository, IHelper helper)
+        public HardSubtitlesJobController(IHardSubtitlesJobRepository repository, IHelper helper)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
@@ -57,9 +57,9 @@ namespace API.WindowsService.Controllers
                     DestinationDurationSeconds = frameCount
                 }
             };
-            var request = new HardSubtilesJobRequest()
+            var request = new HardSubtitlesJobRequest()
             {
-                SubtilesFilename = model.SubtitlesFilename,
+                SubtitlesFilename = model.SubtitlesFilename,
                 VideoSourceFilename = model.VideoSourceFilename,
                 DestinationFilename = model.DestinationFilename,
                 OutputFolder = model.OutputFolder

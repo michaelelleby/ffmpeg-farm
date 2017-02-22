@@ -125,7 +125,7 @@
     <Compile Include="IAudioJobRepository.cs" />
     <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
-    <Compile Include="IHardSubtilesJobRepository.cs" />
+    <Compile Include="IHardSubtitlesJobRepository.cs" />
     <Compile Include="IMuxJobRepository.cs" />
     <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />
@@ -142,7 +142,6 @@
     <Compile Include="Mp4boxJob.cs" />
     <Compile Include="HardSubtitlesJob.cs" />
     <Compile Include="MuxJob.cs" />
-    <Compile Include="HardSubtilesJobRequest.cs" />
     <Compile Include="HardSubtitlesJobRequest.cs" />
     <Compile Include="MuxJobRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

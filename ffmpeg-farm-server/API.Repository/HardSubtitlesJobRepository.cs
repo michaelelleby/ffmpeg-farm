@@ -10,7 +10,7 @@ namespace API.Repository
     /// <summary>
     /// Receives hard subtitles preprocess jobs orders.
     /// </summary>
-    public class HardSubtitlesJobRepository : JobRepository, IHardSubtilesJobRepository
+    public class HardSubtitlesJobRepository : JobRepository, IHardSubtitlesJobRepository
     {
         private readonly string _connectionString;
 
@@ -21,7 +21,7 @@ namespace API.Repository
             _connectionString = connectionString;
         }
 
-        public Guid Add(HardSubtilesJobRequest request, ICollection<FFmpegJob> jobs)
+        public Guid Add(HardSubtitlesJobRequest request, ICollection<FFmpegJob> jobs)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (jobs == null) throw new ArgumentNullException(nameof(jobs));
@@ -33,19 +33,19 @@ namespace API.Repository
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegHardSubtitlesRequest (JobCorrelationId, VideoSourceFilename, SubtilesFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @SubtilesFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
+                        "INSERT INTO FfmpegHardSubtitlesRequest (JobCorrelationId, VideoSourceFilename, SubtitlesFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @SubtitlesFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             request.VideoSourceFilename,
-                            request.SubtilesFilename,
+                            request.SubtitlesFilename,
                             request.Needed,
                             request.DestinationFilename,
                             request.OutputFolder,
                             Created = DateTime.UtcNow
                         });
 
-                    foreach (MuxJob job in jobs.Select(x => x as MuxJob))
+                    foreach (HardSubtitlesJob job in jobs.Select(x => x as HardSubtitlesJob))
                     {
                         var jobId = connection.ExecuteScalar<int>(
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Created, Needed, JobState, JobType) VALUES(@JobCorrelationId, @Created, @Needed, @State, @JobType);SELECT @@IDENTITY;",
