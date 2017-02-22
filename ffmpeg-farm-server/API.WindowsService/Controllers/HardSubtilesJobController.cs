@@ -46,7 +46,7 @@ namespace API.WindowsService.Controllers
             {
                 arguments += $"-ss {model.Inpoint:g} ";
             }
-            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" --filter_complex ""subtitles={model.SubtitlesFilename}:force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -y ""{outputFilename}""";
+            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles={model.SubtitlesFilename}:force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -y ""{outputFilename}""";
             var jobs = new List<FFmpegJob>
             {
                 new HardSubtitlesJob()
