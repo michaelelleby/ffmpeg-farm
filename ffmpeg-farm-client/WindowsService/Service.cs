@@ -27,7 +27,7 @@ namespace FFmpegFarm.WindowsService
             _tasks = new Task[Settings.Default.Threads];
             var env = 
                 Settings.Default.EnvorimentVars
-                    .Split('\n')
+                    .Split(';')
                     .Select(l =>
                     {
                         var pair = l.Split('=');

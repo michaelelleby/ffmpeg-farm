@@ -63,8 +63,8 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("FC_CONFIG_DIR=\\\\ondnas01\\MediaCache\r\nFONTCONFIG_FILE=\\\\ondnas01\\MediaCache\\fonts." +
-            "conf\r\nFONTCONFIG_PATH=\\\\ondnas01\\MediaCache")]
+        [global::System.Configuration.DefaultSettingValueAttribute("FC_CONFIG_DIR=\\\\ondnas01\\MediaCache;FONTCONFIG_FILE=\\\\ondnas01\\MediaCache\\fonts.c" +
+            "onf;FONTCONFIG_PATH=\\\\ondnas01\\MediaCache")]
         public string EnvorimentVars {
             get {
                 return ((string)(this["EnvorimentVars"]));
