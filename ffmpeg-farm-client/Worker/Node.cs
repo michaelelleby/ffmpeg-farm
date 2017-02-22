@@ -62,8 +62,9 @@ namespace FFmpegFarm.Worker
             CancellationToken ct,
             IApiWrapper apiWrapper = null)
         {
-            var t = new Task(() => new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger,
-                apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct));
+
+            var t = Task.Run(() => 
+            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -80,7 +81,7 @@ namespace FFmpegFarm.Worker
                     _currentTask = _apiWrapper.GetNext(Environment.MachineName);
                     if (_currentTask == null)
                     {
-                        Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
+                        Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException(ct);
                         continue;
                     }
                     try
@@ -401,7 +402,7 @@ namespace FFmpegFarm.Worker
             }
             catch (Exception)
             {
-                
+                // ignored
             }
 
             if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line

@@ -37,8 +37,9 @@ namespace FFmpegFarm.Worker
             if (ignoreCancel)
             {
                 // don't use wrapper since cancel has been called. 
-                (stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None)).WaitWithoutException(
-                    CancellationToken.None);
+                stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None);
+                stateTask.Start();
+                stateTask.Wait(TimeSpan.FromSeconds(20));
                 state = stateTask.Result;
             }
             else
@@ -82,7 +83,8 @@ namespace FFmpegFarm.Worker
                     timer.Stop();
                 }
 #endif
-                Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken).GetAwaiter().GetResult();
+                var wt = Task.Delay(TimeSpan.FromSeconds(1), _cancellationToken);
+                wt.WaitAndUnwrapException(_cancellationToken);
             }
             if (swaggerException != null)
                 _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}", ThreadId);
@@ -96,7 +98,7 @@ namespace FFmpegFarm.Worker
         /// </summary>
         private TRes Wrap<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
         {
-            return Wrap(() => apiCall(arg, CancellationToken.None).WaitAndUnwrapException());
+            return Wrap(() => apiCall(arg, _cancellationToken).WaitAndUnwrapException(_cancellationToken));
         }
 
         /// <summary>
@@ -106,7 +108,7 @@ namespace FFmpegFarm.Worker
         {
             Wrap(
                 new Func<object>(() => {
-                    apiCall(arg, CancellationToken.None).WaitAndUnwrapException();
+                    apiCall(arg, _cancellationToken).WaitAndUnwrapException(_cancellationToken);
                     return null;
                 }));
         }

@@ -37,7 +37,6 @@ namespace Worker.Test
 
             // Act
             var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
-            task.Start();
 
             try
             {
@@ -80,7 +79,6 @@ namespace Worker.Test
 
             // Act
             var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
-            task.Start();
 
             try
             {
@@ -123,7 +121,6 @@ namespace Worker.Test
 
             // Act
             var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", mockLogger.Object, cancelSource.Token, apiWrapper);
-            task.Start();
 
             try
             {

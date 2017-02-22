@@ -46,7 +46,6 @@ namespace FFmpegFarm.WindowsService
                     _logger,
                     _cancellationTokenSource.Token);
 
-                task.Start();
                 _tasks[x] = task;
             }
         }
