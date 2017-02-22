@@ -89,7 +89,7 @@ namespace API.Service
         public string HardSubtitlesStyle()
         {
             var cfgStyle = ConfigurationManager.AppSettings["SubtitlesStyle"];
-            return string.IsNullOrWhiteSpace(cfgStyle) ? "FontName=DejaVu Serif,PrimaryColour=&Hffffff,BorderStyle=3" : cfgStyle;
+            return string.IsNullOrWhiteSpace(cfgStyle) ? "FontName=Verdana,Fontsize=18,PrimaryColour=&Hffffff,OutlineColour=&H99000000,BorderStyle=3,Outline=2" : cfgStyle;
         }
     }
 }
