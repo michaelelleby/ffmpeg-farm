@@ -305,7 +305,11 @@ namespace FFmpegFarm.Worker
                 if (string.IsNullOrWhiteSpace(_logfilesPath) || !Directory.Exists(_logfilesPath))
                     return;
 
-                string logPath = Path.Combine(_logfilesPath, $@"task_{_currentTask.Id}_output.txt");
+                var path = Path.Combine(_logfilesPath, _currentTask.Started.Value.ToString("yyyy"), _currentTask.Started.Value.ToString("MM"), _currentTask.Started.Value.ToString("dd"));
+
+                Directory.CreateDirectory(path);
+                
+                string logPath = Path.Combine(path, $@"task_{_currentTask.Id}_output.txt");
                 using (Stream file = File.Create(logPath))
                 {
                     using (var logWriter = new StreamWriter(file))
