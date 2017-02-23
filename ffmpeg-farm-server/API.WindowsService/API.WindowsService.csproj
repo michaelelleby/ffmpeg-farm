@@ -155,9 +155,12 @@
     </Compile>
     <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Controllers\JobController.cs" />
+    <Compile Include="Controllers\HardSubtilesJobController.cs" />
     <Compile Include="Controllers\MuxJobController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
-    <Compile Include="Models\JobCommandEnum.cs" />
+    <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
+    <Compile Include="Validators\HardSubtitlesJobRequestValidator.cs" />
+    <Compile Include="Models\Command.cs" />
     <Compile Include="Models\MuxJobRequestModel.cs" />
     <Compile Include="Models\TaskProgressModel.cs" />
     <Compile Include="Validators\AudioRequestValidator.cs" />

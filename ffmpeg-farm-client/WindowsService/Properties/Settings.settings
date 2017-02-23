@@ -6,13 +6,16 @@
       <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="FFmpegLogPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01\MediaCache\ffmpeg-farm\logfiles</Value>
+      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCache\ffmpeg-farm\logfiles</Value>
     </Setting>
     <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
-      <Value Profile="(Default)">http://od01udv:9000</Value>
+      <Value Profile="(Default)">http://od01udv.net.dr.dk:9000</Value>
     </Setting>
     <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01\MediaCache\ffmpeg-farm\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
+      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCache\ffmpeg-farm\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
+    </Setting>
+    <Setting Name="EnvorimentVars" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">FC_CONFIG_DIR=\\ondnas01\MediaCache;FONTCONFIG_FILE=\\ondnas01\MediaCache\fonts.conf;FONTCONFIG_PATH=\\ondnas01\MediaCache</Value>
     </Setting>
   </Settings>
 </SettingsFile>
