@@ -23,7 +23,7 @@ namespace FFmpegFarm.Worker
         private Process _commandlineProcess;
         private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
-        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(1).TotalMilliseconds;
+        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(2).TotalMilliseconds;
         private readonly ILogger _logger;
         private int? _threadId; // main thread id, used for logging in child threads.
         private int _progressSpinner;

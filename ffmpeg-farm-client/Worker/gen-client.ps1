@@ -3,7 +3,7 @@ If (!(Test-Path "NSWag")) {
     Write-Host "NSwag not found downloading from github..."
     $filename = (Get-Location).Path +"\NSwag.zip"
     $client = new-object System.Net.WebClient
-    $client.DownloadFile("https://github.com/NSwag/NSwag/releases/download/NSwag-Build-711/NSwag.zip","$filename")    
+    $client.DownloadFile("https://github.com/NSwag/NSwag/releases/download/NSwag-Build-794/NSwag.zip","$filename")    
     
     new-item -Name "NSWag" -ItemType directory
     Write-Host "Unzipping to nswag dir..."

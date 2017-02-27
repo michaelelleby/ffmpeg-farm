@@ -11,10 +11,10 @@ namespace API.Repository
         {
             var transactionOptions = new TransactionOptions
             {
-                IsolationLevel = IsolationLevel.ReadCommitted,
+                IsolationLevel = IsolationLevel.Serializable,
                 Timeout = TransactionManager.MaximumTimeout
             };
-            return new TransactionScope(TransactionScopeOption.Required, transactionOptions);
+            return new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions);
         }
     }
 }

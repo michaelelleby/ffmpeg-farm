@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.Worker.Client;
@@ -18,8 +17,8 @@ namespace FFmpegFarm.Worker
 
         public ApiWrapper(string apiUri, ILogger logger, CancellationToken ct)
         {
-            _taskClient = new TaskClient(apiUri);
-            _statusClient = new StatusClient(apiUri);
+            _taskClient = new TaskClient { BaseUrl = apiUri};
+            _statusClient = new StatusClient { BaseUrl = apiUri };
             _logger = logger;
             _cancellationToken = ct;
         }
@@ -87,7 +86,7 @@ namespace FFmpegFarm.Worker
                 wt.WaitAndUnwrapException(_cancellationToken);
             }
             if (swaggerException != null)
-                _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}", ThreadId);
+                _logger.Warn($"{swaggerException.StatusCode} : {swaggerException.Response}", ThreadId);
             _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), ThreadId);
             return default(TRes);
         }
