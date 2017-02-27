@@ -258,6 +258,12 @@ namespace API.Repository
 
                         try
                         {
+                            IEnumerable<FFmpegJobDto> existingJobs = GetActiveJobs(machineName, connection);
+                            if (existingJobs.Any(x => x.Type == JobType.HardSubtitles))
+                            {
+                                return null;
+                            }
+
                             var data = new
                             {
                                 QueuedState = TranscodingJobState.Queued,
@@ -291,6 +297,15 @@ namespace API.Repository
                     }
                 }
             } while (true);
+        }
+
+        private static IEnumerable<FFmpegJobDto> GetActiveJobs(string machineName, IDbConnection connection)
+        {
+            return connection.Query<FFmpegJobDto>(
+                @"SELECT FfmpegJobs.id, JobCorrelationId, Created, Needed, JobType AS Type, JobState AS State FROM FfmpegJobs
+	INNER JOIN FfmpegTasks ON FfmpegJobs.id = FfmpegTasks.FfmpegJobs_id
+	WHERE FfmpegTasks.HeartbeatMachineName = @MachineName AND FfmpegTasks.TaskState = @State;"
+                , new {machineName, State = TranscodingJobState.InProgress});
         }
 
         public ICollection<FFmpegJobDto> Get(int take = 10)
