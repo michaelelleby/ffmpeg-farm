@@ -55,7 +55,7 @@ namespace API.Repository
                                 Created = DateTimeOffset.UtcNow,
                                 job.Needed,
                                 State = job.State,
-                                JobType = JobType.Mux
+                                JobType = JobType.HardSubtitles
                             });
 
                         connection.Execute(
