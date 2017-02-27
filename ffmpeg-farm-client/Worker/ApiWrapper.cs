@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define DEBUGAPI 
+using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.Worker.Client;
@@ -71,14 +73,14 @@ namespace FFmpegFarm.Worker
                     swaggerException = e as SwaggerException;
 #if DEBUGAPI
                     if (swaggerException != null)
-                        _logger.Warn($"{swaggerException.StatusCode} : {Encoding.UTF8.GetString(swaggerException.ResponseData)}", _threadId);
-                    _logger.Exception(e, _threadId);
+                        _logger.Warn($"{swaggerException.StatusCode} : {swaggerException.Response}", ThreadId);
+                    _logger.Exception(e, ThreadId);
 #endif
                 }
 #if DEBUGAPI
                 finally
                 {
-                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms", _threadId);
+                    _logger.Debug($"API call took {timer.ElapsedMilliseconds} ms", ThreadId);
                     timer.Stop();
                 }
 #endif
@@ -98,18 +100,6 @@ namespace FFmpegFarm.Worker
         private TRes Wrap<TArg, TRes>(Func<TArg, CancellationToken, Task<TRes>> apiCall, TArg arg)
         {
             return Wrap(() => apiCall(arg, _cancellationToken).WaitAndUnwrapException(_cancellationToken));
-        }
-
-        /// <summary>
-        /// Retries and ignores exceptions.
-        /// </summary>
-        private void Wrap<TArg>(Func<TArg, CancellationToken, Task> apiCall, TArg arg)
-        {
-            Wrap(
-                new Func<object>(() => {
-                    apiCall(arg, _cancellationToken).WaitAndUnwrapException(_cancellationToken);
-                    return null;
-                }));
         }
     }
 }
