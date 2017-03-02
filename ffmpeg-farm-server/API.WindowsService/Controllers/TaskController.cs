@@ -37,7 +37,8 @@ namespace API.WindowsService.Controllers
             var res = _repository.GetNextJob(machineName);
             if (res != null)
             {
-                _logging.Debug($"Assinged task {res.Id} (job id {res.FfmpegJobsId}) to {machineName}.");
+                var guid = _repository.GetGuidById(res.Id);
+                _logging.Debug($"Assinged task {res.Id} (job id {res.FfmpegJobsId}) to {machineName}. Job {guid}");
             }
             return res;
         }

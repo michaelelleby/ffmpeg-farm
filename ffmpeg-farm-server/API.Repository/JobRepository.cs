@@ -6,7 +6,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Transactions;
 using Contract;
 using Contract.Dto;
 using Dapper;
@@ -365,6 +364,17 @@ namespace API.Repository
                     scope.Complete();
 
                     return job;
+                }
+            }
+        }
+
+        public Guid GetGuidById(int id)
+        {
+            using (var scope = TransactionUtils.CreateTransactionScope())
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    return connection.QueryFirstOrDefault<Guid>("SELECT JobCorrelationId FROM FfmpegJobs WHERE id = @Id;", new {id});
                 }
             }
         }
