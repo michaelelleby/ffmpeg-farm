@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
 using Contract;
 using Contract.Dto;
@@ -12,14 +10,17 @@ namespace API.WindowsService.Controllers
     {
         private readonly IHelper _helper;
         private readonly IJobRepository _repository;
+        private readonly ILogging _logging;
 
-        public TaskController(IHelper helper, IJobRepository repository)
+        public TaskController(IHelper helper, IJobRepository repository, ILogging logging)
         {
             if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _helper = helper;
             _repository = repository;
+            _logging = logging;
         }
 
         /// <summary>
@@ -33,7 +34,12 @@ namespace API.WindowsService.Controllers
             if (string.IsNullOrWhiteSpace(machineName))
                 throw new ArgumentNullException(nameof(machineName));
 
-            return _repository.GetNextJob(machineName);
+            var res = _repository.GetNextJob(machineName);
+            if (res != null)
+            {
+                _logging.Debug($"Assinged task {res.Id} (job id {res.FfmpegJobsId}) to {machineName}.");
+            }
+            return res;
         }
     }
 }

@@ -205,6 +205,10 @@
     <None Include="Properties\SlowCheetah\SlowCheetah.Transforms.targets" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Logging\API.Logging.csproj">
+      <Project>{0ff44599-01b6-4c4a-805f-850103f21cb4}</Project>
+      <Name>API.Logging</Name>
+    </ProjectReference>
     <ProjectReference Include="..\API.Repository\API.Repository.csproj">
       <Project>{a1b19c7b-9d5e-4c7b-8fc0-cbccc86bd83d}</Project>
       <Name>API.Repository</Name>
