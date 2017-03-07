@@ -4,7 +4,6 @@ using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Web.Http;
 using API.WindowsService.Models;
 using Contract;
@@ -20,15 +19,18 @@ namespace API.WindowsService.Controllers
     {
         private readonly IJobRepository _repository;
         private readonly IHelper _helper;
+        private readonly ILogging _logging;
         private static readonly string _logPath = ConfigurationManager.AppSettings["FFmpegLogPath"];
 
-        public StatusController(IJobRepository repository, IHelper helper)
+        public StatusController(IJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _repository = repository;
             _helper = helper;
+            _logging = logging;
         }
 
         /// <summary>
@@ -81,13 +83,16 @@ namespace API.WindowsService.Controllers
         public TranscodingJobState UpdateProgress(TaskProgressModel model)
         {
             if (model == null)
-                throw new ArgumentNullException("model");
+                throw new ArgumentNullException(nameof(model));
 
             if (!ModelState.IsValid)
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
-
+            if (model.Failed)
+                _logging.Warn($"Task {model.Id} failed at {model.MachineName}");
+            if (model.Done)
+                _logging.Info($"Task {model.Id} done at {model.MachineName}");
             return _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
         }
 

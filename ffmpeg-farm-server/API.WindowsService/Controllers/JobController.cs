@@ -12,14 +12,17 @@ namespace API.WindowsService.Controllers
     {
         private readonly IHelper _helper;
         private readonly IJobRepository _repository;
+        private readonly ILogging _logging;
 
-        public JobController(IHelper helper, IJobRepository repository)
+        public JobController(IHelper helper, IJobRepository repository, ILogging logging)
         {
             if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _helper = helper;
             _repository = repository;
+            _logging = logging;
         }
 
         [HttpDelete]
@@ -28,7 +31,12 @@ namespace API.WindowsService.Controllers
             if (jobCorrelationId == Guid.Empty)
                 throw new ArgumentOutOfRangeException(nameof(jobCorrelationId), "Specified jobCorrelationId is invalid");
 
-            return _repository.DeleteJob(jobCorrelationId);
+            var res = _repository.DeleteJob(jobCorrelationId);
+            if (res)
+                _logging.Info($"Job {jobCorrelationId} deleted");
+            else 
+                _logging.Warn($"Failed to delete job {jobCorrelationId}");
+            return res;
         }
 
         [HttpPatch]
@@ -37,19 +45,28 @@ namespace API.WindowsService.Controllers
             if (jobCorrelationId == Guid.Empty)
                 throw new ArgumentOutOfRangeException(nameof(jobCorrelationId), "Specified jobCorrelationId is invalid");
 
+            bool res;
 
             switch (command)
             {
                 case Command.Pause:
-                    return _repository.PauseJob(jobCorrelationId);
+                    res = _repository.PauseJob(jobCorrelationId);
+                    break;
                 case Command.Resume:
-                    return _repository.ResumeJob(jobCorrelationId);
+                    res = _repository.ResumeJob(jobCorrelationId);
+                    break;
                 case Command.Cancel:
-                    return _repository.CancelJob(jobCorrelationId);
+                    res = _repository.CancelJob(jobCorrelationId);
+                    break;
                 case Command.Unknown:
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), $"unsupported {command}", nameof(command));
             }
+            if (res)
+                _logging.Info($"Recived valid {command} order for job {jobCorrelationId}.");
+            else
+                _logging.Warn($"Recived invalid {command} order for job {jobCorrelationId}.");
+            return res;
         }
     }
 }

@@ -126,6 +126,7 @@
     <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
     <Compile Include="IHardSubtitlesJobRepository.cs" />
+    <Compile Include="ILogging.cs" />
     <Compile Include="IMuxJobRepository.cs" />
     <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />

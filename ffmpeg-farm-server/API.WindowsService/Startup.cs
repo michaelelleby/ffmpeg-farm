@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http.Formatting;
 using System.Web.Http;
+using API.Logging;
 using API.Repository;
 using API.Service;
 using API.WindowsService.Filters;
@@ -91,11 +92,18 @@ namespace API.WindowsService
 
                 _.For<IHelper>()
                     .Use<Helper>();
+
+                _.For<ILogging>()
+                    .Singleton()
+                    .Use<NLogWrapper>()
+                    .Ctor<string>("name")
+                    .Is(ConfigurationManager.AppSettings["NLog-Appname"] ??
+                        System.Reflection.Assembly.GetExecutingAssembly().FullName);
             });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);
 
-            config.Filters.Add(new ExceptionFilter());
+            config.Filters.Add(new ExceptionFilter((ILogging) config.DependencyResolver.GetService(typeof(ILogging))));
 
             FluentValidationModelValidatorProvider.Configure(config);
 
