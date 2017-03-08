@@ -38,7 +38,7 @@ namespace API.WindowsService.Controllers
             if (res != null)
             {
                 var guid = _repository.GetGuidById(res.Id);
-                _logging.Debug($"Assinged task {res.Id} (job id {res.FfmpegJobsId}) to {machineName}. Job {guid}");
+                _logging.Debug($"Assigned task {res.Id} (job id {res.FfmpegJobsId}) to {machineName}. Job correlation id {guid}");
             }
             return res;
         }

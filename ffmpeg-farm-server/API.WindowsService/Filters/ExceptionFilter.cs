@@ -25,8 +25,6 @@ namespace API.WindowsService.Filters
 
             base.OnException(actionExecutedContext);
 
-            _logging.Error(ex, "Unhandled exception");
-
             Type type = ex.GetType();
             if (IsException(type))
             {
@@ -42,6 +40,8 @@ namespace API.WindowsService.Filters
 
                 throw new HttpResponseException(response);
             }
+
+            _logging.Error(ex, "Unhandled exception");
         }
 
         private static bool IsException(Type type)
