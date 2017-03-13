@@ -9,6 +9,7 @@ using System.Linq;
 using Contract;
 using Contract.Dto;
 using Dapper;
+using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace API.Repository
 {
@@ -249,7 +250,7 @@ namespace API.Repository
 
             do
             {
-                using (var scope = TransactionUtils.CreateTransactionScope())
+                using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
                 {
                     using (var connection = Helper.GetConnection())
                     {
