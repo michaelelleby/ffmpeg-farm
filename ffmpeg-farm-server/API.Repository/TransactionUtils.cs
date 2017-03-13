@@ -11,7 +11,7 @@ namespace API.Repository
         {
             var transactionOptions = new TransactionOptions
             {
-                IsolationLevel = IsolationLevel.Serializable,
+                IsolationLevel = IsolationLevel.ReadCommitted,
                 Timeout = TransactionManager.MaximumTimeout
             };
             return new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions);
