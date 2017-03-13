@@ -29,21 +29,33 @@ namespace API.Logging
 
         public void Debug(string message)
         {
+            if (_logger == null)
+                return;
+
             _logger.Debug(message);
         }
 
         public void Info(string message)
         {
+            if (_logger == null)
+                return;
+
             _logger.Info(message);
         }
 
         public void Warn(string message)
         {
+            if (_logger == null)
+                return;
+
             _logger.Warn(message);
         }
 
         public void Error(Exception exception, string message)
         {
+            if (_logger == null)
+                return;
+
             _logger.Error(exception, message);
         }
     }
