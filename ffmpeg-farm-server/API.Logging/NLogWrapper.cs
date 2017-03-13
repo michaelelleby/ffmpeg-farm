@@ -17,14 +17,7 @@ namespace API.Logging
         private readonly Logger _logger;
         public NLogWrapper(string name)
         {
-            try
-            {
-                _logger = LogManager.GetLogger(name);
-            }
-            catch (Exception e)
-            {
-                System.Diagnostics.Debug.WriteLine(e.Message);
-            }
+            _logger = LogManager.GetLogger(name);
         }
 
         public void Debug(string message)
