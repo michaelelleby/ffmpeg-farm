@@ -197,42 +197,40 @@ namespace API.Repository
         {
             InsertClientHeartbeat(machineName);
 
-            TranscodingJobState jobState = failed ? TranscodingJobState.Failed : done ? TranscodingJobState.Done
-                                                    : TranscodingJobState.InProgress;
+            TranscodingJobState jobState = failed
+                ? TranscodingJobState.Failed
+                : done
+                    ? TranscodingJobState.Done
+                    : TranscodingJobState.InProgress;
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    connection.Open();
+                connection.Open();
 
-                    // Only allow progress updates for tasks which have statetaskState = InProgress
-                    // This will prevent out-of-order updates causing tasks set to either Failed or Done
-                    // to be set back to InProgress
-                    int updatedRows = connection.Execute(
-                        "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
-                        " AND TaskState = @InProgressState;",
-                        new
-                        {
-                            Id = jobId,
-                            Progress = progress.TotalSeconds,
-                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                            State = jobState,
-                            InProgressState = TranscodingJobState.InProgress,
-                            machineName
-                        });
+                // Only allow progress updates for tasks which have statetaskState = InProgress
+                // This will prevent out-of-order updates causing tasks set to either Failed or Done
+                // to be set back to InProgress
+                int updatedRows = connection.Execute(
+                    "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
+                    " AND TaskState = @InProgressState;",
+                    new
+                    {
+                        Id = jobId,
+                        Progress = progress.TotalSeconds,
+                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                        State = jobState,
+                        InProgressState = TranscodingJobState.InProgress,
+                        machineName
+                    });
 
-                    jobState = (TranscodingJobState) connection.QuerySingle<int>("SELECT TaskState FROM FfmpegTasks WHERE id = @Id;",
-                        new
-                        {
-                            Id = jobId
-                        });
+                jobState = (TranscodingJobState) connection.QuerySingle<int>("SELECT TaskState FROM FfmpegTasks WHERE id = @Id;",
+                    new
+                    {
+                        Id = jobId
+                    });
 
-                    if (updatedRows != 1 && jobState != TranscodingJobState.Canceled)
-                        throw new Exception($"Failed to update progress for job id {jobId}");
-
-                    scope.Complete();
-                }
+                if (updatedRows != 1 && jobState != TranscodingJobState.Canceled)
+                    throw new Exception($"Failed to update progress for job id {jobId}");
             }
             return jobState;
         }
