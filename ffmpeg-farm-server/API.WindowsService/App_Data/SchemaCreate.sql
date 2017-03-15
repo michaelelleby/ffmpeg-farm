@@ -55,13 +55,11 @@ CREATE PROCEDURE [dbo].[sp_InsertClientHeartbeat]
 	@Timestamp DATETIMEOFFSET
 AS
 BEGIN
-	IF EXISTS (SELECT * FROM Clients WHERE MachineName = @MachineName)
-	BEGIN
-		UPDATE	Clients
+	UPDATE	Clients
 		SET		LastHeartbeat = @Timestamp
 		WHERE	MachineName = @MachineName
-	END
-	ELSE
+
+	IF @@ROWCOUNT = 0
 	BEGIN
 		INSERT INTO Clients (MachineName, LastHeartbeat)
 		VALUES		(@MachineName, @Timestamp)
