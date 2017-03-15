@@ -309,87 +309,75 @@ namespace API.Repository
         public ICollection<FFmpegJobDto> Get(int take = 10)
         {
             IDictionary<int, ICollection<FFmpegTaskDto>> jobsDictionary = new ConcurrentDictionary<int, ICollection<FFmpegTaskDto>>();
-
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            ICollection<FFmpegJobDto> jobs = null;
+            ICollection<FFmpegTaskDto> tasks = null;
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    ICollection<FFmpegJobDto> jobs = connection.Query<FFmpegJobDto>(
+                jobs = connection.Query<FFmpegJobDto>(
                         "SELECT top(" + take + @") id, JobCorrelationId, Created, Needed, JobType, JobState AS State
                         FROM FfmpegJobs
                         ORDER BY Created DESC"
                     )
-                        .ToList();
+                    .ToList();
 
-                    if (jobs == null || jobs.Count == 0)
-                        return new List<FFmpegJobDto>();
+                if (jobs == null || jobs.Count == 0)
+                    return new List<FFmpegJobDto>();
 
-                    List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
-                    string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
+                List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
+                string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
 
-                    ICollection<FFmpegTaskDto> tasks = connection.Query<FFmpegTaskDto>(
-                            @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename 
+                tasks = connection.Query<FFmpegTaskDto>(
+                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename 
                               FROM FfmpegTasks
                               WHERE FfmpegJobs_id in " + jobidSql
-                        )
-                        .ToList();
-
-                    foreach (FFmpegTaskDto task in tasks)
-                    {
-                        if (!jobsDictionary.ContainsKey(task.FfmpegJobsId))
-                        {
-                            jobsDictionary.Add(task.FfmpegJobsId, new List<FFmpegTaskDto>());
-                        }
-
-                        jobsDictionary[task.FfmpegJobsId].Add(task);
-                    }
-
-                    foreach (FFmpegJobDto job in jobs.Where(x => jobsDictionary.ContainsKey(x.Id)))
-                    {
-                        job.Tasks = jobsDictionary[job.Id];
-                    }
-
-                    scope.Complete();
-
-                    return jobs;
-                }
+                    )
+                    .ToList();
             }
+
+            foreach (FFmpegTaskDto task in tasks)
+            {
+                if (!jobsDictionary.ContainsKey(task.FfmpegJobsId))
+                {
+                    jobsDictionary.Add(task.FfmpegJobsId, new List<FFmpegTaskDto>());
+                }
+
+                jobsDictionary[task.FfmpegJobsId].Add(task);
+            }
+
+            foreach (FFmpegJobDto job in jobs.Where(x => jobsDictionary.ContainsKey(x.Id)))
+            {
+                job.Tasks = jobsDictionary[job.Id];
+            }
+
+            return jobs;
         }
 
         public FFmpegJobDto Get(Guid id)
         {
             if (id == Guid.Empty) throw new ArgumentOutOfRangeException("id");
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    var job = connection.QuerySingleOrDefault<FFmpegJobDto>(
-                        "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
-                        new {id});
-                    if (job == null)
-                        return null;
+                var job = connection.QuerySingleOrDefault<FFmpegJobDto>(
+                    "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                    new {id});
+                if (job == null)
+                    return null;
 
-                    job.Tasks = connection.Query<FFmpegTaskDto>(
+                job.Tasks = connection.Query<FFmpegTaskDto>(
                         "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
-                        .ToList();
+                    .ToList();
 
-                    scope.Complete();
-
-                    return job;
-                }
+                return job;
             }
         }
 
         public Guid GetGuidById(int id)
         {
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    return connection.QueryFirstOrDefault<Guid>("SELECT JobCorrelationId FROM FfmpegJobs WHERE id = @Id;", new {id});
-                }
+                return connection.QueryFirstOrDefault<Guid>("SELECT JobCorrelationId FROM FfmpegJobs WHERE id = @Id;", new {id});
             }
         }
 
