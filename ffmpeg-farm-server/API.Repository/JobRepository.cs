@@ -399,20 +399,17 @@ namespace API.Repository
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
+                int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
                 {
-                    int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
-                    {
-                        MachineName = machineName,
-                        Timestamp = DateTimeOffset.UtcNow
-                    }, commandType: CommandType.StoredProcedure);
+                    MachineName = machineName,
+                    Timestamp = DateTimeOffset.UtcNow
+                }, commandType: CommandType.StoredProcedure);
 
-                    if (rowsAffected != 1)
-                        throw new Exception($"sp_InsertClientHeartbeat affected {rowsAffected} rows, should only affect 1 row!");
-
-                    scope.Complete();
+                if (rowsAffected != 1)
+                {
+                    throw new Exception($"sp_InsertClientHeartbeat affected {rowsAffected} rows, should only affect 1 row!");
                 }
             }
         }
