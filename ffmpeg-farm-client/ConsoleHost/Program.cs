@@ -35,7 +35,9 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                 cancelSource.Cancel();
             };
             var logger = new ConsoleLogger();
-            var tasks = new Task[int.Parse(cfg["threads"])];
+            var threadCount = int.Parse(cfg["threads"]);
+            var tasks = new Task[threadCount];
+            Worker.Node.PollInterval  = TimeSpan.FromSeconds(10 * threadCount) ;
             for (var x = 0; x < tasks.Length; x++)
             {
                 var task = Worker.Node.GetNodeTask(
@@ -46,6 +48,7 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
                     logger,
                     cancelSource.Token);
                 tasks[x] = task;
+                Thread.Sleep(TimeSpan.FromSeconds(2));
             }
             ConsoleKeyInfo keyInfo;
             while (!cancelSource.IsCancellationRequested &&

@@ -35,6 +35,8 @@ namespace FFmpegFarm.WindowsService
                     })
                     .ToDictionary(p=>p.Key,p=>p.Value);
 
+
+            Node.PollInterval = TimeSpan.FromSeconds(10 * Settings.Default.Threads);
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
 
@@ -47,6 +49,7 @@ namespace FFmpegFarm.WindowsService
                     _cancellationTokenSource.Token);
 
                 _tasks[x] = task;
+                Thread.Sleep(TimeSpan.FromSeconds(2));
             }
         }
 

@@ -32,6 +32,8 @@ namespace FFmpegFarm.Worker
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
 
+        public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
+
         private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
@@ -81,7 +83,7 @@ namespace FFmpegFarm.Worker
                     _currentTask = _apiWrapper.GetNext(Environment.MachineName);
                     if (_currentTask == null)
                     {
-                        Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException(ct);
+                        Task.Delay(PollInterval, ct).WaitWithoutException(ct);
                         continue;
                     }
                     try
