@@ -75,11 +75,6 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml" />
-    <Reference Include="Worker">
-      <HintPath Condition="Exists('..\Worker\bin\Release\net461\')">..\Worker\bin\Release\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Test\net461\')">..\Worker\bin\Test\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Debug\net461\')">..\Worker\bin\Debug\net461\Worker.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventLogger.cs" />
@@ -137,6 +132,12 @@
     <EmbeddedResource Include="Service.resx">
       <DependentUpon>Service.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Worker\Worker.csproj">
+      <Project>{1cd1a8d5-8ae1-4e3f-82dc-a89e170c564a}</Project>
+      <Name>Worker</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" Label="SlowCheetah" />

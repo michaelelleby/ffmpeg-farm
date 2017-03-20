@@ -60,11 +60,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="Worker">
-      <HintPath Condition="Exists('..\Worker\bin\Release\net461\')">..\Worker\bin\Release\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Test\net461\')">..\Worker\bin\Test\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Debug\net461\')">..\Worker\bin\Debug\net461\Worker.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NodeTest.cs" />
@@ -74,7 +69,12 @@
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Worker\Worker.csproj">
+      <Project>{1cd1a8d5-8ae1-4e3f-82dc-a89e170c564a}</Project>
+      <Name>Worker</Name>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup>
     <Content Include="Data\ffmpeg.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
