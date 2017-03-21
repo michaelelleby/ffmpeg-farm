@@ -20,6 +20,15 @@ namespace API.WindowsService
             {
                 APIService service = (APIService) servicesToRun.First();
                 service.Start();
+                Console.WriteLine(@"
+.---..---.                        .---.                       .    .--. --.--
+|    |                            |                          / \   |   )  |  
+|--- |--- .--.--. .,-.  .-. .-..  |--- .-.  .--..--.--.     /___\  |--'   |  
+|    |    |  |  | |   )(.-'(   |  |   (   ) |   |  |  |    /     \ |      |  
+'    '    '  '  `-|`-'  `--'`-`|  '    `-'`-'   '  '  `-  '       `'    --'--
+                  |         ._.'                                             
+                  '                                                          ");
+                Console.WriteLine();
                 Console.WriteLine("Press any key to stop program");
                 Console.Read();
                 service.Stop();
