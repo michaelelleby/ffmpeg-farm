@@ -193,7 +193,7 @@ namespace API.Repository
             return requests;
         }
 
-        public TranscodingJobState SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
+        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, string machineName)
         {
             InsertClientHeartbeat(machineName);
 
@@ -215,7 +215,7 @@ namespace API.Repository
                     " AND TaskState = @InProgressState;",
                     new
                     {
-                        Id = jobId,
+                        Id = id,
                         Progress = progress.TotalSeconds,
                         Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                         State = jobState,
@@ -223,14 +223,8 @@ namespace API.Repository
                         machineName
                     });
 
-                jobState = (TranscodingJobState) connection.QuerySingle<int>("SELECT TaskState FROM FfmpegTasks WHERE id = @Id;",
-                    new
-                    {
-                        Id = jobId
-                    });
-
-                if (updatedRows != 1 && jobState != TranscodingJobState.Canceled)
-                    throw new Exception($"Failed to update progress for job id {jobId}");
+                if (updatedRows != 1)
+                    throw new Exception($"Failed to update progress for task id {id}");
             }
             return jobState;
         }
