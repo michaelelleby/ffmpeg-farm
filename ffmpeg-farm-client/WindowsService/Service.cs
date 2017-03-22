@@ -36,7 +36,7 @@ namespace FFmpegFarm.WindowsService
                     .ToDictionary(p=>p.Key,p=>p.Value);
 
 
-            Node.PollInterval = TimeSpan.FromSeconds(10 * Settings.Default.Threads);
+            Node.PollInterval = TimeSpan.FromSeconds(10);
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
 
