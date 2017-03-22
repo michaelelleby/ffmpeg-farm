@@ -60,7 +60,12 @@ namespace FFmpegFarm.WindowsService
             try
             {
                 // ReSharper disable once MethodSupportsCancellation
-                Task.WaitAll(_tasks);
+                Task.WaitAll(_tasks, 20000, _cancellationTokenSource.Token);
+                _logger.Information("Service stopped");
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Information("Service cancelled tasks due to OnStop() called");
             }
             catch (Exception e)
             {
@@ -68,7 +73,7 @@ namespace FFmpegFarm.WindowsService
                     || e.InnerException?.GetType() == typeof(TaskCanceledException)))
                     throw;
             }
-            _logger.Information("Service stopped");
+
         }
     }
 }
