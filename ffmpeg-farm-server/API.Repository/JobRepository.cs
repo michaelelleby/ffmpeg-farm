@@ -193,7 +193,7 @@ namespace API.Repository
             return requests;
         }
 
-        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, string machineName)
+        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName)
         {
             InsertClientHeartbeat(machineName);
 
@@ -211,12 +211,13 @@ namespace API.Repository
                 // This will prevent out-of-order updates causing tasks set to either Failed or Done
                 // to be set back to InProgress
                 int updatedRows = connection.Execute(
-                    "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
+                    "UPDATE FfmpegTasks SET Progress = @Progress, VerifyProgress = @VerifyProgress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
                     " AND TaskState = @InProgressState;",
                     new
                     {
                         Id = id,
                         Progress = progress.TotalSeconds,
+                        VerifyProgress = verifyProgress?.TotalSeconds,
                         Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                         State = jobState,
                         InProgressState = TranscodingJobState.InProgress,
@@ -321,7 +322,7 @@ namespace API.Repository
                 string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
 
                 tasks = connection.Query<FFmpegTaskDto>(
-                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename 
+                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationDurationSeconds, DestinationFilename 
                               FROM FfmpegTasks
                               WHERE FfmpegJobs_id in " + jobidSql
                     )

@@ -5,6 +5,7 @@ namespace Contract.Models
     public class FfmpegTaskModel
     {
         public decimal Progress { get; set; }
+        public decimal? VerifyProgres { get; set; }
 
         public TranscodingJobState State { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using Contract;
 using Moq;
@@ -133,7 +132,7 @@ namespace API.Repository.Test
             var job = sut.GetNextJob(machinename);
             Assert.That(job, Is.Not.Null);
 
-            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), machinename);
+            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), machinename);
 
             var result = sut.GetNextJob(machinename);
 
@@ -217,7 +216,7 @@ namespace API.Repository.Test
 
             // Act
             var job = sut.GetNextJob(machinename);
-            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), machinename);
+            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), machinename);
 
             var result = sut.GetNextJob(machinename);
 

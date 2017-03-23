@@ -19,5 +19,7 @@ namespace API.WindowsService.Models
 
         [Required]
         public TimeSpan Progress { get; set; }
+
+        public TimeSpan? VerifyProgress { get; set; }
     }
 }

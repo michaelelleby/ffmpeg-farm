@@ -214,8 +214,9 @@ CREATE TABLE [dbo].[FfmpegTasks](
 	[Heartbeat] [datetimeoffset](7) NULL,
 	[HeartbeatMachineName] [varchar](50) NULL,
 	[Progress] [float] NULL,
+	[VerifyProgress] [float] NULL,
 	[DestinationFilename] [nvarchar](max) NULL,
-	[VerifyOutput] [bit] NOT NULL DEFAULT ((0)),
+	[VerifyOutput] [bit] NOT NULL DEFAULT ((0)),	
  CONSTRAINT [PK_FfmpegMuxTasks] PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
