@@ -1,6 +1,7 @@
 ﻿#define DEBUGAPI 
 using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.Worker.Client;
@@ -16,13 +17,20 @@ namespace FFmpegFarm.Worker
 
         private readonly StatusClient _statusClient;
         private readonly TaskClient _taskClient;
+        private readonly HttpClient _httpClient;
 
         public ApiWrapper(string apiUri, ILogger logger, CancellationToken ct)
         {
-            _taskClient = new TaskClient { BaseUrl = apiUri};
-            _statusClient = new StatusClient { BaseUrl = apiUri };
+            _httpClient = new HttpClient {Timeout = TimeSpan.FromSeconds(10) };
+            _taskClient = new TaskClient(_httpClient) { BaseUrl = apiUri};
+            _statusClient = new StatusClient(_httpClient) { BaseUrl = apiUri };
             _logger = logger;
             _cancellationToken = ct;
+        }
+
+        ~ApiWrapper()
+        {
+            _httpClient?.Dispose();
         }
 
         public FFmpegTaskDto GetNext(string machineName)
@@ -40,7 +48,7 @@ namespace FFmpegFarm.Worker
                 // don't use wrapper since cancel has been called. 
                 stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None);
                 stateTask.Start();
-                stateTask.Wait(TimeSpan.FromSeconds(20));
+                stateTask.Wait(CancellationToken.None);
                 state = stateTask.Result;
             }
             else

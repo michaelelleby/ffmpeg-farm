@@ -13,6 +13,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public AudioJobClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -39,7 +46,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/AudioJob");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -93,8 +100,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -105,6 +110,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public ClientClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -129,7 +141,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Client");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -180,8 +192,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -192,6 +202,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public HardSubtitlesJobClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -216,7 +233,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/HardSubtitlesJob");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -270,8 +287,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -282,6 +297,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public HealthCheckClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -306,7 +328,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/HealthCheck");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -357,8 +379,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -369,6 +389,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public JobClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -398,7 +425,7 @@ namespace FFmpegFarm.Worker.Client
             else
                 url_ += string.Format("jobCorrelationId={0}&", System.Uri.EscapeDataString(jobCorrelationId.ToString()));
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -449,8 +476,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -478,7 +503,7 @@ namespace FFmpegFarm.Worker.Client
             else
                 url_ += string.Format("command={0}&", System.Uri.EscapeDataString(command.ToString()));
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -531,8 +556,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -543,6 +566,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public MuxJobClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -567,7 +597,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/MuxJob");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -621,8 +651,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -633,6 +661,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public StatusClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -662,7 +697,7 @@ namespace FFmpegFarm.Worker.Client
             if (take != null)
                 url_ += string.Format("take={0}&", System.Uri.EscapeDataString(take.Value.ToString()));
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -713,8 +748,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -740,7 +773,7 @@ namespace FFmpegFarm.Worker.Client
         {
             var url_ = string.Format("{0}/{1}", BaseUrl, "api/Status");
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -794,8 +827,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -821,7 +852,7 @@ namespace FFmpegFarm.Worker.Client
                 throw new System.ArgumentNullException("id");
             url_ = url_.Replace("{id}", System.Uri.EscapeDataString(id.ToString()));
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -872,8 +903,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
@@ -884,6 +913,13 @@ namespace FFmpegFarm.Worker.Client
     {
         private string _baseUrl = "http://localhost:9000";
         
+        private System.Net.Http.HttpClient _httpClient; 
+    
+        public TaskClient(System.Net.Http.HttpClient httpClient)
+        {
+            _httpClient = httpClient; 
+        }
+    
         public string BaseUrl 
         {
             get { return _baseUrl; }
@@ -917,7 +953,7 @@ namespace FFmpegFarm.Worker.Client
             else
                 url_ += string.Format("machineName={0}&", System.Uri.EscapeDataString(machineName.ToString()));
                     
-            var client_ = new System.Net.Http.HttpClient();
+            var client_ = _httpClient;
             try
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
@@ -968,8 +1004,6 @@ namespace FFmpegFarm.Worker.Client
             }
             finally
             {
-                if (client_ != null)
-                    client_.Dispose();
             }
         }
     
