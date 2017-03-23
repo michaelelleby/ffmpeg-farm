@@ -31,6 +31,9 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
 
         private static void RunAsConsole()
         {
+            Console.CursorVisible = false;
+            Console.WindowWidth = 100;
+            Console.WindowHeight = 42;
             ILogger logger = new ConsoleLogger();
             var token = new CancellationTokenSource();
             var client = new FFmpegClient(logger, token);

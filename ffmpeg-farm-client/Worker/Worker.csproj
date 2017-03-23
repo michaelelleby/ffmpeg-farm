@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>FFmpegFarm.Worker</AssemblyTitle>
-    <TargetFrameworks>netstandard1.6;net461</TargetFrameworks>
+    <TargetFramework>net461</TargetFramework>
     <AssemblyName>Worker</AssemblyName>
     <PackageId>Worker</PackageId>
   </PropertyGroup>
