@@ -30,6 +30,7 @@ namespace FFmpegFarm.Worker
 
         ~ApiWrapper()
         {
+            _logger.Debug("Disposing ApiWrapper");
             _httpClient?.Dispose();
         }
 
