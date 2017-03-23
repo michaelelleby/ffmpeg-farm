@@ -93,7 +93,7 @@ namespace API.WindowsService.Controllers
                 _logging.Warn($"Task {model.Id} failed at {model.MachineName}");
             if (model.Done)
                 _logging.Info($"Task {model.Id} done at {model.MachineName}");
-            return _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.MachineName);
+            return _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.VerifyProgress, model.MachineName);
         }
 
         private static FfmpegJobModel MapDtoToModel(FFmpegJobDto dto)
@@ -110,6 +110,7 @@ namespace API.WindowsService.Controllers
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,
                     Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
+                    VerifyProgres = j.VerifyProgress == null ? (decimal?) null : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
                     DestinationFilename = j.DestinationFilename,
                     LogPath = j.Started != null ?  $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt" : string.Empty
             }),
