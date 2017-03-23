@@ -48,7 +48,7 @@ namespace FFmpegFarm.Worker
                 // don't use wrapper since cancel has been called. 
                 stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None);
                 stateTask.Start();
-                stateTask.Wait(TimeSpan.FromSeconds(20));
+                stateTask.Wait(CancellationToken.None);
                 state = stateTask.Result;
             }
             else

@@ -60,7 +60,7 @@ namespace FFmpegFarm.WindowsService
             try
             {
                 // ReSharper disable once MethodSupportsCancellation
-                Task.WaitAll(_tasks, 20000, _cancellationTokenSource.Token);
+                Task.WaitAll(_tasks, 20000);
                 _logger.Information("Service stopped");
             }
             catch (OperationCanceledException)
