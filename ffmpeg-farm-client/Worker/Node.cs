@@ -23,6 +23,7 @@ namespace FFmpegFarm.Worker
         private readonly string _ffmpegPath;
         private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
+        private readonly Stopwatch _timeSinceLastProgressUpdate;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
@@ -60,6 +61,7 @@ namespace FFmpegFarm.Worker
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
             _envorimentVars = envorimentVars;
+            _timeSinceLastProgressUpdate = new Stopwatch();
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
@@ -202,6 +204,10 @@ namespace FFmpegFarm.Worker
                     _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
 
                     _commandlineProcess.WaitForExit();
+
+                    _timeSinceLastProgressUpdate.Stop();
+
+                    PostProgressUpdate();
 
                     // Disable timer to prevet accidentally aborting the ffmpeg task
                     // due to moving the file taking several seconds without any
@@ -410,6 +416,24 @@ namespace FFmpegFarm.Worker
                     throw new ArgumentOutOfRangeException();
             }
 
+            if (_timeSinceLastProgressUpdate.IsRunning == false || _timeSinceLastProgressUpdate.ElapsedMilliseconds > 10000)
+            {
+                if (_timeSinceLastProgressUpdate.IsRunning)
+                    _timeSinceLastProgressUpdate.Stop();
+
+                PostProgressUpdate();
+
+                _timeSinceLastProgressUpdate.Restart();
+            }
+
+            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
+                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
+
+            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
+        }
+
+        private void PostProgressUpdate()
+        {
             try
             {
                 Response state = _apiWrapper.UpdateProgress(new TaskProgressModel
@@ -419,7 +443,8 @@ namespace FFmpegFarm.Worker
                     Id = _currentTask.Id.GetValueOrDefault(0),
                     MachineName = _currentTask.HeartbeatMachineName,
                     Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
-                    VerifyProgress = _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
+                    VerifyProgress =
+                        _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
                 });
 
                 if (state == Response.Canceled)
@@ -431,11 +456,6 @@ namespace FFmpegFarm.Worker
             {
                 // ignored
             }
-
-            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
-                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
-
-            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
     }
 }
