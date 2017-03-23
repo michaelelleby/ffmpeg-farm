@@ -1732,6 +1732,8 @@ namespace FFmpegFarm.Worker.Client
     { 
         private double? _progress;
      
+        private double? _verifyProgres;
+     
         private FfmpegTaskModelState? _state;
      
         private System.DateTime? _heartbeat;
@@ -1753,6 +1755,20 @@ namespace FFmpegFarm.Worker.Client
                 if (_progress != value)
                 {
                     _progress = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("VerifyProgres", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? VerifyProgres
+        {
+            get { return _verifyProgres; }
+            set 
+            {
+                if (_verifyProgres != value)
+                {
+                    _verifyProgres = value; 
                     RaisePropertyChanged();
                 }
             }
@@ -1875,6 +1891,8 @@ namespace FFmpegFarm.Worker.Client
         private bool _done;
      
         private string _progress;
+     
+        private string _verifyProgress;
     
         [Newtonsoft.Json.JsonProperty("Id", Required = Newtonsoft.Json.Required.Always)]
         public int Id
@@ -1948,6 +1966,20 @@ namespace FFmpegFarm.Worker.Client
             }
         }
     
+        [Newtonsoft.Json.JsonProperty("VerifyProgress", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string VerifyProgress
+        {
+            get { return _verifyProgress; }
+            set 
+            {
+                if (_verifyProgress != value)
+                {
+                    _verifyProgress = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     
         public string ToJson() 
@@ -1986,6 +2018,8 @@ namespace FFmpegFarm.Worker.Client
         private string _heartbeatMachineName;
      
         private double? _progress;
+     
+        private double? _verifyProgress;
      
         private int? _destinationDurationSeconds;
      
@@ -2101,6 +2135,20 @@ namespace FFmpegFarm.Worker.Client
                 if (_progress != value)
                 {
                     _progress = value; 
+                    RaisePropertyChanged();
+                }
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("VerifyProgress", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? VerifyProgress
+        {
+            get { return _verifyProgress; }
+            set 
+            {
+                if (_verifyProgress != value)
+                {
+                    _verifyProgress = value; 
                     RaisePropertyChanged();
                 }
             }

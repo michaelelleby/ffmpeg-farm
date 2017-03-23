@@ -14,15 +14,22 @@ namespace FFmpegFarm.Worker
 {
     public class Node
     {
+        private enum Step
+        {
+            Work,
+            Verify
+        }
         private readonly object _lock = new object();
         private readonly string _ffmpegPath;
         private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
+        private readonly Stopwatch _timeSinceLastProgressUpdate;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
         private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
+        private Step _currentStep;
         private static readonly int TimeOut = (int) TimeSpan.FromMinutes(2).TotalMilliseconds;
         private readonly ILogger _logger;
         private int? _threadId; // main thread id, used for logging in child threads.
@@ -54,6 +61,7 @@ namespace FFmpegFarm.Worker
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
             _envorimentVars = envorimentVars;
+            _timeSinceLastProgressUpdate = new Stopwatch();
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
@@ -155,6 +163,7 @@ namespace FFmpegFarm.Worker
                 int exitCode = -1;
                 using (_commandlineProcess = new Process())
                 {
+                    _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
                     string arguments = _currentTask.Arguments;
 
@@ -196,6 +205,10 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
+                    _timeSinceLastProgressUpdate.Stop();
+
+                    PostProgressUpdate();
+
                     // Disable timer to prevet accidentally aborting the ffmpeg task
                     // due to moving the file taking several seconds without any
                     // status updates
@@ -220,6 +233,7 @@ namespace FFmpegFarm.Worker
 
                     using (_commandlineProcess = new Process())
                     {
+                        _currentStep = Step.Verify;
                         _commandlineProcess.StartInfo = new ProcessStartInfo
                         {
                             RedirectStandardError = true,
@@ -333,6 +347,7 @@ namespace FFmpegFarm.Worker
                 MachineName = Environment.MachineName,
                 Id = task.Id.GetValueOrDefault(0),
                 Progress = TimeSpan.FromSeconds(task.Progress.GetValueOrDefault(0)).ToString("c"),
+                VerifyProgress = TimeSpan.FromSeconds(task.VerifyProgress.GetValueOrDefault(0)).ToString("c"),
                 Failed = task.State == FFmpegTaskDtoState.Failed,
                 Done = task.State == FFmpegTaskDtoState.Done
             };
@@ -388,8 +403,37 @@ namespace FFmpegFarm.Worker
                 Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
                 Convert.ToInt32(match.Groups[4].Value) * 25);
 
-            _currentTask.Progress = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
+            var value = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
+            switch (_currentStep)
+            {
+                case Step.Work:
+                    _currentTask.Progress = value;
+                    break;
+                case Step.Verify:
+                    _currentTask.VerifyProgress = value;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
+            if (_timeSinceLastProgressUpdate.IsRunning == false || _timeSinceLastProgressUpdate.ElapsedMilliseconds > 10000)
+            {
+                if (_timeSinceLastProgressUpdate.IsRunning)
+                    _timeSinceLastProgressUpdate.Stop();
+
+                PostProgressUpdate();
+
+                _timeSinceLastProgressUpdate.Restart();
+            }
+
+            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
+                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
+
+            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
+        }
+
+        private void PostProgressUpdate()
+        {
             try
             {
                 Response state = _apiWrapper.UpdateProgress(new TaskProgressModel
@@ -398,7 +442,9 @@ namespace FFmpegFarm.Worker
                     Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                     Id = _currentTask.Id.GetValueOrDefault(0),
                     MachineName = _currentTask.HeartbeatMachineName,
-                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
+                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
+                    VerifyProgress =
+                        _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
                 });
 
                 if (state == Response.Canceled)
@@ -410,11 +456,6 @@ namespace FFmpegFarm.Worker
             {
                 // ignored
             }
-
-            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
-                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
-
-            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
     }
 }
