@@ -17,20 +17,19 @@ namespace FFmpegFarm.Worker
 
         private readonly StatusClient _statusClient;
         private readonly TaskClient _taskClient;
-        private readonly HttpClient _httpClient;
+        private static readonly HttpClient HttpClient = new HttpClient{Timeout = TimeSpan.FromSeconds(10)};
 
         public ApiWrapper(string apiUri, ILogger logger, CancellationToken ct)
         {
-            _httpClient = new HttpClient {Timeout = TimeSpan.FromSeconds(10) };
-            _taskClient = new TaskClient(_httpClient) { BaseUrl = apiUri};
-            _statusClient = new StatusClient(_httpClient) { BaseUrl = apiUri };
+            _taskClient = new TaskClient(HttpClient) { BaseUrl = apiUri};
+            _statusClient = new StatusClient(HttpClient) { BaseUrl = apiUri };
             _logger = logger;
             _cancellationToken = ct;
         }
 
         ~ApiWrapper()
         {
-            _httpClient?.Dispose();
+            _logger.Debug("Disposing ApiWrapper");
         }
 
         public FFmpegTaskDto GetNext(string machineName)
