@@ -360,7 +360,7 @@ namespace API.Repository
                     return null;
 
                 job.Tasks = connection.Query<FFmpegTaskDto>(
-                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
+                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
                     .ToList();
 

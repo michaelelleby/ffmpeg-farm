@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using System.ServiceProcess;
 using System.Threading;
 using FFmpegFarm.Worker;
@@ -37,12 +36,10 @@ ____ ____ _  _ ___  ____ ____ ____ ____ ____ _  _    _ _ _ ____ ____ _  _ ____ _
             ILogger logger = new ConsoleLogger();
             var token = new CancellationTokenSource();
             var client = new FFmpegClient(logger, token);
-
-            var cfg = ConfigurationManager.AppSettings;
+            
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(Logo);
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"Configuration : \n{cfg["FFmpegPath"]}\n{cfg["ControllerApi"]}\n{cfg["threads"]} threads.\n\n");
             Console.WriteLine("Press ctrl+x to exit...\n");
             var exitEvent = new ManualResetEvent(false);
             var cancelSource = new CancellationTokenSource();
