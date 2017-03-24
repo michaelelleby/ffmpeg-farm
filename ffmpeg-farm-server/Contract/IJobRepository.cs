@@ -15,5 +15,7 @@ namespace Contract
         FFmpegJobDto Get(Guid id);
         ICollection<FFmpegJobDto> Get(int take = 10);
         Guid GetGuidById(int id);
+
+        int PruneInactiveClients(TimeSpan maxAge);
     }
 }
