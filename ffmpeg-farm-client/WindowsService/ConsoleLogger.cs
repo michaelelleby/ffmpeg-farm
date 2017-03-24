@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Threading;
 using FFmpegFarm.Worker;
 
-namespace FFmpegFarm.ConsoleHost
+namespace FFmpegFarm.WindowsService
 {
     internal class ConsoleLogger : ILogger
     {
