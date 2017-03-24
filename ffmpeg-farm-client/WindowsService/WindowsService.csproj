@@ -107,10 +107,6 @@
     <None Include="App.config">
       <TransformOnBuild>true</TransformOnBuild>
     </None>
-    <None Include="App.Debug.config">
-      <DependentUpon>App.config</DependentUpon>
-      <IsTransformFile>True</IsTransformFile>
-    </None>
     <None Include="App.Development.config">
       <DependentUpon>App.config</DependentUpon>
       <IsTransformFile>True</IsTransformFile>
