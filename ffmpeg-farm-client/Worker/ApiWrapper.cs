@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.Worker.Client;
@@ -59,6 +60,7 @@ namespace FFmpegFarm.Worker
         /// <summary>
         /// Retries and ignores exceptions.
         /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private TRes Wrap<TRes>(Func<TRes> func)
         {
             const int retryCount = 3;
@@ -81,7 +83,9 @@ namespace FFmpegFarm.Worker
 #if DEBUGAPI
                     if (swaggerException != null)
                         _logger.Warn($"{swaggerException.StatusCode} : {swaggerException.Response}", ThreadId);
-                    _logger.Exception(e, ThreadId);
+
+                    string member = new StackFrame(2).GetMethod().Name;
+                    _logger.Exception(e, ThreadId, member);
 #endif
                 }
 #if DEBUGAPI
@@ -96,7 +100,9 @@ namespace FFmpegFarm.Worker
             }
             if (swaggerException != null)
                 _logger.Warn($"{swaggerException.StatusCode} : {swaggerException.Response}", ThreadId);
-            _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), ThreadId);
+
+            string caller = new StackFrame(2).GetMethod().Name;
+            _logger.Exception(exception ?? new Exception(nameof(ApiWrapper)), ThreadId, caller);
             return default(TRes);
         }
 

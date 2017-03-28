@@ -49,7 +49,7 @@ namespace FFmpegFarm.WindowsService
             }
         }
 
-        public void Exception(Exception exception, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        public void Exception(Exception exception, int? threadId = null, string memberName = "")
         {
             lock (Lock)
             {
