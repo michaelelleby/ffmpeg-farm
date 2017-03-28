@@ -139,7 +139,7 @@ namespace FFmpegFarm.Worker
                     {
                         // Prevent uncaught exceptions in the finally {} block
                         // since this will bring down the entire worker service
-                        _logger.Exception(e, _threadId);
+                        _logger.Exception(e, _threadId, "Run");
                     }
                 }
                 _logger.Debug("Cancel recived shutting down...");
@@ -301,7 +301,7 @@ namespace FFmpegFarm.Worker
                 }
                 catch (Exception e)
                 {
-                    _logger.Exception(e, _threadId);
+                    _logger.Exception(e, _threadId, "ExecuteJob");
                 }
 
                 if (acquiredLock)
@@ -380,7 +380,7 @@ namespace FFmpegFarm.Worker
                 }
                 catch (Exception e)
                 {
-                    _logger.Exception(e);
+                    _logger.Exception(e, null, "KillProcess");
                 }
             }
         }
