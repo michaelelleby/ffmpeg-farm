@@ -241,22 +241,25 @@ namespace API.Repository
 
             DateTimeOffset timeout = now.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                IEnumerable<FFmpegJobDto> existingJobs = GetActiveJobs(machineName, connection);
+                if (existingJobs.Any(x => x.Type == JobType.HardSubtitles))
+                {
+                    return null;
+                }
+            }
+
             do
             {
                 using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
                 {
                     using (var connection = Helper.GetConnection())
                     {
-                        connection.Open();
-
                         try
                         {
-                            IEnumerable<FFmpegJobDto> existingJobs = GetActiveJobs(machineName, connection);
-                            if (existingJobs.Any(x => x.Type == JobType.HardSubtitles))
-                            {
-                                return null;
-                            }
-
                             var data = new
                             {
                                 QueuedState = TranscodingJobState.Queued,
@@ -264,6 +267,8 @@ namespace API.Repository
                                 Timeout = timeout,
                                 Timestamp = now
                             };
+
+                            connection.Open();
 
                             var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
                             if (task == null)
@@ -295,8 +300,8 @@ namespace API.Repository
         private static IEnumerable<FFmpegJobDto> GetActiveJobs(string machineName, IDbConnection connection)
         {
             return connection.Query<FFmpegJobDto>(
-                @"SELECT FfmpegJobs.id, JobCorrelationId, Created, Needed, JobType AS Type, JobState AS State FROM FfmpegJobs
-	INNER JOIN FfmpegTasks ON FfmpegJobs.id = FfmpegTasks.FfmpegJobs_id
+                @"SELECT FfmpegJobs.id, JobCorrelationId, Created, Needed, JobType AS Type, JobState AS State FROM FfmpegJobs WITH (NOLOCK)
+	INNER JOIN FfmpegTasks WITH (NOLOCK) ON FfmpegJobs.id = FfmpegTasks.FfmpegJobs_id
 	WHERE FfmpegTasks.HeartbeatMachineName = @MachineName AND FfmpegTasks.TaskState = @State;"
                 , new {machineName, State = TranscodingJobState.InProgress});
         }
