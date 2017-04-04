@@ -686,5 +686,19 @@ namespace API.Repository
                     });
             }
         }
+
+        public int PruneInactiveClients(TimeSpan maxAge)
+        {
+            using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    var res = connection.Execute("DELETE FROM Clients WHERE Clients.LastHeartbeat < @MaxAge",
+                        new {MaxAge = DateTimeOffset.Now - maxAge });
+                    scope.Complete();
+                    return res;
+                }
+            }
+        }
     }
 }
