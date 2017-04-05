@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Threading;
 using FFmpegFarm.Worker;
 
-namespace FFmpegFarm.ConsoleHost
+namespace FFmpegFarm.WindowsService
 {
     internal class ConsoleLogger : ILogger
     {
@@ -49,7 +49,7 @@ namespace FFmpegFarm.ConsoleHost
             }
         }
 
-        public void Exception(Exception exception, int? threadId = null, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        public void Exception(Exception exception, int? threadId = null, string memberName = "")
         {
             lock (Lock)
             {

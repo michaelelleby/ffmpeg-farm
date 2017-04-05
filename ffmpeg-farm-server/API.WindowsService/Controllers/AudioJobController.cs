@@ -19,14 +19,17 @@ namespace API.WindowsService.Controllers
     {
         private readonly IAudioJobRepository _repository;
         private readonly IHelper _helper;
+        private readonly ILogging _logging;
 
-        public AudioJobController(IAudioJobRepository repository, IHelper helper)
+        public AudioJobController(IAudioJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _repository = repository;
             _helper = helper;
+            _logging = logging;
         }
 
         /// <summary>
@@ -42,7 +45,9 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            return HandleNewAudioJob(input);
+            var res = HandleNewAudioJob(input);
+            _logging.Info($"Created new audio job : {res}");
+            return res;
         }
 
         private Guid HandleNewAudioJob(AudioJobRequestModel request)

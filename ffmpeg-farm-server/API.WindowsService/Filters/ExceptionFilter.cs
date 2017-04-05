@@ -4,11 +4,19 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Filters;
+using Contract;
 
 namespace API.WindowsService.Filters
 {
     public class ExceptionFilter : ExceptionFilterAttribute
     {
+        private readonly ILogging _logging;
+
+        public ExceptionFilter(ILogging logging)
+        {
+            _logging = logging;
+        }
+
         /// <summary>Raises the exception event.</summary>
         /// <param name="actionExecutedContext">The context for the action.</param>
         public override void OnException(HttpActionExecutedContext actionExecutedContext)
@@ -32,6 +40,8 @@ namespace API.WindowsService.Filters
 
                 throw new HttpResponseException(response);
             }
+
+            _logging.Error(ex, "Unhandled exception");
         }
 
         private static bool IsException(Type type)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -13,24 +14,34 @@ namespace FFmpegFarm.Worker
 {
     public class Node
     {
+        private enum Step
+        {
+            Work,
+            Verify
+        }
         private readonly object _lock = new object();
         private readonly string _ffmpegPath;
         private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
+        private readonly Stopwatch _timeSinceLastProgressUpdate;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
         private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
-        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(1).TotalMilliseconds;
+        private Step _currentStep;
+        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(2).TotalMilliseconds;
         private readonly ILogger _logger;
         private int? _threadId; // main thread id, used for logging in child threads.
         private int _progressSpinner;
         private const int ProgressSkip = 5;
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
-        
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, ILogger logger, IApiWrapper apiWrapper)
+        private readonly IDictionary<string, string> _envorimentVars;
+
+        public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
+
+        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -41,23 +52,29 @@ namespace FFmpegFarm.Worker
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
                 throw new ArgumentNullException(nameof(logger));
+            if(envorimentVars == null)
+                throw new ArgumentNullException(nameof(envorimentVars));
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
+            _envorimentVars = envorimentVars;
+            _timeSinceLastProgressUpdate = new Stopwatch();
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
             string apiUri, 
             string logfilesPath,
-            ILogger logger, 
+            IDictionary<string, string> envorimentVars,
+            ILogger logger,
             CancellationToken ct,
             IApiWrapper apiWrapper = null)
         {
-            var t = new Task(() => new Node(ffmpegPath,apiUri, logfilesPath, logger,
-                apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct));
+
+            var t = Task.Run(() => 
+            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -74,7 +91,7 @@ namespace FFmpegFarm.Worker
                     _currentTask = _apiWrapper.GetNext(Environment.MachineName);
                     if (_currentTask == null)
                     {
-                        Task.Delay(TimeSpan.FromSeconds(5), ct).WaitWithoutException();
+                        Task.Delay(PollInterval, ct).WaitWithoutException(ct);
                         continue;
                     }
                     try
@@ -122,7 +139,7 @@ namespace FFmpegFarm.Worker
                     {
                         // Prevent uncaught exceptions in the finally {} block
                         // since this will bring down the entire worker service
-                        _logger.Exception(e, _threadId);
+                        _logger.Exception(e, _threadId, "Run");
                     }
                 }
                 _logger.Debug("Cancel recived shutting down...");
@@ -146,6 +163,7 @@ namespace FFmpegFarm.Worker
                 int exitCode = -1;
                 using (_commandlineProcess = new Process())
                 {
+                    _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
                     string arguments = _currentTask.Arguments;
 
@@ -169,7 +187,11 @@ namespace FFmpegFarm.Worker
                         FileName = _ffmpegPath,
                         Arguments = arguments
                     };
-
+                    var env = _commandlineProcess.StartInfo.Environment;
+                    foreach (var e in _envorimentVars)
+                    {
+                        env[e.Key] = e.Value;
+                    }
                     _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
 
                     _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
@@ -182,6 +204,10 @@ namespace FFmpegFarm.Worker
                     _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
 
                     _commandlineProcess.WaitForExit();
+
+                    _timeSinceLastProgressUpdate.Stop();
+
+                    PostProgressUpdate();
 
                     // Disable timer to prevet accidentally aborting the ffmpeg task
                     // due to moving the file taking several seconds without any
@@ -207,6 +233,7 @@ namespace FFmpegFarm.Worker
 
                     using (_commandlineProcess = new Process())
                     {
+                        _currentStep = Step.Verify;
                         _commandlineProcess.StartInfo = new ProcessStartInfo
                         {
                             RedirectStandardError = true,
@@ -274,7 +301,7 @@ namespace FFmpegFarm.Worker
                 }
                 catch (Exception e)
                 {
-                    _logger.Exception(e, _threadId);
+                    _logger.Exception(e, _threadId, "ExecuteJob");
                 }
 
                 if (acquiredLock)
@@ -320,6 +347,7 @@ namespace FFmpegFarm.Worker
                 MachineName = Environment.MachineName,
                 Id = task.Id.GetValueOrDefault(0),
                 Progress = TimeSpan.FromSeconds(task.Progress.GetValueOrDefault(0)).ToString("c"),
+                VerifyProgress = TimeSpan.FromSeconds(task.VerifyProgress.GetValueOrDefault(0)).ToString("c"),
                 Failed = task.State == FFmpegTaskDtoState.Failed,
                 Done = task.State == FFmpegTaskDtoState.Done
             };
@@ -352,7 +380,7 @@ namespace FFmpegFarm.Worker
                 }
                 catch (Exception e)
                 {
-                    _logger.Exception(e);
+                    _logger.Exception(e, null, "KillProcess");
                 }
             }
         }
@@ -375,8 +403,37 @@ namespace FFmpegFarm.Worker
                 Convert.ToInt32(match.Groups[2].Value), Convert.ToInt32(match.Groups[3].Value),
                 Convert.ToInt32(match.Groups[4].Value) * 25);
 
-            _currentTask.Progress = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
+            var value = TimeSpan.Parse(_progress.ToString(), CultureInfo.InvariantCulture).TotalSeconds;
+            switch (_currentStep)
+            {
+                case Step.Work:
+                    _currentTask.Progress = value;
+                    break;
+                case Step.Verify:
+                    _currentTask.VerifyProgress = value;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
+            if (_timeSinceLastProgressUpdate.IsRunning == false || _timeSinceLastProgressUpdate.ElapsedMilliseconds > 10000)
+            {
+                if (_timeSinceLastProgressUpdate.IsRunning)
+                    _timeSinceLastProgressUpdate.Stop();
+
+                PostProgressUpdate();
+
+                _timeSinceLastProgressUpdate.Restart();
+            }
+
+            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
+                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
+
+            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
+        }
+
+        private void PostProgressUpdate()
+        {
             try
             {
                 Response state = _apiWrapper.UpdateProgress(new TaskProgressModel
@@ -385,7 +442,9 @@ namespace FFmpegFarm.Worker
                     Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
                     Id = _currentTask.Id.GetValueOrDefault(0),
                     MachineName = _currentTask.HeartbeatMachineName,
-                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.Value).ToString("c")
+                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
+                    VerifyProgress =
+                        _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
                 });
 
                 if (state == Response.Canceled)
@@ -395,13 +454,8 @@ namespace FFmpegFarm.Worker
             }
             catch (Exception)
             {
-                
+                // ignored
             }
-
-            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
-                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
-
-            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }
     }
 }

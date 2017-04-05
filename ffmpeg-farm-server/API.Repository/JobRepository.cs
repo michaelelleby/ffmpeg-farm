@@ -6,10 +6,10 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Transactions;
 using Contract;
 using Contract.Dto;
 using Dapper;
+using IsolationLevel = System.Transactions.IsolationLevel;
 
 namespace API.Repository
 {
@@ -193,46 +193,39 @@ namespace API.Repository
             return requests;
         }
 
-        public TranscodingJobState SaveProgress(int jobId, bool failed, bool done, TimeSpan progress, string machineName)
+        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName)
         {
             InsertClientHeartbeat(machineName);
 
-            TranscodingJobState jobState = failed ? TranscodingJobState.Failed : done ? TranscodingJobState.Done
-                                                    : TranscodingJobState.InProgress;
+            TranscodingJobState jobState = failed
+                ? TranscodingJobState.Failed
+                : done
+                    ? TranscodingJobState.Done
+                    : TranscodingJobState.InProgress;
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    connection.Open();
+                connection.Open();
 
-                    // Only allow progress updates for tasks which have statetaskState = InProgress
-                    // This will prevent out-of-order updates causing tasks set to either Failed or Done
-                    // to be set back to InProgress
-                    int updatedRows = connection.Execute(
-                        "UPDATE FfmpegTasks SET Progress = @Progress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
-                        " AND TaskState = @InProgressState;",
-                        new
-                        {
-                            Id = jobId,
-                            Progress = progress.TotalSeconds,
-                            Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
-                            State = jobState,
-                            InProgressState = TranscodingJobState.InProgress,
-                            machineName
-                        });
+                // Only allow progress updates for tasks which have statetaskState = InProgress
+                // This will prevent out-of-order updates causing tasks set to either Failed or Done
+                // to be set back to InProgress
+                int updatedRows = connection.Execute(
+                    "UPDATE FfmpegTasks SET Progress = @Progress, VerifyProgress = @VerifyProgress, Heartbeat = @Heartbeat, TaskState = @State, HeartbeatMachineName = @MachineName WHERE Id = @Id" +
+                    " AND TaskState = @InProgressState;",
+                    new
+                    {
+                        Id = id,
+                        Progress = progress.TotalSeconds,
+                        VerifyProgress = verifyProgress?.TotalSeconds,
+                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                        State = jobState,
+                        InProgressState = TranscodingJobState.InProgress,
+                        machineName
+                    });
 
-                    jobState = (TranscodingJobState) connection.QuerySingle<int>("SELECT TaskState FROM FfmpegTasks WHERE id = @Id;",
-                        new
-                        {
-                            Id = jobId
-                        });
-
-                    if (updatedRows != 1 && jobState != TranscodingJobState.Canceled)
-                        throw new Exception($"Failed to update progress for job id {jobId}");
-
-                    scope.Complete();
-                }
+                if (updatedRows != 1)
+                    throw new Exception($"Failed to update progress for task id {id}");
             }
             return jobState;
         }
@@ -248,14 +241,23 @@ namespace API.Repository
 
             DateTimeOffset timeout = now.Subtract(TimeSpan.FromSeconds(timeoutSeconds));
 
+            using (var connection = Helper.GetConnection())
+            {
+                connection.Open();
+
+                IEnumerable<FFmpegJobDto> existingJobs = GetActiveJobs(machineName, connection);
+                if (existingJobs.Any(x => x.Type == JobType.HardSubtitles))
+                {
+                    return null;
+                }
+            }
+
             do
             {
-                using (var scope = TransactionUtils.CreateTransactionScope())
+                using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
                 {
                     using (var connection = Helper.GetConnection())
                     {
-                        connection.Open();
-
                         try
                         {
                             var data = new
@@ -265,6 +267,8 @@ namespace API.Repository
                                 Timeout = timeout,
                                 Timestamp = now
                             };
+
+                            connection.Open();
 
                             var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
                             if (task == null)
@@ -293,79 +297,87 @@ namespace API.Repository
             } while (true);
         }
 
+        private static IEnumerable<FFmpegJobDto> GetActiveJobs(string machineName, IDbConnection connection)
+        {
+            return connection.Query<FFmpegJobDto>(
+                @"SELECT FfmpegJobs.id, JobCorrelationId, Created, Needed, JobType AS Type, JobState AS State FROM FfmpegJobs WITH (NOLOCK)
+	INNER JOIN FfmpegTasks WITH (NOLOCK) ON FfmpegJobs.id = FfmpegTasks.FfmpegJobs_id
+	WHERE FfmpegTasks.HeartbeatMachineName = @MachineName AND FfmpegTasks.TaskState = @State;"
+                , new {machineName, State = TranscodingJobState.InProgress});
+        }
+
         public ICollection<FFmpegJobDto> Get(int take = 10)
         {
             IDictionary<int, ICollection<FFmpegTaskDto>> jobsDictionary = new ConcurrentDictionary<int, ICollection<FFmpegTaskDto>>();
-
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            ICollection<FFmpegJobDto> jobs = null;
+            ICollection<FFmpegTaskDto> tasks = null;
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    ICollection<FFmpegJobDto> jobs = connection.Query<FFmpegJobDto>(
+                jobs = connection.Query<FFmpegJobDto>(
                         "SELECT top(" + take + @") id, JobCorrelationId, Created, Needed, JobType, JobState AS State
                         FROM FfmpegJobs
                         ORDER BY Created DESC"
                     )
-                        .ToList();
+                    .ToList();
 
-                    if (jobs == null || jobs.Count == 0)
-                        return new List<FFmpegJobDto>();
+                if (jobs == null || jobs.Count == 0)
+                    return new List<FFmpegJobDto>();
 
-                    List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
-                    string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
+                List<string> ids = jobs.Select(j => j.Id.ToString()).ToList();
+                string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
 
-                    ICollection<FFmpegTaskDto> tasks = connection.Query<FFmpegTaskDto>(
-                            @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationDurationSeconds, DestinationFilename 
+                tasks = connection.Query<FFmpegTaskDto>(
+                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationDurationSeconds, DestinationFilename 
                               FROM FfmpegTasks
                               WHERE FfmpegJobs_id in " + jobidSql
-                        )
-                        .ToList();
-
-                    foreach (FFmpegTaskDto task in tasks)
-                    {
-                        if (!jobsDictionary.ContainsKey(task.FfmpegJobsId))
-                        {
-                            jobsDictionary.Add(task.FfmpegJobsId, new List<FFmpegTaskDto>());
-                        }
-
-                        jobsDictionary[task.FfmpegJobsId].Add(task);
-                    }
-
-                    foreach (FFmpegJobDto job in jobs.Where(x => jobsDictionary.ContainsKey(x.Id)))
-                    {
-                        job.Tasks = jobsDictionary[job.Id];
-                    }
-
-                    scope.Complete();
-
-                    return jobs;
-                }
+                    )
+                    .ToList();
             }
+
+            foreach (FFmpegTaskDto task in tasks)
+            {
+                if (!jobsDictionary.ContainsKey(task.FfmpegJobsId))
+                {
+                    jobsDictionary.Add(task.FfmpegJobsId, new List<FFmpegTaskDto>());
+                }
+
+                jobsDictionary[task.FfmpegJobsId].Add(task);
+            }
+
+            foreach (FFmpegJobDto job in jobs.Where(x => jobsDictionary.ContainsKey(x.Id)))
+            {
+                job.Tasks = jobsDictionary[job.Id];
+            }
+
+            return jobs;
         }
 
         public FFmpegJobDto Get(Guid id)
         {
             if (id == Guid.Empty) throw new ArgumentOutOfRangeException("id");
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
-                {
-                    var job = connection.QuerySingleOrDefault<FFmpegJobDto>(
-                        "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
-                        new {id});
-                    if (job == null)
-                        return null;
+                var job = connection.QuerySingleOrDefault<FFmpegJobDto>(
+                    "SELECT id, JobCorrelationId, Needed, Created, JobType, JobState AS State FROM FfmpegJobs WHERE JobCorrelationId = @Id;",
+                    new {id});
+                if (job == null)
+                    return null;
 
-                    job.Tasks = connection.Query<FFmpegTaskDto>(
-                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
+                job.Tasks = connection.Query<FFmpegTaskDto>(
+                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
-                        .ToList();
+                    .ToList();
 
-                    scope.Complete();
+                return job;
+            }
+        }
 
-                    return job;
-                }
+        public Guid GetGuidById(int id)
+        {
+            using (var connection = Helper.GetConnection())
+            {
+                return connection.QueryFirstOrDefault<Guid>("SELECT JobCorrelationId FROM FfmpegJobs WHERE id = @Id;", new {id});
             }
         }
 
@@ -373,20 +385,17 @@ namespace API.Repository
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
-            using (var scope = TransactionUtils.CreateTransactionScope())
+            using (var connection = Helper.GetConnection())
             {
-                using (var connection = Helper.GetConnection())
+                int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
                 {
-                    int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
-                    {
-                        MachineName = machineName,
-                        Timestamp = DateTimeOffset.UtcNow
-                    }, commandType: CommandType.StoredProcedure);
+                    MachineName = machineName,
+                    Timestamp = DateTimeOffset.UtcNow
+                }, commandType: CommandType.StoredProcedure);
 
-                    if (rowsAffected != 1)
-                        throw new Exception($"sp_InsertClientHeartbeat affected {rowsAffected} rows, should only affect 1 row!");
-
-                    scope.Complete();
+                if (rowsAffected != 1)
+                {
+                    throw new Exception($"sp_InsertClientHeartbeat affected {rowsAffected} rows, should only affect 1 row!");
                 }
             }
         }
@@ -675,6 +684,20 @@ namespace API.Repository
                         State = TranscodingJobState.Queued,
                         Target = targetNumber
                     });
+            }
+        }
+
+        public int PruneInactiveClients(TimeSpan maxAge)
+        {
+            using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
+            {
+                using (var connection = Helper.GetConnection())
+                {
+                    var res = connection.Execute("DELETE FROM Clients WHERE Clients.LastHeartbeat < @MaxAge",
+                        new {MaxAge = DateTimeOffset.Now - maxAge });
+                    scope.Complete();
+                    return res;
+                }
             }
         }
     }

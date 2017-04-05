@@ -6,7 +6,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{76A20DD4-D407-42C3-97C4-A3BF5BB1F136}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>FFmpegFarm.WindowsService</RootNamespace>
     <AssemblyName>FFmpegFarm.WindowsService</AssemblyName>
@@ -63,8 +63,12 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
     <Reference Include="System.Management" />
@@ -72,17 +76,13 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml" />
-    <Reference Include="Worker">
-      <HintPath Condition="Exists('..\Worker\bin\Release\net461\')">..\Worker\bin\Release\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Test\net461\')">..\Worker\bin\Test\net461\Worker.dll</HintPath>
-      <HintPath Condition="Exists('..\Worker\bin\Debug\net461\')">..\Worker\bin\Debug\net461\Worker.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConsoleLogger.cs" />
     <Compile Include="EventLogger.cs" />
+    <Compile Include="FFmpegClient.cs" />
     <Compile Include="Installer.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -106,10 +106,6 @@
   <ItemGroup>
     <None Include="App.config">
       <TransformOnBuild>true</TransformOnBuild>
-    </None>
-    <None Include="App.Debug.config">
-      <DependentUpon>App.config</DependentUpon>
-      <IsTransformFile>True</IsTransformFile>
     </None>
     <None Include="App.Development.config">
       <DependentUpon>App.config</DependentUpon>
@@ -137,6 +133,12 @@
     <EmbeddedResource Include="Service.resx">
       <DependentUpon>Service.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Worker\Worker.csproj">
+      <Project>{1cd1a8d5-8ae1-4e3f-82dc-a89e170c564a}</Project>
+      <Name>Worker</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" Label="SlowCheetah" />

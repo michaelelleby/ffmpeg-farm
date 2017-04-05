@@ -16,5 +16,7 @@ namespace Contract.Dto
         public TranscodingJobState State { get; set; }
 
         public ICollection<FFmpegTaskDto> Tasks { get; set; }
+
+        public JobType Type { get; set; }
     }
 }

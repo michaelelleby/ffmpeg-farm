@@ -13,14 +13,17 @@ namespace API.WindowsService.Controllers
     {
         private readonly IMuxJobRepository _repository;
         private readonly IHelper _helper;
+        private readonly ILogging _logging;
 
-        public MuxJobController(IMuxJobRepository repository, IHelper helper)
+        public MuxJobController(IMuxJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _repository = repository;
             _helper = helper;
+            _logging = logging;
         }
 
         [HttpPost]
@@ -31,7 +34,9 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            return HandleNewMuxJob(input);
+            var res = HandleNewMuxJob(input);
+            _logging.Info($"Created new mux job : {res}");
+            return res;
         }
 
         private Guid HandleNewMuxJob(MuxJobRequestModel model)
