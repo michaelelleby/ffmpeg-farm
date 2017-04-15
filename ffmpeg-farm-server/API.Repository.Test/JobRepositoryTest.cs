@@ -111,7 +111,7 @@ namespace API.Repository.Test
                 {
                     new AudioDestinationFormat
                     {
-                        AudioCodec = Codec.MP3,
+                        AudioCodec = AudioCodec.MP3,
                         Bitrate = 192,
                         Channels = Channels.Stereo,
                         Format = ContainerFormat.MP4
@@ -167,7 +167,7 @@ namespace API.Repository.Test
                 {
                     new AudioDestinationFormat
                     {
-                        AudioCodec = Codec.MP3,
+                        AudioCodec = AudioCodec.MP3,
                         Bitrate = 192,
                         Channels = Channels.Stereo,
                         Format = ContainerFormat.MP4
@@ -197,7 +197,7 @@ namespace API.Repository.Test
                 {
                     new AudioDestinationFormat
                     {
-                        AudioCodec = Codec.MP3,
+                        AudioCodec = AudioCodec.MP3,
                         Bitrate = 192,
                         Channels = Channels.Stereo,
                         Format = ContainerFormat.MP4

@@ -463,7 +463,7 @@ namespace API.Repository
             if (jobRequest == null)
                 throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
 
-            jobRequest.Targets = connection.Query<DestinationFormat>(
+            jobRequest.Targets = connection.Query<VideoDestinationFormat>(
                     "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegVideoRequestTargets WHERE JobCorrelationId = @Id;",
                     new {Id = job.JobCorrelationId})
                 .ToArray();
@@ -618,7 +618,7 @@ namespace API.Repository
             foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
                 int targetNumber = chunk.First().Target;
-                DestinationFormat target = jobRequest.Targets[targetNumber];
+                VideoDestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
                     $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target
@@ -650,7 +650,7 @@ namespace API.Repository
             {
                 var FfmpegVideoParts = chunk as IList<FfmpegPart> ?? chunk.ToList();
                 int targetNumber = FfmpegVideoParts.First().Target;
-                DestinationFormat target = jobRequest.Targets[targetNumber];
+                VideoDestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
                     $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target.Height}_{target.VideoBitrate}_{target.AudioBitrate}{fileExtension}";
