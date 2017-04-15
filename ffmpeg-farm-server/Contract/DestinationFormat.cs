@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Contract
 {
-    public class DestinationFormat
+    public class VideoDestinationFormat
     {
         public int Width { get; set; }
 
@@ -16,8 +16,6 @@ namespace Contract
         public H264Profile Profile { get; set; }
 
         public string Level { get; set; }
-
-        public string Codec { get; set; }
 
         public string OutputExtension { get; set; }
 

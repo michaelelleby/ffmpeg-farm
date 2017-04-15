@@ -3,13 +3,8 @@ using System.Collections.Generic;
 
 namespace Contract
 {
-    public class VideoTranscodingJob : BaseJob
+    public class VideoTranscodingJob : FFmpegJob
     {
-        /// <summary>
-        /// Commandline arguments sent to FFmpeg
-        /// </summary>
-        public string[] Arguments { get; set; }
-
         public ICollection<FfmpegPart> Chunks { get; set; }
         public DateTimeOffset Needed { get; set; }
 

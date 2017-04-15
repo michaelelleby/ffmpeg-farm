@@ -179,6 +179,8 @@
     <Compile Include="StructureMapScope.cs" />
     <Compile Include="Validators\AudioDestinationFormatValidator.cs" />
     <Compile Include="Validators\MuxJobRequestValidator.cs" />
+    <Compile Include="Validators\VideoDestinationFormatValidator.cs" />
+    <Compile Include="Validators\VideoRequestValidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
