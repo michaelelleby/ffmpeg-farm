@@ -17,69 +17,35 @@ namespace API.WindowsService.Controllers
     {
         private readonly IVideoJobRepository _repository;
         private readonly IHelper _helper;
+        private readonly ILogging _logging;
 
-        public VideoJobController(IVideoJobRepository repository, IHelper helper)
+        public VideoJobController(IVideoJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
-
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
+            
             _repository = repository;
             _helper = helper;
-        }
-
-        /// <summary>
-        /// Get next transcoding job
-        /// </summary>
-        /// <param name="machineName">Client's machine name used to stamp who took the job</param>
-        /// <returns><see cref="AudioTranscodingJob"/></returns>
-        public HttpResponseMessage Get(string machineName)
-        {
-            if (string.IsNullOrWhiteSpace(machineName))
-            {
-                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified");
-            }
-
-            Mp4boxJob dashJob = _repository.GetNextDashJob();
-            if (dashJob != null)
-            {
-                return Request.CreateResponse(HttpStatusCode.OK, dashJob);
-            }
-
-            var job = _repository.GetNextMergeJob() ?? _repository.GetNextTranscodingJob();
-            return Request.CreateResponse(HttpStatusCode.OK, job);
-        }
-
-        /// <summary>
-        /// Delete a job
-        /// </summary>
-        /// <param name="jobId">Job id returned when creating new job</param>
-        [HttpDelete]
-        public HttpResponseMessage Delete(Guid jobId)
-        {
-            if (jobId == Guid.Empty)
-                throw new ArgumentException("Job id must be a valid GUID.");
-
-            return _repository.DeleteJob(jobId) == false
-                ? Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found")
-                : Request.CreateResponse(HttpStatusCode.OK);
+            _logging = logging;
         }
 
         /// <summary>
         /// Queue new transcoding job
         /// </summary>
         /// <param name="request"></param>
-        public HttpResponseMessage Post(VideoJobRequestModel request)
+        [HttpPost]
+        public Guid CreateNew(VideoJobRequestModel request)
         {
             if (!ModelState.IsValid)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState);
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            var jobId = HandleNewVideoJob(request);
-
-            return Request.CreateResponse(HttpStatusCode.Created, $"{jobId:N}");
+            Guid jobId = HandleNewVideoJob(request);
+            _logging.Info($"Created new video job : {jobId}");
+            return jobId;
         }
-
 
         private Guid HandleNewVideoJob(VideoJobRequestModel request)
         {
@@ -122,33 +88,33 @@ namespace API.WindowsService.Controllers
                 format.Target = t++;
             }
 
-            VideoTranscodingJob audioJob = new VideoTranscodingJob
-            {
-                JobCorrelationId = jobCorrelationId,
-                SourceFilename = source,
-                Needed = job.Needed,
-                State = TranscodingJobState.Queued
-            };
-            StringBuilder arguments = new StringBuilder($@"-y -ss {job.Inpoint} -i ""{source}""");
             foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
             {
-                string chunkFilename =
-                    $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.{0}";
-                arguments.Append($@" -c:a aac -b:a {bitrate}k -vn ""{chunkFilename}""");
+                string outputfilename = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.{0}";
+                string arguments = $@"-y -ss {job.Inpoint} -i ""{source}"" -c:a aac -b:a {bitrate}k -vn ""{outputfilename}""";
+                var audioJob = new VideoTranscodingJob
+                {
+                    JobCorrelationId = jobCorrelationId,
+                    SourceFilename = source,
+                    Needed = job.Needed,
+                    State = TranscodingJobState.Queued,
+                    DestinationDurationSeconds = mi.Duration,
+                    DestinationFilename = outputfilename,
+                    Arguments = arguments
+                };
 
                 audioJob.Chunks.Add(
                     new FfmpegPart
                     {
                         SourceFilename = source,
                         JobCorrelationId = jobCorrelationId,
-                        Filename = chunkFilename,
+                        Filename = outputfilename,
                         Target = 0,
                         Number = 0
                     });
-            }
-            audioJob.Arguments = arguments.ToString();
 
-            transcodingJobs.Add(audioJob);
+                transcodingJobs.Add(audioJob);
+            }
 
             IList<Resolution> resolutions =
                 job.Targets.GroupBy(x => new { x.Width, x.Height }).Select(x => new Resolution
@@ -174,7 +140,7 @@ namespace API.WindowsService.Controllers
                     value = duration;
                 }
 
-                var transcodingJob = AudioTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
+                var transcodingJob = VideoTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
                     extension, i, job.Inpoint.GetValueOrDefault());
 
                 transcodingJobs.Add(transcodingJob);
@@ -195,7 +161,7 @@ namespace API.WindowsService.Controllers
             }
         }
 
-        private static VideoTranscodingJob AudioTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
+        private static VideoTranscodingJob VideoTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
             Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
             TimeSpan inpoint)
         {

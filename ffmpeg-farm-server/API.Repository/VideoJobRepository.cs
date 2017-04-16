@@ -236,7 +236,7 @@ namespace API.Repository
                 {
                     VideoDestinationFormat format = request.Targets[part.Target];
                     connection.Execute(
-                        "INSERT INTO FfmpegVideoParts (JobCorrelationId, Target, Filename, Number, FfmpegVideoJobs_Id, Width, Height, Bitrate) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegVideoJobsId, @Width, @Height, @Bitrate);",
+                        "INSERT INTO FfmpegVideoParts (JobCorrelationId, Target, Filename, Number, FfmpegJobs_Id, Width, Height, Bitrate) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegVideoJobsId, @Width, @Height, @Bitrate);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
