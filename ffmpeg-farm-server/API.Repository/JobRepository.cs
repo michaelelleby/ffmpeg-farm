@@ -193,9 +193,9 @@ namespace API.Repository
             return requests;
         }
 
-        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName)
+        public bool SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName, DateTimeOffset timestamp)
         {
-            InsertClientHeartbeat(machineName);
+            InsertClientHeartbeat(machineName, timestamp);
 
             TranscodingJobState jobState = failed
                 ? TranscodingJobState.Failed
@@ -218,23 +218,21 @@ namespace API.Repository
                         Id = id,
                         Progress = progress.TotalSeconds,
                         VerifyProgress = verifyProgress?.TotalSeconds,
-                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
+                        Heartbeat = timestamp,
                         State = jobState,
                         InProgressState = TranscodingJobState.InProgress,
                         machineName
                     });
 
-                if (updatedRows != 1)
-                    throw new Exception($"Failed to update progress for task id {id}");
+                return updatedRows == 1;
             }
-            return jobState;
         }
 
         public FFmpegTaskDto GetNextJob(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
-            InsertClientHeartbeat(machineName);
+            InsertClientHeartbeat(machineName, DateTimeOffset.Now);
 
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             var now = DateTimeOffset.UtcNow;
@@ -381,7 +379,7 @@ namespace API.Repository
             }
         }
 
-        private void InsertClientHeartbeat(string machineName)
+        private void InsertClientHeartbeat(string machineName, DateTimeOffset heartbeat)
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
@@ -390,7 +388,7 @@ namespace API.Repository
                 int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
                 {
                     MachineName = machineName,
-                    Timestamp = DateTimeOffset.UtcNow
+                    Timestamp = heartbeat
                 }, commandType: CommandType.StoredProcedure);
 
                 if (rowsAffected != 1)

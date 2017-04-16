@@ -4,6 +4,8 @@
 // </auto-generated>
 //----------------------
 
+using System;
+
 namespace FFmpegFarm.Worker.Client
 {
     #pragma warning disable // Disable all warnings
@@ -1883,7 +1885,9 @@ namespace FFmpegFarm.Worker.Client
     public partial class TaskProgressModel : System.ComponentModel.INotifyPropertyChanged
     { 
         private int _id;
-     
+
+        private DateTimeOffset _timestamp;
+
         private string _machineName;
      
         private bool _failed;
@@ -1907,7 +1911,21 @@ namespace FFmpegFarm.Worker.Client
                 }
             }
         }
-    
+
+        [Newtonsoft.Json.JsonProperty("Timestamp", Required = Newtonsoft.Json.Required.Always)]
+        public DateTimeOffset Timestamp
+        {
+            get { return _timestamp; }
+            set
+            {
+                if (_timestamp != value)
+                {
+                    _timestamp = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
         [Newtonsoft.Json.JsonProperty("MachineName", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public string MachineName

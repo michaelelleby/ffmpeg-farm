@@ -31,13 +31,14 @@ namespace Worker.Test
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
+            Mock<IProgressUpdater> mockProgressUpdater = new Mock<IProgressUpdater>();
             var cancelSource = new CancellationTokenSource();
             var apiWrapper = new FakeApiWrapper(cancelSource);
 
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, mockProgressUpdater.Object, cancelSource.Token, apiWrapper);
 
             try
             {
@@ -73,13 +74,14 @@ namespace Worker.Test
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
+            Mock<IProgressUpdater> mockProgressUpdater = new Mock<IProgressUpdater>();
             var cancelSource = new CancellationTokenSource();
             var apiWrapper = new FakeApiWrapper(cancelSource);
 
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, mockProgressUpdater.Object, cancelSource.Token, apiWrapper);
 
             try
             {
@@ -115,13 +117,14 @@ namespace Worker.Test
             };
 
             Mock<ILogger> mockLogger = new Mock<ILogger>();
+            Mock<IProgressUpdater> mockProgressUpdater = new Mock<IProgressUpdater>();
             var cancelSource = new CancellationTokenSource();
             var apiWrapper = new FakeApiWrapper(cancelSource);
 
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, mockProgressUpdater.Object, cancelSource.Token, apiWrapper);
 
             try
             {
