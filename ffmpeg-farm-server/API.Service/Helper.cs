@@ -47,7 +47,7 @@ namespace API.Service
 
             return new Mediainfo
             {
-                Duration = Convert.ToInt32(output[0]) / 1000, // Duration is reported in milliseconds
+                Duration = (int)float.Parse(output[0], NumberFormatInfo.InvariantInfo) / 1000, // Duration is reported in milliseconds
                 Framerate = float.Parse(output[1], NumberFormatInfo.InvariantInfo),
                 Width = Convert.ToInt32(output[2]),
                 Height = Convert.ToInt32(output[3]),
