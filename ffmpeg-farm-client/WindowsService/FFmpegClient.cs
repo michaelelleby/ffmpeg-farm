@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FFmpegFarm.WindowsService.Properties;
 using FFmpegFarm.Worker;
+using FFmpegFarm.Worker.ProgressUpdaters;
 
 namespace FFmpegFarm.WindowsService
 {
@@ -37,18 +38,18 @@ namespace FFmpegFarm.WindowsService
                     })
                     .ToDictionary(p => p.Key, p => p.Value);
 
+            var apiUri = Settings.Default.ControllerApi;
+            IApiWrapper apiWrapper = new ApiWrapper(apiUri, _logger, _cancellationTokenSource.Token);
+
+            IProgressUpdater progressUpdater = Settings.Default.RabbitMqEnabled
+                ? new RabbitMqProgressUpdater(Settings.Default.RabbitMqDsn, Settings.Default.RabbitMqQueueName)
+                : new HttpProgressUpdater(apiWrapper) as IProgressUpdater;
 
             Node.PollInterval = TimeSpan.FromSeconds(10);
             for (var x = 0; x < Settings.Default.Threads; x++)
             {
-
-                var task = Node.GetNodeTask(
-                    Settings.Default.FFmpegPath,
-                    Settings.Default.ControllerApi,
-                    Settings.Default.FFmpegLogPath,
-                    env,
-                    _logger,
-                    _cancellationTokenSource.Token);
+                var task = Node.GetNodeTask(Settings.Default.FFmpegPath, apiUri, Settings.Default.FFmpegLogPath, env, _logger, progressUpdater,
+                    _cancellationTokenSource.Token, apiWrapper);
 
                 _tasks[x] = task;
                 Thread.Sleep(TimeSpan.FromSeconds(2));

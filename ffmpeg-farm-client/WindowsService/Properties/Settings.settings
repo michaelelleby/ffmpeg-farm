@@ -2,20 +2,29 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="FFmpegFarm.WindowsService.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="Threads" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">4</Value>
-    </Setting>
-    <Setting Name="FFmpegLogPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCache\ffmpeg-farm\logfiles</Value>
-    </Setting>
-    <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
-      <Value Profile="(Default)">http://od01udv.net.dr.dk:9000</Value>
-    </Setting>
-    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCache\ffmpeg-farm\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
-    </Setting>
     <Setting Name="EnvorimentVars" Type="System.String" Scope="Application">
       <Value Profile="(Default)">FC_CONFIG_DIR=\\ondnas01\MediaCache;FONTCONFIG_FILE=\\ondnas01\MediaCache\fonts.conf;FONTCONFIG_PATH=\\ondnas01\MediaCache</Value>
+    </Setting>
+    <Setting Name="Threads" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="FFmpegLogPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">d:\temp\logfiles</Value>
+    </Setting>
+    <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
+      <Value Profile="(Default)">http://localhost:9000</Value>
+    </Setting>
+    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">d:\ffmpeg-3.2.4-win64-static\bin\ffmpeg.exe</Value>
+    </Setting>
+    <Setting Name="RabbitMqDsn" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">amqp://guest:guest@localhost:5672</Value>
+    </Setting>
+    <Setting Name="RabbitMqQueueName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">ffmpeg-farm-status</Value>
+    </Setting>
+    <Setting Name="RabbitMqEnabled" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>
 </SettingsFile>

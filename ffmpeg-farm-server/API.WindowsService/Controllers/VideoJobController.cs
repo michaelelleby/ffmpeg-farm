@@ -173,6 +173,7 @@ namespace API.WindowsService.Controllers
                 SourceFilename = job.SourceFilename,
                 Needed = job.Needed,
                 State = TranscodingJobState.Queued,
+                DestinationFilename ="" 
             };
             string x264Preset = string.IsNullOrWhiteSpace(job.FFmpegPreset) ? "medium" : job.FFmpegPreset.ToLowerInvariant().Trim();
             int refs = 8388608 / (mi.Width * mi.Height);
