@@ -10,7 +10,7 @@ namespace FFmpegFarm.Worker.Client
     
     public partial class TaskClient
     {
-        partial void PrepareRequest(HttpClient request, ref string url)
+        partial void PrepareRequest(HttpClient client, HttpRequestMessage request, string url)
         {
             #if DEBUGAPI
             lock (ClientHelper.Locker)
@@ -23,7 +23,7 @@ namespace FFmpegFarm.Worker.Client
 
     public partial class StatusClient
     {
-        partial void PrepareRequest(HttpClient request, ref string url)
+        partial void PrepareRequest(HttpClient client, HttpRequestMessage request, string url)
         {
             #if DEBUGAPI
             lock (ClientHelper.Locker)

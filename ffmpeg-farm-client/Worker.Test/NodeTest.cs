@@ -167,22 +167,24 @@ namespace Worker.Test
                 return Tasks.Count > 0 ? Tasks.Pop() : null;
             }
 
-            public Response UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
+            public bool UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
             {
-                IsDone = model.Done;
-                IsFailed = model.Failed;
+                return true;
 
-                if (IsDone || IsFailed)
-                {
-                    _token.Cancel();
-                }
+                //IsDone = model.Done;
+                //IsFailed = model.Failed;
 
-                if (IsDone)
-                    return Response.Done;
-                if (IsFailed)
-                    return Response.Failed;
+                //if (IsDone || IsFailed)
+                //{
+                //    _token.Cancel();
+                //}
 
-                return Response.InProgress;
+                //if (IsDone)
+                //    return Response.Done;
+                //if (IsFailed)
+                //    return Response.Failed;
+
+                //return Response.InProgress;
             }
 
             public int? ThreadId { get; set; }

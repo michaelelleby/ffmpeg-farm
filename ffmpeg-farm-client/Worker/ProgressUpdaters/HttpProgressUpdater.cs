@@ -31,9 +31,9 @@ namespace FFmpegFarm.Worker.ProgressUpdaters
                     Timestamp = DateTimeOffset.Now
                 };
 
-                Response state = _apiWrapper.UpdateProgress(model);
+                bool state = _apiWrapper.UpdateProgress(model);
 
-                if (state == Response.Canceled)
+                //if (state == Response.Canceled)
                 {
                     //KillProcess("Canceled from ffmpeg server");
                 }

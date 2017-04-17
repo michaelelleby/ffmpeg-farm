@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -35,7 +36,7 @@ namespace FFmpegFarm.Worker
         private int _progressSpinner;
         private const int ProgressSkip = 5;
         private readonly Stopwatch _stopwatch = new Stopwatch();
-        private IApiWrapper _apiWrapper;
+        private readonly IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
         private readonly IProgressUpdater _progressUpdater;
 
@@ -125,7 +126,8 @@ namespace FFmpegFarm.Worker
                             Id = _currentTask.Id.GetValueOrDefault(0),
                             Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
                             Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                            Done = _currentTask.State == FFmpegTaskDtoState.Done
+                            Done = _currentTask.State == FFmpegTaskDtoState.Done,
+                            Timestamp = DateTimeOffset.Now
                         };
                         _apiWrapper.UpdateProgress(model, true);
                     }
@@ -144,35 +146,39 @@ namespace FFmpegFarm.Worker
         {
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
-            _stopwatch.Start();
+            _stopwatch.Restart();
 
             bool acquiredLock = false;
 
             try
             {
-                var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
-                if (!Directory.Exists(destDir))
+                string[] destinationFilenames = _currentTask.DestinationFilename.Split('/');
+                string outputfilename = destinationFilenames.FirstOrDefault();
+                var destDir = Path.GetDirectoryName(outputfilename);
+                if (!string.IsNullOrWhiteSpace(destDir) && !Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
 
-                int exitCode = -1;
+                int exitCode;
                 using (_commandlineProcess = new Process())
                 {
                     _currentStep = Step.Work;
-                    string outputFullPath = string.Empty;
+                    string[] outputFullPaths = new string[destinationFilenames.Length];
                     string arguments = _currentTask.Arguments;
 
                     // <TEMP> as output filename means we should transcode the file to the local disk
                     // and move it to destination path after it is done transcoding
-                    if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
+                    for (int i = 0; i < destinationFilenames.Length; i++)
                     {
-                        outputFullPath = Path.GetTempFileName();
-                        arguments = arguments.Replace(@"|TEMP|", outputFullPath);
+                        if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
+                        {
+                            outputFullPaths[i] = Path.GetTempFileName();
+                            arguments = arguments.Replace(@"|TEMP|", outputFullPaths[i]);
+                        }
+                        else
+                        {
+                            outputFullPaths[i] = destinationFilenames[i];
+                        }
                     }
-                    else
-                    {
-                        outputFullPath = _currentTask.DestinationFilename;
-                    }
-
                     _commandlineProcess.StartInfo = new ProcessStartInfo
                     {
                         RedirectStandardError = true,
@@ -206,9 +212,13 @@ namespace FFmpegFarm.Worker
                     // status updates
                     _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
 
-                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
+                    for (int i = 0; i < destinationFilenames.Length; i++)
                     {
-                        File.Move(outputFullPath, _currentTask.DestinationFilename);
+                        if (string.Compare(outputFullPaths[i], destinationFilenames[i],
+                                StringComparison.OrdinalIgnoreCase) != 0)
+                        {
+                            File.Move(outputFullPaths[i], destinationFilenames[i]);
+                        }
                     }
 
                     _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
@@ -226,13 +236,20 @@ namespace FFmpegFarm.Worker
                     using (_commandlineProcess = new Process())
                     {
                         _currentStep = Step.Verify;
+                        StringBuilder arguments = new StringBuilder("-xerror");
+                        foreach (string filename in destinationFilenames)
+                        {
+                            arguments.Append($@" -i ""{filename}""");
+                        }
+                        arguments.Append(" -f null -");
+                        
                         _commandlineProcess.StartInfo = new ProcessStartInfo
                         {
                             RedirectStandardError = true,
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             FileName = _ffmpegPath,
-                            Arguments = $@"-xerror -i ""{_currentTask.DestinationFilename}"" -f null -"
+                            Arguments = arguments.ToString()
                         };
 
                         _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
@@ -286,10 +303,12 @@ namespace FFmpegFarm.Worker
                 // Cleanup when job fails
                 try
                 {
-                    if (_currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed
-                        && File.Exists(_currentTask.DestinationFilename))
+                    if (_currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed)
                     {
-                        File.Delete(_currentTask.DestinationFilename);
+                        foreach (string filename in _currentTask.DestinationFilename.Split('/').Where(File.Exists))
+                        {
+                            File.Delete(filename);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -312,6 +331,9 @@ namespace FFmpegFarm.Worker
             try
             {
                 if (string.IsNullOrWhiteSpace(_logfilesPath) || !Directory.Exists(_logfilesPath))
+                    return;
+
+                if (_currentTask.Started == null)
                     return;
 
                 var path = Path.Combine(_logfilesPath, _currentTask.Started.Value.ToString("yyyy"), _currentTask.Started.Value.ToString("MM"), _currentTask.Started.Value.ToString("dd"));

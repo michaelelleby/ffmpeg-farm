@@ -90,7 +90,7 @@ namespace API.WindowsService.Controllers
 
             foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
             {
-                string outputfilename = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.{0}";
+                string outputfilename = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.mp4";
                 string arguments = $@"-y -ss {job.Inpoint} -i ""{source}"" -c:a aac -b:a {bitrate}k -vn ""{outputfilename}""";
                 var audioJob = new VideoTranscodingJob
                 {
@@ -121,14 +121,14 @@ namespace API.WindowsService.Controllers
                 {
                     Width = x.Key.Width,
                     Height = x.Key.Height,
-                    Bitrates = x.Select(format => new Quality
+                    Bitrates = x.Select(destinationFormat => new Quality
                     {
-                        VideoBitrate = format.VideoBitrate,
-                        AudioBitrate = format.AudioBitrate,
-                        Level = string.IsNullOrWhiteSpace(format.Level) ? "3.1" : format.Level.Trim(),
-                        Profile = format.Profile,
-                        Target = format.Target
-                    }),
+                        VideoBitrate = destinationFormat.VideoBitrate,
+                        AudioBitrate = destinationFormat.AudioBitrate,
+                        Level = string.IsNullOrWhiteSpace(destinationFormat.Level) ? "3.1" : destinationFormat.Level.Trim(),
+                        Profile = destinationFormat.Profile,
+                        Target = destinationFormat.Target
+                    })
                 }).ToList();
 
             int duration = Convert.ToInt32(mi.Duration - job.Inpoint.GetValueOrDefault().TotalSeconds);
@@ -140,7 +140,7 @@ namespace API.WindowsService.Controllers
                     value = duration;
                 }
 
-                var transcodingJob = VideoTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
+                var transcodingJob = VideoTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, request.OutputFolder, request.DestinationFilenamePrefix,
                     extension, i, job.Inpoint.GetValueOrDefault());
 
                 transcodingJobs.Add(transcodingJob);
@@ -162,8 +162,7 @@ namespace API.WindowsService.Controllers
         }
 
         private static VideoTranscodingJob VideoTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
-            Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
-            TimeSpan inpoint)
+            Guid jobCorrelationId, string destinationFolder, string destinationFilenamePrefix, string extension, int i, TimeSpan inpoint)
         {
             var arguments = new StringBuilder();
 
@@ -176,7 +175,8 @@ namespace API.WindowsService.Controllers
                 DestinationFilename ="" 
             };
             string x264Preset = string.IsNullOrWhiteSpace(job.FFmpegPreset) ? "medium" : job.FFmpegPreset.ToLowerInvariant().Trim();
-            int refs = 8388608 / (mi.Width * mi.Height);
+            
+            //int refs = 8388608 / (mi.Width * mi.Height);
 
             //if (job.EnableTwoPass)
             //{
@@ -245,7 +245,7 @@ namespace API.WindowsService.Controllers
                     Quality quality = resolution.Bitrates.ToList()[k];
                     string chunkFilename =
                         $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-                            .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{extension}";
+                            .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}.{extension}";
 
                     arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset} -aspect 16:9 ");
                     
@@ -277,6 +277,8 @@ namespace API.WindowsService.Controllers
             }
 
             transcodingJob.Arguments = arguments.ToString();
+
+            transcodingJob.DestinationFilename = string.Join(@"/", transcodingJob.Chunks.Select(x => x.Filename));
 
             return transcodingJob;
         }

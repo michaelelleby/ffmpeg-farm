@@ -111,12 +111,15 @@ namespace API.WindowsService.Controllers
                     HeartbeatMachine = j.HeartbeatMachineName,
                     State = j.State,
                     Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    VerifyProgres = j.VerifyProgress == null ? (decimal?) null : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    DestinationFilename = j.DestinationFilename,
-                    LogPath = j.Started != null ?  $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt" : string.Empty
-            }),
+                    VerifyProgres = j.VerifyProgress == null
+                        ? (decimal?) null
+                        : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
+                    DestinationFilenames = j.DestinationFilename.Split('/'),
+                    LogPath = j.Started != null
+                        ? $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt"
+                        : string.Empty
+                })
             };
         }
     }
 }
-

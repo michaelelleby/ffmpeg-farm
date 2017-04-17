@@ -65,7 +65,7 @@ namespace API.Repository
                                 FfmpegJobsId = jobId,
                                 job.Arguments,
                                 QueuedState = TranscodingJobState.Queued,
-                                job.DestinationFilename,
+                                DestinationFilename = job.DestinationFilename,
                                 job.DestinationDurationSeconds,
                                 VerifyOutput = false
                             });

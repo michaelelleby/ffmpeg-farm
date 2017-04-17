@@ -38,15 +38,17 @@ namespace FFmpegFarm.Worker
             return Wrap(_taskClient.GetNextAsync, machineName);
         }
 
-        public Response UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
+        public bool UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
         {
-            Task<Response> stateTask;
-            Response state;
+            if (model.Timestamp == DateTimeOffset.MinValue)
+                throw new ArgumentException("Timestamp must be set on the model", nameof(model));
+
+            bool state;
                 
             if (ignoreCancel)
             {
                 // don't use wrapper since cancel has been called. 
-                stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None);
+                Task<bool> stateTask = _statusClient.UpdateProgressAsync(model, CancellationToken.None);
                 stateTask.Start();
                 stateTask.Wait(CancellationToken.None);
                 state = stateTask.Result;
