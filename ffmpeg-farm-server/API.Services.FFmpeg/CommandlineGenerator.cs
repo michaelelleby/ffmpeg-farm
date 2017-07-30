@@ -41,14 +41,14 @@ namespace API.Services.FFmpeg
                 sb.Append($@"-filter_complex ""{string.Join(";", filterList)}"" ");
             }
 
-            if (audioSb.Length > 0)
-            {
-                sb.Append(audioSb);
-            }
-
             if (videoSb.Length > 0)
             {
                 sb.Append(videoSb);
+            }
+
+            if (audioSb.Length > 0)
+            {
+                sb.Append(audioSb);
             }
 
             return Regex.Replace(sb.ToString().Trim(), @"\s{2,}", " ");
@@ -81,7 +81,7 @@ namespace API.Services.FFmpeg
         {
             if (audio == null) throw new ArgumentNullException(nameof(audio));
 
-            return $@" -codec:a {audio.Codec.ToString().ToLower()} -b:a {audio.Bitrate}k ";
+            return $@" -codec:a {audio.Codec.ToString().ToLower()} -b:a {audio.Bitrate / 1024}k ";
         }
     }
 }

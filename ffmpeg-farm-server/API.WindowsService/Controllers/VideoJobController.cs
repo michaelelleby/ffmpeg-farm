@@ -8,6 +8,7 @@ using System.Text;
 using System.Transactions;
 using System.Web.Http;
 using API.Service;
+using API.Services.FFmpeg;
 using API.WindowsService.Models;
 using Contract;
 
@@ -276,7 +277,23 @@ namespace API.WindowsService.Controllers
 
             }
 
-            transcodingJob.Arguments = arguments.ToString();
+            var parameters = new FFmpegParameters
+            {
+                AudioParam = new FFmpegParameters.Audio
+                {
+                    Bitrate = 131072,
+                    Codec = AudioCodec.AAC
+                },
+                VideoParam = new FFmpegParameters.Video
+                {
+                    Bitrate = resolutions.First().Bitrates.First().VideoBitrate,
+                    Size = new VideoSize(resolutions.First().Width, resolutions.First().Height),
+                    Preset = x264Preset,
+                    Codec = VideoCodec.LibX264
+                },
+                Inputfile = job.SourceFilename
+            };
+            transcodingJob.Arguments = CommandlineGenerator.Get(parameters);
 
             return transcodingJob;
         }

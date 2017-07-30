@@ -208,6 +208,10 @@
       <Project>{a1b19c7b-9d5e-4c7b-8fc0-cbccc86bd83d}</Project>
       <Name>API.Repository</Name>
     </ProjectReference>
+    <ProjectReference Include="..\API.Services.FFmpeg\API.Services.FFmpeg.csproj">
+      <Project>{1794E459-AEA4-4712-83FE-C0B0C3D64733}</Project>
+      <Name>API.Services.FFmpeg</Name>
+    </ProjectReference>
     <ProjectReference Include="..\API.Service\API.Service.csproj">
       <Project>{A015F759-529F-4B76-BD1D-94831FE886DF}</Project>
       <Name>API.Service</Name>

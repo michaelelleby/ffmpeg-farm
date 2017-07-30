@@ -31,16 +31,13 @@ namespace API.Services.FFmpeg.Tests
         {
             // Arrange
             const string inputFilename = "test input filename";
-            var parameters = GetTestParameters(inputFilename, audioCodec: AudioCodec.AAC, audioBitrate: 128000);
+            var parameters = GetTestParameters(inputFilename, audioCodec: AudioCodec.AAC, audioBitrate: 131072);
 
             // Act
             var result = CommandlineGenerator.Get(parameters);
 
             // Assert
-            string expected =
-                $@"-i ""{inputFilename}"" -codec:a {parameters.AudioParam.Codec.ToString().ToLower()} -b:a {
-                        parameters.AudioParam.Bitrate
-                    }k";
+            string expected = $@"-i ""{inputFilename}"" -codec:a aac -b:a 128k";
 
             Assert.That(result, Is.EqualTo(expected));
         }
@@ -58,7 +55,7 @@ namespace API.Services.FFmpeg.Tests
             parameters.AudioParam = new FFmpegParameters.Audio
             {
                 Codec = AudioCodec.AAC,
-                Bitrate = 128000
+                Bitrate = 131072
             };
             parameters.Deinterlace = new FFmpegParameters.DeinterlaceSettings
             {
@@ -71,10 +68,7 @@ namespace API.Services.FFmpeg.Tests
             var result = CommandlineGenerator.Get(parameters);
 
             // Assert
-            string expected =
-                $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0"" -codec:a {
-                        parameters.AudioParam.Codec.ToString().ToLower()
-                    } -b:a {parameters.AudioParam.Bitrate}k";
+            string expected = $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0"" -codec:a aac -b:a 128k";
             Assert.That(result, Is.EqualTo(expected));
         }
 
@@ -123,13 +117,14 @@ namespace API.Services.FFmpeg.Tests
             const string inputFilename = "test input filename";
             var parameters = GetTestParameters(inputFilename,
                 FFmpegParameters.DeinterlaceSettings.DeinterlaceMode.SendFrame,
-                FFmpegParameters.DeinterlaceSettings.DeinterlaceParity.Auto, true, 1024000, VideoCodec.LibX264);
+                FFmpegParameters.DeinterlaceSettings.DeinterlaceParity.Auto, true, 1024000, VideoCodec.LibX264,
+                "medium", AudioCodec.AAC, 131072, new VideoSize(1920, 1080));
 
             // Act
             var result = CommandlineGenerator.Get(parameters);
 
             // Assert
-            string expected = $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0"" -codec:v libx264 -preset medium -b:v 1000k";
+            string expected = $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0;scale=1920:1080"" -codec:v libx264 -preset medium -b:v 1000k -codec:a aac -b:a 128k";
             Assert.That(result, Is.EqualTo(expected));
         }
 
@@ -184,7 +179,7 @@ namespace API.Services.FFmpeg.Tests
                     parameters.AudioParam = new FFmpegParameters.Audio();
                 }
 
-                parameters.AudioParam.Bitrate = 128000;
+                parameters.AudioParam.Bitrate = audioBitrate;
             }
 
             if (deinterlaceMode != FFmpegParameters.DeinterlaceSettings.DeinterlaceMode.Unknown && deinterlaceParity !=
