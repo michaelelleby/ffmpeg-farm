@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace API.Repository.Test
 {
-    [TestFixture]
+    [TestFixture, Ignore("test")]
     public class JobRepositoryTest
     {
         private SqlFixture _fixture;

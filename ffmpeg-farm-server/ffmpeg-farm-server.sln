@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Contract", "Contract\API.Contract.csproj", "{C5AB7E69-27B9-4071-A0D1-6A6E22DF7D8C}"
 EndProject
@@ -23,6 +23,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.StatusPoller", "API.StatusPoller\API.StatusPoller.csproj", "{40D6226C-CBFF-4196-AE9F-65A851299C8B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.IoC", "API.IoC\API.IoC.csproj", "{F389216B-6347-4908-8741-EA6B511A83B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Services.FFmpeg", "API.Services.FFmpeg\API.Services.FFmpeg.csproj", "{1794E459-AEA4-4712-83FE-C0B0C3D64733}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{614BE47A-EECE-4A69-92B5-0E3CA3025EFC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Services.FFmpeg.Tests", "API.Services.FFmpeg.Tests\API.Services.FFmpeg.Tests.csproj", "{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -180,8 +186,45 @@ Global
 		{F389216B-6347-4908-8741-EA6B511A83B3}.Test|Any CPU.Build.0 = Release|Any CPU
 		{F389216B-6347-4908-8741-EA6B511A83B3}.Test|x86.ActiveCfg = Release|Any CPU
 		{F389216B-6347-4908-8741-EA6B511A83B3}.Test|x86.Build.0 = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Debug|x86.Build.0 = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Development|Any CPU.ActiveCfg = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Development|Any CPU.Build.0 = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Development|x86.ActiveCfg = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Development|x86.Build.0 = Debug|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Release|x86.ActiveCfg = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Release|x86.Build.0 = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Test|Any CPU.ActiveCfg = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Test|Any CPU.Build.0 = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Test|x86.ActiveCfg = Release|Any CPU
+		{1794E459-AEA4-4712-83FE-C0B0C3D64733}.Test|x86.Build.0 = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Debug|x86.Build.0 = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Development|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Development|Any CPU.Build.0 = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Development|x86.ActiveCfg = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Development|x86.Build.0 = Debug|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Release|x86.ActiveCfg = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Release|x86.Build.0 = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Test|Any CPU.ActiveCfg = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Test|Any CPU.Build.0 = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Test|x86.ActiveCfg = Release|Any CPU
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47}.Test|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1C87958A-F619-41ED-8A31-82155DEF2C22} = {614BE47A-EECE-4A69-92B5-0E3CA3025EFC}
+		{5D73F173-ABB4-4753-B916-1D5FE12B403F} = {614BE47A-EECE-4A69-92B5-0E3CA3025EFC}
+		{5AD514C9-8AC0-4EC2-9940-8CE014D54E47} = {614BE47A-EECE-4A69-92B5-0E3CA3025EFC}
 	EndGlobalSection
 EndGlobal

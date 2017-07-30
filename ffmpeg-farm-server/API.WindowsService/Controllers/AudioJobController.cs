@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Web.ModelBinding;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;

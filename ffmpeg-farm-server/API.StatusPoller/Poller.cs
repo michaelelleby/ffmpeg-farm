@@ -33,7 +33,7 @@ namespace API.StatusPoller
 
             _connectionFactory = new ConnectionFactory
             {
-                Uri = rabbitMqDsn
+                Uri = new Uri(rabbitMqDsn)
             };
         }
 
