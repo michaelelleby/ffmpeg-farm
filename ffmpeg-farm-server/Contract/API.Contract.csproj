@@ -156,6 +156,7 @@
     <Compile Include="FFmpegJob.cs" />
     <Compile Include="VideoCodec.cs" />
     <Compile Include="VideoSize.cs" />
+    <Compile Include="VideoTarget.cs" />
     <Compile Include="VideoTranscodingJob.cs" />
     <Compile Include="JobRequestExamples.cs" />
     <Compile Include="TranscodingJobState.cs" />

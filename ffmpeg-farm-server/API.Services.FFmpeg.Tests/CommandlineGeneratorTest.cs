@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.Serialization.Formatters;
 using Contract;
 using NUnit.Framework;
@@ -111,6 +113,48 @@ namespace API.Services.FFmpeg.Tests
         }
 
         [Test]
+        public void Get_ShouldMap()
+        {
+            // Arrange
+            const string inputFilename = "test input filename";
+
+            var parameters = GetTestParameters(inputFilename);
+            parameters.VideoParam = new FFmpegParameters.Video
+            {
+                VideoTarget = new List<VideoTarget>
+                {
+                    new VideoTarget
+                    {
+                        Size = new VideoSize
+                        {
+                            Width = 1920,
+                            Height = 1080
+                        },
+                        Preset = "medium",
+                        Bitrate = 3072000
+                    },
+                    new VideoTarget
+                    {
+                        Size = new VideoSize
+                        {
+                            Width = 1920,
+                            Height = 1080
+                        },
+                        Preset = "medium",
+                        Bitrate = 2560000
+                    }
+                }
+            };
+
+            // Act
+            var result = CommandlineGenerator.Get(parameters);
+
+            // Assert
+            string expected = $@"-i ""{inputFilename}"" -filter_complex ""scale=1920:1080,split=2[out0][out1]"" -map [out0] -codec:v libx264 -preset medium -b:v 3000k -map [out1] -codec:v libx264 -preset medium -b:v 2500k";
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [Test]
         public void Get_ShouldSetBothAudioAndVideoInfo()
         {
             // Arrange
@@ -124,7 +168,7 @@ namespace API.Services.FFmpeg.Tests
             var result = CommandlineGenerator.Get(parameters);
 
             // Assert
-            string expected = $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0;scale=1920:1080"" -codec:v libx264 -preset medium -b:v 1000k -codec:a aac -b:a 128k";
+            string expected = $@"-i ""{inputFilename}"" -filter_complex ""yadif=0:-1:0,scale=1920:1080"" -codec:v libx264 -preset medium -b:v 1000k -codec:a aac -b:a 128k";
             Assert.That(result, Is.EqualTo(expected));
         }
 
@@ -159,7 +203,15 @@ namespace API.Services.FFmpeg.Tests
                     parameters.VideoParam = new FFmpegParameters.Video();
                 }
 
-                parameters.VideoParam.Bitrate = videoBitrate;
+                VideoTarget target = parameters.VideoParam.VideoTarget.FirstOrDefault();
+                if (target == null)
+                {
+                    target = new VideoTarget();
+                    parameters.VideoParam.VideoTarget.Add(target);
+                }
+
+
+                target.Bitrate = videoBitrate;
             }
 
             if (audioCodec != AudioCodec.Unknown)
@@ -195,12 +247,26 @@ namespace API.Services.FFmpeg.Tests
 
             if (videoSize != null)
             {
-                parameters.VideoParam.Size = videoSize;
+                VideoTarget target = parameters.VideoParam.VideoTarget.First();
+                if (target == null)
+                {
+                    target = new VideoTarget();
+                    parameters.VideoParam.VideoTarget.Add(target);
+                }
+
+                target.Size = videoSize;
             }
 
             if (!string.IsNullOrWhiteSpace(videoPreset))
             {
-                parameters.VideoParam.Preset = videoPreset;
+                VideoTarget target = parameters.VideoParam.VideoTarget.First();
+                if (target == null)
+                {
+                    target = new VideoTarget();
+                    parameters.VideoParam.VideoTarget.Add(target);
+                }
+
+                target.Preset = videoPreset;
             }
 
             return parameters;

@@ -286,9 +286,12 @@ namespace API.WindowsService.Controllers
                 },
                 VideoParam = new FFmpegParameters.Video
                 {
-                    Bitrate = resolutions.First().Bitrates.First().VideoBitrate,
-                    Size = new VideoSize(resolutions.First().Width, resolutions.First().Height),
-                    Preset = x264Preset,
+                    //VideoTarget =
+                    //{
+                    //    Bitrate = resolutions.First().Bitrates.First().VideoBitrate,
+                    //    Size = new VideoSize(resolutions.First().Width, resolutions.First().Height),
+                    //    Preset = x264Preset
+                    //},
                     Codec = VideoCodec.LibX264
                 },
                 Inputfile = job.SourceFilename

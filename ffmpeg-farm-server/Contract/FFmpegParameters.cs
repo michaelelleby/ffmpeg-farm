@@ -1,4 +1,4 @@
-using System.Drawing;
+using System.Collections.Generic;
 
 namespace Contract
 {
@@ -18,10 +18,14 @@ namespace Contract
 
         public class Video
         {
+            public Video()
+            {
+                VideoTarget = new List<VideoTarget>();
+            }
+
             public VideoCodec Codec { get; set; }
-            public int Bitrate { get; set; }
-            public VideoSize Size { get; set; }
-            public string Preset { get; set; }
+
+            public ICollection<VideoTarget> VideoTarget { get; set; }
         }
 
         public class DeinterlaceSettings
