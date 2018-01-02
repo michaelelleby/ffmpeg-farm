@@ -12,18 +12,12 @@ namespace API.WindowsService.Controllers
     public class AudioDemuxJobController : ApiController
     {
         private readonly IAudioDemuxJobRepository _repository;
-        private readonly IHelper _helper;
         private readonly ILogging _logging;
 
-        public AudioDemuxJobController(IAudioDemuxJobRepository repository, IHelper helper, ILogging logging)
+        public AudioDemuxJobController(IAudioDemuxJobRepository repository, ILogging logging)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _repository = repository;
-            _helper = helper;
-            _logging = logging;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
         }
 
         [HttpPost]
