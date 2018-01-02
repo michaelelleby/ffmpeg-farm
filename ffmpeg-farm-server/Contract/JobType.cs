@@ -8,6 +8,7 @@ namespace Contract
         VideoMp4box,
         VideoMerge,
         Mux,
-        HardSubtitles
+        HardSubtitles,
+        AudioDemux
     }
 }
