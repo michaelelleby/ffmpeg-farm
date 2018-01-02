@@ -42,7 +42,7 @@ namespace API.WindowsService.Controllers
             string arguments = string.Empty;
 
             //TODO: Fix the ffmpeg args so the job will work
-            arguments += $"-i {model.VideoSourceFilename} -filter_complex \"[0:9][0:10] amerge\" {outputFilename} -y";
+            arguments += $"-i {model.VideoSourceFilename} {outputFilename} -y";
             var jobs = new List<FFmpegJob>
             {
                 new AudioDemuxJob

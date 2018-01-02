@@ -6,7 +6,6 @@ namespace API.Logging
 {
     public class NLogWrapper : ILogging
     {
-        
         static NLogWrapper()
         {
             //Ref fix
