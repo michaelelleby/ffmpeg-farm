@@ -27,7 +27,7 @@ namespace API.WindowsService.Test.Controllers
         };
         
         [Test]
-        public void CreateNew()
+        public void CreateNew_Repository_Mapping()
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
