@@ -19,9 +19,7 @@ namespace API.Repository
 
         public JobRepository(IHelper helper)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-
-            Helper = helper;
+            Helper = helper ?? throw new ArgumentNullException(nameof(helper));
         }
 
         public bool DeleteJob(Guid jobId)

@@ -24,7 +24,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>App_Data\WindowsService.XML</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -156,9 +157,11 @@
     <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\HardSubtilesJobController.cs" />
+    <Compile Include="Controllers\AudioDemuxJobController.cs" />
     <Compile Include="Controllers\MuxJobController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
+    <Compile Include="Models\AudioDemuxJobRequestModel.cs" />
     <Compile Include="Validators\HardSubtitlesJobRequestValidator.cs" />
     <Compile Include="Models\Command.cs" />
     <Compile Include="Models\MuxJobRequestModel.cs" />
@@ -178,6 +181,7 @@
     <Compile Include="StructureMapDependencyResolver.cs" />
     <Compile Include="StructureMapScope.cs" />
     <Compile Include="Validators\AudioDestinationFormatValidator.cs" />
+    <Compile Include="Validators\AudioDemuxJobRequestValidator.cs" />
     <Compile Include="Validators\MuxJobRequestValidator.cs" />
   </ItemGroup>
   <ItemGroup>

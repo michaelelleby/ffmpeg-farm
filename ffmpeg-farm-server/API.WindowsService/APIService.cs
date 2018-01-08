@@ -5,7 +5,7 @@ using Microsoft.Owin.Hosting;
 
 namespace API.WindowsService
 {
-    public partial class APIService : ServiceBase
+    public class APIService : ServiceBase
     {
         private IDisposable _server = null;
 
@@ -28,12 +28,9 @@ namespace API.WindowsService
             _server = WebApp.Start<Startup>(url);
         }
 
-        public void Stop()
+        public new void Stop()
         {
-            if (_server != null)
-            {
-                _server.Dispose();
-            }
+            _server?.Dispose();
         }
     }
 }

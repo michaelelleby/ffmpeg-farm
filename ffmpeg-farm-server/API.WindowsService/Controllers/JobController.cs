@@ -1,28 +1,19 @@
 ﻿using System;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
 using API.WindowsService.Models;
 using Contract;
-using Contract.Dto;
 
 namespace API.WindowsService.Controllers
 {
     public class JobController : ApiController
     {
-        private readonly IHelper _helper;
         private readonly IJobRepository _repository;
         private readonly ILogging _logging;
 
-        public JobController(IHelper helper, IJobRepository repository, ILogging logging)
+        public JobController(IJobRepository repository, ILogging logging)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _helper = helper;
-            _repository = repository;
-            _logging = logging;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
         }
 
         [HttpDelete]
