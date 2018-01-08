@@ -23,6 +23,7 @@ namespace FFmpegFarm.Worker
         private readonly string _ffmpegPath;
         private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
+        private readonly Stopwatch _timeSinceLastProgressUpdate;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
@@ -37,36 +38,43 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
-        private readonly IProgressUpdater _progressUpdater;
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string, string> envorimentVars, ILogger logger, IApiWrapper apiWrapper, IProgressUpdater progressUpdater)
+        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
-            if (string.IsNullOrWhiteSpace(ffmpegPath)) throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
-            if (string.IsNullOrWhiteSpace(apiUri)) throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
-            if (logger == null) throw new ArgumentNullException(nameof(logger));
-            if (progressUpdater == null) throw new ArgumentNullException(nameof(progressUpdater));
-            if (envorimentVars == null) throw new ArgumentNullException(nameof(envorimentVars));
-
+            if (string.IsNullOrWhiteSpace(ffmpegPath))
+                throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
             if (!File.Exists(ffmpegPath))
                 throw new FileNotFoundException(ffmpegPath);
-
             _ffmpegPath = ffmpegPath;
+            if (string.IsNullOrWhiteSpace(apiUri))
+                throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
+            if(logger == null)
+                throw new ArgumentNullException(nameof(logger));
+            if(envorimentVars == null)
+                throw new ArgumentNullException(nameof(envorimentVars));
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
             _logger = logger;
             _apiWrapper = apiWrapper;
-            _progressUpdater = progressUpdater;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
             _envorimentVars = envorimentVars;
+            _timeSinceLastProgressUpdate = new Stopwatch();
         }
 
-        public static Task GetNodeTask(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string, string> envorimentVars, ILogger logger, IProgressUpdater progressUpdater, CancellationToken ct, IApiWrapper apiWrapper = null)
+        public static Task GetNodeTask(string ffmpegPath, 
+            string apiUri, 
+            string logfilesPath,
+            IDictionary<string, string> envorimentVars,
+            ILogger logger,
+            CancellationToken ct,
+            IApiWrapper apiWrapper = null)
         {
+
             var t = Task.Run(() => 
-            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct), progressUpdater).Run(ct), ct);
+            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -78,7 +86,6 @@ namespace FFmpegFarm.Worker
                 ct.ThrowIfCancellationRequested();
                 ct.Register(() => KillProcess("Canceled"));
                 _cancellationToken = ct;
-
                 while (!_cancellationToken.IsCancellationRequested)
                 {
                     _currentTask = _apiWrapper.GetNext(Environment.MachineName);
@@ -94,14 +101,14 @@ namespace FFmpegFarm.Worker
                     catch (Exception e)
                     {
                         _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
-                                     $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
-                                     $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                             $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
+                             $"\n\tffmpeg process output:\n\n{_output}", _threadId);
 
                         Monitor.Enter(_lock);
                         if (_currentTask != null)
                         {
                             _currentTask.State = FFmpegTaskDtoState.Failed;
-                            _progressUpdater.UpdateTask(_currentTask);
+                            UpdateTask(_currentTask);
                             _currentTask = null;
                         }
                         Monitor.Exit(_lock);
@@ -110,8 +117,7 @@ namespace FFmpegFarm.Worker
                 }
                 ct.ThrowIfCancellationRequested();
             }
-            finally
-            {
+            finally {
                 if (_currentTask != null)
                 {
                     try
@@ -199,7 +205,9 @@ namespace FFmpegFarm.Worker
 
                     _commandlineProcess.WaitForExit();
 
-                    _progressUpdater.UpdateTask(_currentTask);
+                    _timeSinceLastProgressUpdate.Stop();
+
+                    PostProgressUpdate();
 
                     // Disable timer to prevet accidentally aborting the ffmpeg task
                     // due to moving the file taking several seconds without any
@@ -274,8 +282,7 @@ namespace FFmpegFarm.Worker
                     _currentTask.State = FFmpegTaskDtoState.Done;
                     _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
                 }
-
-                _progressUpdater.UpdateTask(_currentTask);
+                UpdateTask(_currentTask);
 
                 Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
             }
@@ -331,6 +338,20 @@ namespace FFmpegFarm.Worker
             {
                 // Prevent this from ever crashing the worker
             }
+        }
+
+        private void UpdateTask(FFmpegTaskDto task)
+        {
+            var model = new TaskProgressModel
+            {
+                MachineName = Environment.MachineName,
+                Id = task.Id.GetValueOrDefault(0),
+                Progress = TimeSpan.FromSeconds(task.Progress.GetValueOrDefault(0)).ToString("c"),
+                VerifyProgress = TimeSpan.FromSeconds(task.VerifyProgress.GetValueOrDefault(0)).ToString("c"),
+                Failed = task.State == FFmpegTaskDtoState.Failed,
+                Done = task.State == FFmpegTaskDtoState.Done
+            };
+            _apiWrapper.UpdateProgress(model);
         }
 
         private bool FfmpegDetectedError()
@@ -395,10 +416,46 @@ namespace FFmpegFarm.Worker
                     throw new ArgumentOutOfRangeException();
             }
 
-            _progressUpdater.UpdateTask(_currentTask);
+            if (_timeSinceLastProgressUpdate.IsRunning == false || _timeSinceLastProgressUpdate.ElapsedMilliseconds > 10000)
+            {
+                if (_timeSinceLastProgressUpdate.IsRunning)
+                    _timeSinceLastProgressUpdate.Stop();
+
+                PostProgressUpdate();
+
+                _timeSinceLastProgressUpdate.Restart();
+            }
 
             if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
                 _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
+
+            _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
+        }
+
+        private void PostProgressUpdate()
+        {
+            try
+            {
+                Response state = _apiWrapper.UpdateProgress(new TaskProgressModel
+                {
+                    Done = _currentTask.State == FFmpegTaskDtoState.Done,
+                    Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                    Id = _currentTask.Id.GetValueOrDefault(0),
+                    MachineName = _currentTask.HeartbeatMachineName,
+                    Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
+                    VerifyProgress =
+                        _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
+                });
+
+                if (state == Response.Canceled)
+                {
+                    KillProcess("Canceled from ffmpeg server");
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Contract
 {
-    public enum AudioCodec
+    public enum Codec
     {
         Unknown,
         MP3,

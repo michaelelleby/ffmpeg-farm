@@ -68,6 +68,7 @@
     <Compile Include="AudioJobRepository.cs" />
     <Compile Include="JobRepository.cs" />
     <Compile Include="HardSubtitlesJobRepository.cs" />
+    <Compile Include="AudioDemuxJobRepository.cs" />
     <Compile Include="MuxJobRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
     <Compile Include="VideoJobRepository.cs" />

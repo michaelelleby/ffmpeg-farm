@@ -19,9 +19,7 @@ namespace API.Repository
 
         public JobRepository(IHelper helper)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-
-            Helper = helper;
+            Helper = helper ?? throw new ArgumentNullException(nameof(helper));
         }
 
         public bool DeleteJob(Guid jobId)
@@ -193,9 +191,9 @@ namespace API.Repository
             return requests;
         }
 
-        public bool SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName, DateTimeOffset timestamp)
+        public TranscodingJobState SaveProgress(int id, bool failed, bool done, TimeSpan progress, TimeSpan? verifyProgress, string machineName)
         {
-            InsertClientHeartbeat(machineName, timestamp);
+            InsertClientHeartbeat(machineName);
 
             TranscodingJobState jobState = failed
                 ? TranscodingJobState.Failed
@@ -218,21 +216,23 @@ namespace API.Repository
                         Id = id,
                         Progress = progress.TotalSeconds,
                         VerifyProgress = verifyProgress?.TotalSeconds,
-                        Heartbeat = timestamp,
+                        Heartbeat = DateTimeOffset.UtcNow.UtcDateTime,
                         State = jobState,
                         InProgressState = TranscodingJobState.InProgress,
                         machineName
                     });
 
-                return updatedRows == 1;
+                if (updatedRows != 1)
+                    throw new Exception($"Failed to update progress for task id {id}");
             }
+            return jobState;
         }
 
         public FFmpegTaskDto GetNextJob(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
-            InsertClientHeartbeat(machineName, DateTimeOffset.Now);
+            InsertClientHeartbeat(machineName);
 
             int timeoutSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["TimeoutSeconds"]);
             var now = DateTimeOffset.UtcNow;
@@ -379,7 +379,7 @@ namespace API.Repository
             }
         }
 
-        private void InsertClientHeartbeat(string machineName, DateTimeOffset heartbeat)
+        private void InsertClientHeartbeat(string machineName)
         {
             if (string.IsNullOrWhiteSpace(machineName)) throw new ArgumentNullException(nameof(machineName));
 
@@ -388,7 +388,7 @@ namespace API.Repository
                 int rowsAffected = connection.Execute("sp_InsertClientHeartbeat", new
                 {
                     MachineName = machineName,
-                    Timestamp = heartbeat
+                    Timestamp = DateTimeOffset.UtcNow
                 }, commandType: CommandType.StoredProcedure);
 
                 if (rowsAffected != 1)
@@ -461,7 +461,7 @@ namespace API.Repository
             if (jobRequest == null)
                 throw new ArgumentException($@"Job with correlation id {job.JobCorrelationId} not found");
 
-            jobRequest.Targets = connection.Query<VideoDestinationFormat>(
+            jobRequest.Targets = connection.Query<DestinationFormat>(
                     "SELECT JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate FROM FfmpegVideoRequestTargets WHERE JobCorrelationId = @Id;",
                     new {Id = job.JobCorrelationId})
                 .ToArray();
@@ -616,7 +616,7 @@ namespace API.Repository
             foreach (var chunk in chunks.GroupBy(x => x.Target, x => x, (key, values) => values))
             {
                 int targetNumber = chunk.First().Target;
-                VideoDestinationFormat target = jobRequest.Targets[targetNumber];
+                DestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
                     $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target
@@ -648,7 +648,7 @@ namespace API.Repository
             {
                 var FfmpegVideoParts = chunk as IList<FfmpegPart> ?? chunk.ToList();
                 int targetNumber = FfmpegVideoParts.First().Target;
-                VideoDestinationFormat target = jobRequest.Targets[targetNumber];
+                DestinationFormat target = jobRequest.Targets[targetNumber];
 
                 string targetFilename =
                     $@"{outputFolder}{Path.DirectorySeparatorChar}{fileNameWithoutExtension}_{target.Width}x{target.Height}_{target.VideoBitrate}_{target.AudioBitrate}{fileExtension}";

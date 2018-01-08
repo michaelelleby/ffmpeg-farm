@@ -2,7 +2,7 @@
 {
     public class AudioDestinationFormat
     {
-        public AudioCodec AudioCodec { get; set; }
+        public Codec AudioCodec { get; set; }
 
         public ContainerFormat Format { get; set; }
         

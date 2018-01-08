@@ -25,17 +25,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("FC_CONFIG_DIR=\\\\ondnas01\\MediaCache;FONTCONFIG_FILE=\\\\ondnas01\\MediaCache\\fonts.c" +
-            "onf;FONTCONFIG_PATH=\\\\ondnas01\\MediaCache")]
-        public string EnvorimentVars {
-            get {
-                return ((string)(this["EnvorimentVars"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("8")]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
         public int Threads {
             get {
                 return ((int)(this["Threads"]));
@@ -44,7 +34,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("d:\\temp\\logfiles")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01.net.dr.dk\\MediaCache\\ffmpeg-farm\\logfiles")]
         public string FFmpegLogPath {
             get {
                 return ((string)(this["FFmpegLogPath"]));
@@ -54,7 +44,7 @@ namespace FFmpegFarm.WindowsService.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.WebServiceUrl)]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://localhost:9000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://od01udv.net.dr.dk:9000")]
         public string ControllerApi {
             get {
                 return ((string)(this["ControllerApi"]));
@@ -63,7 +53,8 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("d:\\ffmpeg-3.2.4-win64-static\\bin\\ffmpeg.exe")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\\\\ondnas01.net.dr.dk\\MediaCache\\ffmpeg-farm\\ffmpeg-3.2-win64-static\\bin\\ffmpeg.ex" +
+            "e")]
         public string FFmpegPath {
             get {
                 return ((string)(this["FFmpegPath"]));
@@ -72,28 +63,11 @@ namespace FFmpegFarm.WindowsService.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("amqp://guest:guest@localhost:5672")]
-        public string RabbitMqDsn {
+        [global::System.Configuration.DefaultSettingValueAttribute("FC_CONFIG_DIR=\\\\ondnas01\\MediaCache;FONTCONFIG_FILE=\\\\ondnas01\\MediaCache\\fonts.c" +
+            "onf;FONTCONFIG_PATH=\\\\ondnas01\\MediaCache")]
+        public string EnvorimentVars {
             get {
-                return ((string)(this["RabbitMqDsn"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("ffmpeg-farm-status")]
-        public string RabbitMqQueueName {
-            get {
-                return ((string)(this["RabbitMqQueueName"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool RabbitMqEnabled {
-            get {
-                return ((bool)(this["RabbitMqEnabled"]));
+                return ((string)(this["EnvorimentVars"]));
             }
         }
     }

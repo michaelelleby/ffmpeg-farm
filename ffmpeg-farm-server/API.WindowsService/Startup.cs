@@ -67,7 +67,44 @@ namespace API.WindowsService
             config.MapHttpAttributeRoutes();
 
             var container = new Container();
-            IoC.IoC.ConfigureContainer(container);
+            container.Configure(_ =>
+            {
+                _.For<IVideoJobRepository>()
+                    .Use<VideoJobRepository>();
+
+                _.For<IAudioJobRepository>()
+                    .Use<AudioJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IAudioDemuxJobRepository>()
+                    .Use<AudioDemuxJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IMuxJobRepository>()
+                    .Use<MuxJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IHardSubtitlesJobRepository>()
+                    .Use<HardSubtitlesJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IJobRepository>()
+                    .Use<JobRepository>();
+
+                _.For<IHelper>()
+                    .Use<Helper>();
+
+                _.For<ILogging>()
+                    .Singleton()
+                    .Use<NLogWrapper>()
+                    .Ctor<string>("name")
+                    .Is(ConfigurationManager.AppSettings["NLog-Appname"] ??
+                        System.Reflection.Assembly.GetExecutingAssembly().FullName);
+            });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);
 
