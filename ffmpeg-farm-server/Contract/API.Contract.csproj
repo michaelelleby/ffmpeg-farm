@@ -90,11 +90,6 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FluentValidation, Version=6.2.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentValidation.6.2.1.0\lib\Net45\FluentValidation.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Build.Framework" />
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath Condition="Exists('..\packages\Newtonsoft.Json.9.0.1\lib\net45\')">..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <HintPath Condition="Exists('..\..\ffmpeg-farm-client\packages\Newtonsoft.Json.9.0.1\lib\net45\')">..\..\ffmpeg-farm-client\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -146,7 +141,6 @@
     <Compile Include="Models\FfmpegJobModel.cs" />
     <Compile Include="Models\ServiceStatus.cs" />
     <Compile Include="Models\FfmpegTaskModel.cs" />
-    <Compile Include="Models\TaskProgressModel.cs" />
     <Compile Include="Models\WorkerStatus.cs" />
     <Compile Include="Mp4boxJob.cs" />
     <Compile Include="HardSubtitlesJob.cs" />

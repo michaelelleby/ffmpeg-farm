@@ -31,7 +31,7 @@ namespace Contract
         /// <summary>
         ///  One or more target resolutions and bitrates
         /// </summary>
-        public VideoDestinationFormat[] Targets { get; set; }
+        public DestinationFormat[] Targets { get; set; }
 
         /// <summary>
         /// Preset for X264. One of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo.

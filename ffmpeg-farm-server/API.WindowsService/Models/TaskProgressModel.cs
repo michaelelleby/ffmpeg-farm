@@ -1,15 +1,12 @@
 ﻿using System;
-using Microsoft.Build.Framework;
+using System.ComponentModel.DataAnnotations;
 
-namespace Contract.Models
+namespace API.WindowsService.Models
 {
     public class TaskProgressModel
     {
         [Required]
         public int Id { get; set; }
-
-        [Required]
-        public DateTimeOffset Timestamp { get; set; }
 
         [Required]
         public string MachineName { get; set; }

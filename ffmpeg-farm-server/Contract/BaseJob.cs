@@ -5,11 +5,6 @@ namespace Contract
     public class BaseJob
     {
         /// <summary>
-        /// Commandline arguments sent to FFmpeg
-        /// </summary>
-        public string Arguments { get; set; }
-
-        /// <summary>
         /// Job id
         /// </summary>
         public Guid JobCorrelationId { get; set; }
@@ -18,10 +13,6 @@ namespace Contract
         /// Client machine name. Used when reporting progress updates
         /// </summary>
         public string MachineName { get; set; }
-
-        public DateTimeOffset Heartbeat { get; set; }
-
-        public string HeartBeatMachineName { get; set; }
 
         /// <summary>
         /// Progress of how many seconds has been encoded

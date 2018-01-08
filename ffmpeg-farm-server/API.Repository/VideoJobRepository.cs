@@ -116,7 +116,7 @@ namespace API.Repository
                     return new MergeJob
                     {
                         Id = Convert.ToInt32(data.Id),
-                        Arguments = data.Arguments,
+                        Arguments = new string[] {data.Arguments},
                         JobCorrelationId = data.JobCorrelationId
                     };
                 }
@@ -159,7 +159,7 @@ namespace API.Repository
             }
         }
 
-        public void SaveJobs(JobRequest request, ICollection<VideoTranscodingJob> jobs, IDbConnection connection,
+        public void SaveJobs(JobRequest job, ICollection<VideoTranscodingJob> jobs, IDbConnection connection,
             Guid jobCorrelationId, int chunkDuration)
         {
             if (jobs.Any(x => x.State == TranscodingJobState.Unknown))
@@ -171,16 +171,16 @@ namespace API.Repository
                 new
                 {
                     JobCorrelationId = jobCorrelationId,
-                    request.VideoSourceFilename,
-                    request.AudioSourceFilename,
-                    request.DestinationFilename,
-                    request.Needed,
+                    job.VideoSourceFilename,
+                    job.AudioSourceFilename,
+                    job.DestinationFilename,
+                    job.Needed,
                     Created = DateTime.UtcNow,
-                    request.EnableDash,
-                    request.EnableTwoPass, request.EnablePsnr
+                    job.EnableDash,
+                    job.EnableTwoPass, job.EnablePsnr
                 });
 
-            foreach (VideoDestinationFormat target in request.Targets)
+            foreach (DestinationFormat target in job.Targets)
             {
                 connection.Execute(
                     "INSERT INTO FfmpegVideoRequestTargets (JobCorrelationId, Width, Height, VideoBitrate, AudioBitrate, H264Level, H264Profile) VALUES(@JobCorrelationId, @Width, @Height, @VideoBitrate, @AudioBitrate, @Level, @Profile);",
@@ -196,47 +196,28 @@ namespace API.Repository
                     });
             }
 
-            int jobId = connection.ExecuteScalar<int>(
-                        "INSERT INTO FfmpegJobs (JobCorrelationId, Created, Needed, JobState, JobType) VALUES(@JobCorrelationId, @Created, @Needed, @JobState, @JobType);SELECT @@IDENTITY;",
-                        new
-                        {
-                            JobCorrelationId = jobCorrelationId,
-                            Created = DateTimeOffset.UtcNow,
-                            request.Needed,
-                            JobState = TranscodingJobState.Queued,
-                            JobType = JobType.Audio
-                        });
-
             foreach (VideoTranscodingJob transcodingJob in jobs)
             {
-                //var jobId = connection.ExecuteScalar<int>("INSERT INTO FfmpegVideoJobs (JobCorrelationId, Arguments, Needed, VideoSourceFilename, ChunkDuration, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @VideoSourceFilename, @ChunkDuration, @State);SELECT @@IDENTITY;",
-                //    new
-                //    {
-                //        JobCorrelationId = jobCorrelationId,
-                //        Arguments = String.Join("|", transcodingJob.Arguments),
-                //        Needed = transcodingJob.Needed,
-                //        VideoSourceFilename = transcodingJob.SourceFilename,
-                //        ChunkDuration = chunkDuration,
-                //        State = transcodingJob.State
-                //    });
-
                 connection.Execute(
-                    "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
+                    "INSERT INTO FfmpegVideoJobs (JobCorrelationId, Arguments, Needed, VideoSourceFilename, ChunkDuration, State) VALUES(@JobCorrelationId, @Arguments, @Needed, @VideoSourceFilename, @ChunkDuration, @State);",
                     new
                     {
-                        FfmpegJobsId = jobId,
-                        transcodingJob.Arguments,
-                        TaskState = TranscodingJobState.Queued,
-                        transcodingJob.DestinationFilename,
-                        transcodingJob.DestinationDurationSeconds,
-                        VerifyOutput = true
+                        JobCorrelationId = jobCorrelationId,
+                        Arguments = String.Join("|", transcodingJob.Arguments),
+                        Needed = transcodingJob.Needed,
+                        VideoSourceFilename = transcodingJob.SourceFilename,
+                        ChunkDuration = chunkDuration,
+                        State = transcodingJob.State
                     });
+
+                int jobId = connection.Query<int>("SELECT @@IDENTITY;")
+                    .Single();
 
                 foreach (FfmpegPart part in transcodingJob.Chunks)
                 {
-                    VideoDestinationFormat format = request.Targets[part.Target];
+                    DestinationFormat format = job.Targets[part.Target];
                     connection.Execute(
-                        "INSERT INTO FfmpegVideoParts (JobCorrelationId, Target, Filename, Number, FfmpegJobs_Id, Width, Height, Bitrate) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegVideoJobsId, @Width, @Height, @Bitrate);",
+                        "INSERT INTO FfmpegVideoParts (JobCorrelationId, Target, Filename, Number, FfmpegVideoJobs_Id, Width, Height, Bitrate) VALUES(@JobCorrelationId, @Target, @Filename, @Number, @FfmpegVideoJobsId, @Width, @Height, @Bitrate);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,

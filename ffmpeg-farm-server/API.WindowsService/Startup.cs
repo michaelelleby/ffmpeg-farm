@@ -105,7 +105,6 @@ namespace API.WindowsService
                     .Is(ConfigurationManager.AppSettings["NLog-Appname"] ??
                         System.Reflection.Assembly.GetExecutingAssembly().FullName);
             });
-            IoC.IoC.ConfigureContainer(container);
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);
 
