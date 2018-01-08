@@ -12,11 +12,8 @@ namespace API.WindowsService.Controllers
 
         public JobController(IJobRepository repository, ILogging logging)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _repository = repository;
-            _logging = logging;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
         }
 
         [HttpDelete]
