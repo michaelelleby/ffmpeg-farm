@@ -46,19 +46,5 @@ namespace API.WindowsService.Test.Controllers
             // Assert
             Assert.That(exception.ParamName, Is.EqualTo("id"));
         }
-
-        [Test]
-        public void UpdateProgressShouldThrowForNullJobParameter()
-        {
-            // Arrange
-            var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var sut = fixture.Create<StatusController>();
-
-            // Act
-            var exception = Assert.Throws<ArgumentNullException>(() => sut.UpdateProgress(null));
-
-            // Assert
-            Assert.That(exception.ParamName, Is.EqualTo("model"));
-        }
     }
 }

@@ -7,314 +7,278 @@ using System.Net.Http;
 using System.Text;
 using System.Transactions;
 using System.Web.Http;
-using System.Web.Http.Description;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;
 
-// TODO Disabled while audio transcoding is being developed so we don't have to spend time keeping this code up to date
+namespace API.WindowsService.Controllers
+{
+    public class VideoJobController : ApiController
+    {
+        private readonly IVideoJobRepository _repository;
+        private readonly IHelper _helper;
+        private readonly ILogging _logging;
 
-//namespace API.WindowsService.Controllers
-//{
-//public class VideoJobController : ApiController
-//{
-//    private readonly IVideoJobRepository _repository;
+        public VideoJobController(IVideoJobRepository repository, IHelper helper, ILogging logging)
+        {
+            if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
+            
+            _repository = repository;
+            _helper = helper;
+            _logging = logging;
+        }
 
-//    public VideoJobController(IVideoJobRepository repository)
-//    {
-//        if (repository == null) throw new ArgumentNullException(nameof(repository));
+        /// <summary>
+        /// Queue new transcoding job
+        /// </summary>
+        /// <param name="request"></param>
+        [HttpPost]
+        public Guid CreateNew(VideoJobRequestModel request)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+            }
 
-//        _repository = repository;
-//    }
+            Guid jobId = HandleNewVideoJob(request);
+            _logging.Info($"Created new video job : {jobId}");
+            return jobId;
+        }
 
-//    /// <summary>
-//    /// Get next transcoding job
-//    /// </summary>
-//    /// <param name="machineName">Client's machine name used to stamp who took the job</param>
-//    /// <returns><see cref="AudioTranscodingJob"/></returns>
-//    public HttpResponseMessage Get(string machineName)
-//    {
-//        if (string.IsNullOrWhiteSpace(machineName))
-//        {
-//            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Machinename must be specified");
-//        }
+        private Guid HandleNewVideoJob(VideoJobRequestModel request)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
-//        Helper.InsertClientHeartbeat(machineName);
+            string extension = ContainerHelper.GetExtension(request.ContainerFormat);
+            JobRequest job = new JobRequest
+            {
+                Needed = request.Needed.LocalDateTime,
+                AudioSourceFilename = request.AudioSourceFilename,
+                EnableDash = request.EnableMpegDash,
+                EnablePsnr = request.EnablePsnr,
+                EnableTwoPass = request.EnableTwoPass,
+                Inpoint = request.Inpoint,
+                Targets = request.Targets,
+                VideoSourceFilename = request.SourceFilename,
+                X264Preset = request.FFmpegPreset,
+                DestinationFilename = Path.Combine(request.DestinationFilenamePrefix, extension)
+            };
+            Mediainfo mi = _helper.GetMediainfo(job.VideoSourceFilename);
+            Guid jobCorrelationId = Guid.NewGuid();
 
-//        Mp4boxJob dashJob = _repository.GetNextDashJob();
-//        if (dashJob != null)
-//        {
-//            return Request.CreateResponse(HttpStatusCode.OK, dashJob);
-//        }
+            Directory.CreateDirectory(request.OutputFolder);
 
-//        var job = _repository.GetNextMergeJob() ?? _repository.GetNextTranscodingJob();
-//        return Request.CreateResponse(HttpStatusCode.OK, job);
-//    }
+            if (!Directory.Exists(request.OutputFolder))
+                throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
 
-//    /// <summary>
-//    /// Delete a job
-//    /// </summary>
-//    /// <param name="jobId">Job id returned when creating new job</param>
-//    [HttpDelete]
-//    public HttpResponseMessage Delete(Guid jobId)
-//    {
-//        if (jobId == Guid.Empty)
-//            throw new ArgumentException("Job id must be a valid GUID.");
+            ICollection<VideoTranscodingJob> transcodingJobs = new List<VideoTranscodingJob>();
+            const int chunkDuration = 60;
 
-//        return _repository.DeleteJob(jobId, JobType.Video) == false
-//            ? Request.CreateErrorResponse(HttpStatusCode.NotFound, $"Job {jobId:N} was not found")
-//            : Request.CreateResponse(HttpStatusCode.OK);
-//    }
+            // Queue audio first because it cannot be chunked and thus will take longer to transcode
+            // and if we do it first chances are it will be ready when all the video parts are ready
+            string source = !string.IsNullOrWhiteSpace(job.AudioSourceFilename)
+                ? job.AudioSourceFilename
+                : job.VideoSourceFilename;
 
-//    /// <summary>
-//    /// Queue new transcoding job
-//    /// </summary>
-//    /// <param name="job"></param>
-//    public HttpResponseMessage Post(VideoJobRequestModel request)
-//    {
-//        if (!ModelState.IsValid)
-//        {
-//            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState);
-//        }
+            int t = 0;
+            foreach (VideoDestinationFormat format in job.Targets)
+            {
+                format.Target = t++;
+            }
 
-//        var jobId = HandleNewVideoJob(request);
+            foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
+            {
+                string outputfilename = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.{0}";
+                string arguments = $@"-y -ss {job.Inpoint} -i ""{source}"" -c:a aac -b:a {bitrate}k -vn ""{outputfilename}""";
+                var audioJob = new VideoTranscodingJob
+                {
+                    JobCorrelationId = jobCorrelationId,
+                    SourceFilename = source,
+                    Needed = job.Needed,
+                    State = TranscodingJobState.Queued,
+                    DestinationDurationSeconds = mi.Duration,
+                    DestinationFilename = outputfilename,
+                    Arguments = arguments
+                };
 
-//        return Request.CreateResponse(HttpStatusCode.Created, $"{jobId:N}");
-//    }
+                audioJob.Chunks.Add(
+                    new FfmpegPart
+                    {
+                        SourceFilename = source,
+                        JobCorrelationId = jobCorrelationId,
+                        Filename = outputfilename,
+                        Target = 0,
+                        Number = 0
+                    });
 
+                transcodingJobs.Add(audioJob);
+            }
 
-//    private Guid HandleNewVideoJob(VideoJobRequestModel request)
-//    {
-//        if (request == null) throw new ArgumentNullException(nameof(request));
+            IList<Resolution> resolutions =
+                job.Targets.GroupBy(x => new { x.Width, x.Height }).Select(x => new Resolution
+                {
+                    Width = x.Key.Width,
+                    Height = x.Key.Height,
+                    Bitrates = x.Select(format => new Quality
+                    {
+                        VideoBitrate = format.VideoBitrate,
+                        AudioBitrate = format.AudioBitrate,
+                        Level = string.IsNullOrWhiteSpace(format.Level) ? "3.1" : format.Level.Trim(),
+                        Profile = format.Profile,
+                        Target = format.Target
+                    }),
+                }).ToList();
 
-//        string extension = ContainerHelper.GetExtension(request.ContainerFormat);
-//        JobRequest job = new JobRequest
-//        {
-//            Needed = request.Needed.LocalDateTime,
-//            AudioSourceFilename = request.AudioSourceFilename,
-//            EnableDash = request.EnableMpegDash,
-//            EnablePsnr = request.EnablePsnr,
-//            EnableTwoPass = request.EnableTwoPass,
-//            Inpoint = request.Inpoint,
-//            Targets = request.Targets,
-//            VideoSourceFilename = request.SourceFilenames,
-//            X264Preset = request.FFmpegPreset,
-//            DestinationFilename = Path.Combine(request.DestinationFilenamePrefix, extension)
-//        };
-//        Mediainfo mi = Helper.GetMediainfo(job.VideoSourceFilename);
-//        Guid jobCorrelationId = Guid.NewGuid();
+            int duration = Convert.ToInt32(mi.Duration - job.Inpoint.GetValueOrDefault().TotalSeconds);
+            for (int i = 0; duration - i * chunkDuration > 0; i++)
+            {
+                int value = i * chunkDuration;
+                if (value > duration)
+                {
+                    value = duration;
+                }
 
-//        Directory.CreateDirectory(request.OutputFolder);
+                var transcodingJob = VideoTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
+                    extension, i, job.Inpoint.GetValueOrDefault());
 
-//        if (!Directory.Exists(request.OutputFolder))
-//            throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
+                transcodingJobs.Add(transcodingJob);
+            }
 
-//        ICollection<VideoTranscodingJob> transcodingJobs = new List<VideoTranscodingJob>();
-//        const int chunkDuration = 60;
+            using (var connection = _helper.GetConnection())
+            {
+                connection.Open();
 
-//        // Queue audio first because it cannot be chunked and thus will take longer to transcode
-//        // and if we do it first chances are it will be ready when all the video parts are ready
-//        string source = !string.IsNullOrWhiteSpace(job.AudioSourceFilename)
-//            ? job.AudioSourceFilename
-//            : job.VideoSourceFilename;
+                using (var scope = new TransactionScope())
+                {
+                    _repository.SaveJobs(job, transcodingJobs, connection, jobCorrelationId, chunkDuration);
 
-//        int t = 0;
-//        foreach (DestinationFormat format in job.Targets)
-//        {
-//            format.Target = t++;
-//        }
+                    scope.Complete();
 
-//        VideoTranscodingJob audioJob = new VideoTranscodingJob
-//        {
-//            JobCorrelationId = jobCorrelationId,
-//            SourceFilenames = source,
-//            Needed = job.Needed,
-//            State = TranscodingJobState.Queued
-//        };
-//        StringBuilder arguments = new StringBuilder($@"-y -ss {job.Inpoint} -i ""{source}""");
-//        //for (int i = 0; i < job.Targets.Length; i++)
-//        foreach (int bitrate in job.Targets.Select(x => x.AudioBitrate).Distinct())
-//        {
-//            string chunkFilename =
-//                $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{request.DestinationFilenamePrefix}_{bitrate}_audio.{0}";
-//            arguments.Append($@" -c:a aac -b:a {bitrate}k -vn ""{chunkFilename}""");
+                    return jobCorrelationId;
+                }
+            }
+        }
 
-//            audioJob.Chunks.Add(
-//                new FfmpegPart
-//                {
-//                    SourceFilenames = source,
-//                    JobCorrelationId = jobCorrelationId,
-//                    Filename = chunkFilename,
-//                    Target = 0,
-//                    Number = 0
-//                });
-//        }
-//        audioJob.Arguments = new[] {arguments.ToString()};
+        private static VideoTranscodingJob VideoTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
+            Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
+            TimeSpan inpoint)
+        {
+            var arguments = new StringBuilder();
 
-//        transcodingJobs.Add(audioJob);
+            var transcodingJob = new VideoTranscodingJob
+            {
+                JobCorrelationId = jobCorrelationId,
+                SourceFilename = job.SourceFilename,
+                Needed = job.Needed,
+                State = TranscodingJobState.Queued,
+                DestinationFilename ="" 
+            };
+            string x264Preset = string.IsNullOrWhiteSpace(job.FFmpegPreset) ? "medium" : job.FFmpegPreset.ToLowerInvariant().Trim();
+            int refs = 8388608 / (mi.Width * mi.Height);
 
-//        IList<Resolution> resolutions =
-//            job.Targets.GroupBy(x => new {x.Width, x.Height}).Select(x => new Resolution
-//            {
-//                Width = x.Key.Width,
-//                Height = x.Key.Height,
-//                Bitrates = x.Select(format => new Quality
-//                {
-//                    VideoBitrate = format.VideoBitrate,
-//                    AudioBitrate = format.AudioBitrate,
-//                    Level = string.IsNullOrWhiteSpace(format.Level) ? "3.1" : format.Level.Trim(),
-//                    Profile = format.Profile,
-//                    Target = format.Target
-//                }),
-//            }).ToList();
+            //if (job.EnableTwoPass)
+            //{
+            //    arguments.Append(
+            //        $@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
-//        int duration = Convert.ToInt32(mi.Duration - job.Inpoint.GetValueOrDefault().TotalSeconds);
-//        for (int i = 0; duration - i*chunkDuration > 0; i++)
-//        {
-//            int value = i*chunkDuration;
-//            if (value > duration)
-//            {
-//                value = duration;
-//            }
+            //    arguments.Append($"split={resolutions.Count}");
+            //    for (int j = 0; j < resolutions.Count; j++)
+            //    {
+            //        arguments.Append($"[in{j}]");
+            //    }
+            //    arguments.Append(";");
 
-//            var transcodingJob = AudioTranscodingJob(request, value, chunkDuration, resolutions, jobCorrelationId, mi, request.OutputFolder, request.DestinationFilenamePrefix,
-//                extension, i, job.Inpoint.GetValueOrDefault());
+            //    for (int j = 0; j < resolutions.Count; j++)
+            //    {
+            //        arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height}:sws_flags=lanczos[out{j}];");
+            //    }
+            //    arguments = arguments.Remove(arguments.Length - 1, 1);
+            //    // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
+            //    arguments.Append(@"""");
 
-//            transcodingJobs.Add(transcodingJob);
-//        }
+            //    for (int j = 0; j < resolutions.Count; j++)
+            //    {
+            //        Resolution resolution = resolutions[j];
+            //        string chunkPassFilename =
+            //            $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
+            //                .Width}x{resolution.Height}_{value}.stats";
 
-//        using (var connection = Helper.GetConnection())
-//        {
-//            connection.Open();
+            //        arguments.Append(
+            //            $@" -map [out{j}] -pass 1 -profile {resolution.Bitrates.First().Profile} -passlogfile ""{chunkPassFilename}"" -an -c:v libx264 -refs {refs} -psy 0 -aq-mode 0 -me_method tesa -me_range 16 -preset {x264Preset} -aspect 16:9 -f mp4 NUL");
+            //    }
 
-//            using (var scope = new TransactionScope())
-//            {
-//                _repository.SaveJobs(job, transcodingJobs, connection, jobCorrelationId, chunkDuration);
+            //    argumentList.Add(arguments.ToString());
+            //}
 
-//                scope.Complete();
+            arguments.Clear();
+            arguments.Append($@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilename}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
 
-//                return jobCorrelationId;
-//            }
-//        }
-//    }
+            arguments.Append($"split={resolutions.Count}");
+            for (int j = 0; j < resolutions.Count; j++)
+            {
+                arguments.Append($"[in{j}]");
+            }
+            arguments.Append(";");
 
-//    private static VideoTranscodingJob AudioTranscodingJob(VideoJobRequestModel job, int value, int chunkDuration, IList<Resolution> resolutions,
-//        Guid jobCorrelationId, Mediainfo mi, string destinationFolder, string destinationFilenamePrefix, string extension, int i,
-//        TimeSpan inpoint)
-//    {
-//        var argumentList = new List<string>();
-//        var arguments = new StringBuilder();
-//        var transcodingJob = new VideoTranscodingJob
-//        {
-//            JobCorrelationId = jobCorrelationId,
-//            SourceFilenames = job.SourceFilenames,
-//            Needed = job.Needed,
-//            State = TranscodingJobState.Queued,
-//        };
-//        string x264Preset = string.IsNullOrWhiteSpace(job.FFmpegPreset) ? "medium" : job.FFmpegPreset.ToLowerInvariant().Trim();
-//        int refs = 8388608 / (mi.Width * mi.Height);
+            for (int j = 0; j < resolutions.Count; j++)
+            {
+                arguments.Append(
+                    $"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height}:sws_flags=lanczos,split={resolutions[j].Bitrates.Count()}");
 
-//        if (job.EnableTwoPass)
-//        {
-//            arguments.Append(
-//                $@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilenames}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+                for (int k = 0; k < resolutions[j].Bitrates.Count(); k++)
+                {
+                    arguments.Append($"[out{j}_{k}]");
+                }
+                arguments.Append(";");
+            }
+            arguments = arguments.Remove(arguments.Length - 1, 1);
+            // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
+            arguments.Append(@"""");
 
-//            arguments.Append($"split={resolutions.Count}");
-//            for (int j = 0; j < resolutions.Count; j++)
-//            {
-//                arguments.Append($"[in{j}]");
-//            }
-//            arguments.Append(";");
+            for (int j = 0; j < resolutions.Count; j++)
+            {
+                Resolution resolution = resolutions[j];
+                for (int k = 0; k < resolution.Bitrates.Count(); k++)
+                {
+                    Quality quality = resolution.Bitrates.ToList()[k];
+                    string chunkFilename =
+                        $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
+                            .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{extension}";
 
-//            for (int j = 0; j < resolutions.Count; j++)
-//            {
-//                arguments.Append($"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height}:sws_flags=lanczos[out{j}];");
-//            }
-//            arguments = arguments.Remove(arguments.Length - 1, 1);
-//            // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
-//            arguments.Append(@"""");
+                    arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset} -aspect 16:9 ");
+                    
+                    //if (job.EnableTwoPass)
+                    //{
+                    //    string chunkPassFilename =
+                    //    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
+                    //        .Width}x{resolution.Height}_{value}.stats";
+                    //    arguments.Append($@"-pass 2 -passlogfile ""{chunkPassFilename}"" ");
+                    //}
 
-//            for (int j = 0; j < resolutions.Count; j++)
-//            {
-//                Resolution resolution = resolutions[j];
-//                string chunkPassFilename =
-//                    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-//                        .Width}x{resolution.Height}_{value}.stats";
+                    if (job.EnablePsnr)
+                    {
+                        arguments.Append("-psnr ");
+                    }
 
-//                arguments.Append(
-//                    $@" -map [out{j}] -pass 1 -profile {resolution.Bitrates.First().Profile} -passlogfile ""{chunkPassFilename}"" -an -c:v libx264 -refs {refs} -psy 0 -aq-mode 0 -me_method tesa -me_range 16 -preset {x264Preset} -aspect 16:9 -f mp4 NUL");
-//            }
+                    arguments.Append($@"""{chunkFilename}""");
 
-//            argumentList.Add(arguments.ToString());
-//        }
+                    transcodingJob.Chunks.Add(new FfmpegPart
+                    {
+                        JobCorrelationId = jobCorrelationId,
+                        SourceFilename = job.SourceFilename,
+                        Filename = chunkFilename,
+                        Target = quality.Target,
+                        Number = i
+                    });
+                }
 
-//        arguments.Clear();
-//        arguments.Append($@"-y -ss {inpoint + TimeSpan.FromSeconds(value)} -t {chunkDuration} -i ""{job.SourceFilenames}"" -filter_complex ""yadif=0:-1:0,format=yuv420p,");
+            }
 
-//        arguments.Append($"split={resolutions.Count}");
-//        for (int j = 0; j < resolutions.Count; j++)
-//        {
-//            arguments.Append($"[in{j}]");
-//        }
-//        arguments.Append(";");
+            transcodingJob.Arguments = arguments.ToString();
 
-//        for (int j = 0; j < resolutions.Count; j++)
-//        {
-//            arguments.Append(
-//                $"[in{j}]scale={resolutions[j].Width}:{resolutions[j].Height}:sws_flags=lanczos,split={resolutions[j].Bitrates.Count()}");
-
-//            for (int k = 0; k < resolutions[j].Bitrates.Count(); k++)
-//            {
-//                arguments.Append($"[out{j}_{k}]");
-//            }
-//            arguments.Append(";");
-//        }
-//        arguments = arguments.Remove(arguments.Length - 1, 1);
-//        // Remove trailing semicolon, ffmpeg does not like a semicolon after the last filter
-//        arguments.Append(@"""");
-
-//        for (int j = 0; j < resolutions.Count; j++)
-//        {
-//            Resolution resolution = resolutions[j];
-//            for (int k = 0; k < resolution.Bitrates.Count(); k++)
-//            {
-//                Quality quality = resolution.Bitrates.ToList()[k];
-//                string chunkFilename =
-//                    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-//                        .Width}x{resolution.Height}_{quality.VideoBitrate}_{quality.AudioBitrate}_{value}{extension}";
-
-//                arguments.Append($@" -map [out{j}_{k}] -an -c:v libx264 -refs {refs} -psy 0 -aq-mode 0 -me_method tesa -me_range 16 -b:v {quality.VideoBitrate}k -profile:v {quality.Profile} -level {quality.Level} -preset {x264Preset} -aspect 16:9 ");
-//                if (job.EnableTwoPass)
-//                {
-//                    string chunkPassFilename =
-//                    $@"{destinationFolder}{Path.DirectorySeparatorChar}{destinationFilenamePrefix}_{resolution
-//                        .Width}x{resolution.Height}_{value}.stats";
-//                    arguments.Append($@"-pass 2 -passlogfile ""{chunkPassFilename}"" ");
-//                }
-
-//                if (job.EnablePsnr)
-//                {
-//                    arguments.Append("-psnr ");
-//                }
-
-//                arguments.Append($@"""{chunkFilename}""");
-
-//                transcodingJob.Chunks.Add(new FfmpegPart
-//                {
-//                    JobCorrelationId = jobCorrelationId,
-//                    SourceFilenames = job.SourceFilenames,
-//                    Filename = chunkFilename,
-//                    Target = quality.Target,
-//                    Number = i
-//                });
-//            }
-
-//        }
-
-//        argumentList.Add(arguments.ToString());
-//        transcodingJob.Arguments = argumentList.ToArray();
-
-//        return transcodingJob;
-//    }
-//}
-//}
+            return transcodingJob;
+        }
+    }
+}

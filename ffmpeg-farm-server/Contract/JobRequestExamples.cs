@@ -16,14 +16,14 @@
                 DestinationFilename = @"e:\temp\output.mp4",
                 Targets = new[]
                 {
-                    new DestinationFormat
+                    new VideoDestinationFormat
                     {
                         VideoBitrate = 2000,
                         Width = 1280,
                         Height = 720,
                         AudioBitrate = 128
                     },
-                    new DestinationFormat
+                    new VideoDestinationFormat
                     {
                         VideoBitrate = 1000,
                         AudioBitrate = 64,
