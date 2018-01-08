@@ -16,8 +16,11 @@ namespace API.WindowsService.Controllers
 
         public AudioDemuxJobController(IAudioDemuxJobRepository repository, ILogging logging)
         {
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
+
+            _repository = repository;
+            _logging = logging;
         }
 
         [HttpPost]
