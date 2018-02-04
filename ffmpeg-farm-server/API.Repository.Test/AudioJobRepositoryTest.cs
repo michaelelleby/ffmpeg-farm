@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using AutoFixture;
+using AutoFixture.AutoMoq;
 using Contract;
 using NUnit.Framework;
-using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.AutoMoq;
 
 namespace API.Repository.Test
 {

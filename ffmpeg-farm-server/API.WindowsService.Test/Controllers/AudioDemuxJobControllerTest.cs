@@ -5,11 +5,11 @@ using System.Linq;
 using API.WindowsService.Controllers;
 using API.WindowsService.Models;
 using API.WindowsService.Test.Helpers;
+using AutoFixture;
+using AutoFixture.AutoMoq;
 using Contract;
 using Moq;
 using NUnit.Framework;
-using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.AutoMoq;
 using SemanticComparison;
 
 namespace API.WindowsService.Test.Controllers

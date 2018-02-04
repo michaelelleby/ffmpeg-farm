@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Net.Http;
 using System.Web.Http;
-using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.Kernel;
+using AutoFixture;
+using AutoFixture.Kernel;
 
 namespace API.WindowsService.Test.Helpers
 {

@@ -1,14 +1,13 @@
-﻿using Ploeh.AutoFixture;
-using Ploeh.AutoFixture.AutoMoq;
+﻿using AutoFixture;
+using AutoFixture.AutoMoq;
 
 namespace API.WindowsService.Test.Helpers
 {
     internal class ApiControllerConventions : CompositeCustomization
     {
+        /// <inheritdoc />
         internal ApiControllerConventions()
-            : base(
-                new HttpRequestMessageCustomization(),
-                new ApiControllerCustomization(),
+            : base(new ApiControllerConventions(),
                 new AutoMoqCustomization())
         {
         }

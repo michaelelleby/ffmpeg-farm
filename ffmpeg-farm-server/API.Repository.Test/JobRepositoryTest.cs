@@ -148,7 +148,6 @@ namespace API.Repository.Test
 
             Mock<IHelper> helper = new Mock<IHelper>();
             IAudioJobRepository audioJobRepository = new AudioJobRepository(helper.Object);
-            IHardSubtitlesJobRepository hardSubtitlesJobRepository = new HardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
             IJobRepository sut = new JobRepository(helper.Object);
 
             helper.Setup(m => m.GetConnection())
