@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using API.Database;
 using Contract;
 using Dapper;
 
 namespace API.Repository
 {
-    public class AudioJobRepository : JobRepository, IAudioJobRepository
+    public class OldAudioJobRepository : OldJobRepository, IOldAudioJobRepository
     {
         private readonly IHelper _helper;
 
-        public AudioJobRepository(IHelper helper) : base(helper)
+        public OldAudioJobRepository(IHelper helper) : base(helper)
         {
             if (helper == null) throw new ArgumentNullException(nameof(helper));
 

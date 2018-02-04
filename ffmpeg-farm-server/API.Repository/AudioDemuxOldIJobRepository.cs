@@ -2,26 +2,27 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using API.Database;
 using Contract;
 using Dapper;
 
 namespace API.Repository
 {
     /// <summary>
-    /// Receives hard subtitles preprocess jobs orders.
+    /// Receives mux'ing preprocess jobs orders.
     /// </summary>
-    public class HardSubtitlesJobRepository : JobRepository, IHardSubtitlesJobRepository
+    public class AudioDemuxJobRepository : OldJobRepository, IAudioDemuxJobRepository
     {
         private readonly string _connectionString;
 
-        public HardSubtitlesJobRepository(IHelper helper, string connectionString) : base(helper)
+        public AudioDemuxJobRepository(IHelper helper, string connectionString) : base(helper)
         {
             if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
 
             _connectionString = connectionString;
         }
 
-        public Guid Add(HardSubtitlesJobRequest request, ICollection<FFmpegJob> jobs)
+        public Guid Add(AudioDemuxJobRequest request, ICollection<FFmpegJob> jobs)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (jobs == null) throw new ArgumentNullException(nameof(jobs));
@@ -33,19 +34,18 @@ namespace API.Repository
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegHardSubtitlesRequest (JobCorrelationId, VideoSourceFilename, SubtitlesFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @SubtitlesFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
+                        "INSERT INTO FfmpegMuxRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, '', @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             request.VideoSourceFilename,
-                            request.SubtitlesFilename,
                             request.Needed,
                             request.DestinationFilename,
                             request.OutputFolder,
                             Created = DateTime.UtcNow
                         });
 
-                    foreach (HardSubtitlesJob job in jobs.Select(x => x as HardSubtitlesJob))
+                    foreach (AudioDemuxJob job in jobs.Select(x => x as AudioDemuxJob))
                     {
                         var jobId = connection.ExecuteScalar<int>(
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Created, Needed, JobState, JobType) VALUES(@JobCorrelationId, @Created, @Needed, @State, @JobType);SELECT @@IDENTITY;",
@@ -55,7 +55,7 @@ namespace API.Repository
                                 Created = DateTimeOffset.UtcNow,
                                 job.Needed,
                                 State = job.State,
-                                JobType = JobType.HardSubtitles
+                                JobType = JobType.Mux
                             });
 
                         connection.Execute(

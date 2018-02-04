@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.Database;
+using API.Repository;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;
@@ -17,11 +19,11 @@ namespace API.WindowsService.Controllers
     /// </summary>
     public class AudioJobController : ApiController
     {
-        private readonly IAudioJobRepository _repository;
+        private readonly IOldAudioJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
 
-        public AudioJobController(IAudioJobRepository repository, IHelper helper, ILogging logging)
+        public AudioJobController(IOldAudioJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
@@ -148,7 +150,39 @@ namespace API.WindowsService.Controllers
             if (!Directory.Exists(request.OutputFolder))
                 throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
 
-            return _repository.Add(jobRequest, jobs);
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                var ffmpegrequest = new FfmpegAudioRequest
+                {
+                    JobCorrelationId = jobCorrelationId,
+                    Created = DateTimeOffset.UtcNow,
+                    DestinationFilename = request.DestinationFilenamePrefix,
+                    Needed = request.Needed,
+                    OutputFolder = request.OutputFolder,
+                    SourceFilename = string.Join(",", request.SourceFilenames)
+                };
+                unitOfWork.AudioRequests.Add(ffmpegrequest);
+
+                ICollection<FfmpegTasks> tasks = jobs.Select(j => new FfmpegTasks
+                {
+                    Arguments = j.Arguments,
+                    DestinationDurationSeconds = j.DestinationDurationSeconds,
+                    DestinationFilename = j.DestinationFilename
+                }).ToList();
+
+                var ffmpegjob = new FfmpegJobs
+                {
+                    Created = DateTimeOffset.UtcNow,
+                    JobCorrelationId = jobCorrelationId,
+                    FfmpegTasks = tasks
+                };
+
+                unitOfWork.Jobs.Add(ffmpegjob);
+
+                unitOfWork.Complete();
+            }
+            //return _repository.Add(jobRequest, jobs);
+            return Guid.Empty;
         }
     }
 }

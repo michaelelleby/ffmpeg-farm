@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using API.Database;
 using API.WindowsService.Controllers;
 using API.WindowsService.Models;
 using API.WindowsService.Test.Helpers;

@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.Database;
 using API.WindowsService.Models;
 using Contract;
 
@@ -11,11 +12,11 @@ namespace API.WindowsService.Controllers
 {
     public class MuxJobController : ApiController
     {
-        private readonly IMuxJobRepository _repository;
+        private readonly IMuxIOldJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
 
-        public MuxJobController(IMuxJobRepository repository, IHelper helper, ILogging logging)
+        public MuxJobController(IMuxIOldJobRepository repository, IHelper helper, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));

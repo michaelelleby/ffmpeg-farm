@@ -120,14 +120,20 @@
     <Compile Include="FfmpegPart.cs" />
     <Compile Include="FfmpegTask.cs" />
     <Compile Include="H264Profile.cs" />
-    <Compile Include="IAudioJobRepository.cs" />
+    <Compile Include="IAudioOldIJobRepository.cs" />
+    <Compile Include="IAudioRequestRepository.cs" />
     <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
+    <Compile Include="IRepository.cs" />
+    <Compile Include="IClientRepository.cs" />
+    <Compile Include="ITaskRepository.cs" />
+    <Compile Include="IOldJobRepository.cs" />
     <Compile Include="IHardSubtitlesJobRepository.cs" />
     <Compile Include="ILogging.cs" />
-    <Compile Include="IAudioDemuxJobRepository.cs" />
-    <Compile Include="IMuxJobRepository.cs" />
-    <Compile Include="IVideoJobRepository.cs" />
+    <Compile Include="IAudioDemuxOldIJobRepository.cs" />
+    <Compile Include="IMuxOldIJobRepository.cs" />
+    <Compile Include="IUnitOfWork.cs" />
+    <Compile Include="IOldVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobRequestBase.cs" />
     <Compile Include="JobStatusModel.cs" />
@@ -152,7 +158,12 @@
     <Compile Include="FFmpegJob.cs" />
     <Compile Include="VideoTranscodingJob.cs" />
     <Compile Include="JobRequestExamples.cs" />
-    <Compile Include="TranscodingJobState.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\API.Database\API.Database.csproj">
+      <Project>{C6B46691-1429-4D9B-A9DE-A0DC7BC84993}</Project>
+      <Name>API.Database</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -38,6 +40,7 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
+        private static ConcurrentBag<int> _currentTaskList;
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
@@ -62,6 +65,7 @@ namespace FFmpegFarm.Worker
             _logfilesPath = logfilesPath;
             _envorimentVars = envorimentVars;
             _timeSinceLastProgressUpdate = new Stopwatch();
+            _currentTaskList = new ConcurrentBag<int>();
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
@@ -148,6 +152,14 @@ namespace FFmpegFarm.Worker
 
         private void ExecuteJob()
         {
+            if (_currentTaskList.Contains(_currentTask.Id.Value))
+            {
+                _logger.Warn($"Got task id {_currentTask.Id} that other worker is already working on! Skipping.");
+                return;
+            }
+
+            _currentTaskList.Add(_currentTask.Id.Value);
+
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Restart();

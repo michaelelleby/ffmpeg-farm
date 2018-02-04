@@ -34,7 +34,7 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IJobRepository>>();
+            var repository = fixture.Freeze<Mock<IOldJobRepository>>();
             var sut = fixture.Create<StatusController>();
 
             repository.Setup(m => m.Get(It.IsAny<Guid>()))

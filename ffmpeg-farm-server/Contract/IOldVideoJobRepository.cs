@@ -4,7 +4,7 @@ using System.Data;
 
 namespace Contract
 {
-    public interface IVideoJobRepository : IJobRepository
+    public interface IOldVideoJobRepository : IOldJobRepository
     {
         VideoTranscodingJob GetNextTranscodingJob();
         MergeJob GetNextMergeJob();

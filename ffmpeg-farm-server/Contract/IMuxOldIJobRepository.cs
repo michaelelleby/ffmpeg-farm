@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Contract
 {
-    public interface IMuxJobRepository : IJobRepository
+    public interface IMuxIOldJobRepository : IOldJobRepository
     {
         Guid Add(MuxJobRequest request, ICollection<FFmpegJob> jobs);
     }

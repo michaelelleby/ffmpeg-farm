@@ -1,4 +1,4 @@
-namespace Contract
+namespace API.Database
 {
     public enum TranscodingJobState : byte
     {

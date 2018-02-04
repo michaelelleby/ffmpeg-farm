@@ -15,7 +15,7 @@ namespace API.Repository.Test
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization());
 
-            IAudioJobRepository sut = fixture.Create<AudioJobRepository>();
+            IOldAudioJobRepository sut = fixture.Create<OldAudioJobRepository>();
 
             // Act
             var exception = Assert.Throws<ArgumentNullException>(() => sut.Add(null, new List<AudioTranscodingJob>()));
@@ -29,7 +29,7 @@ namespace API.Repository.Test
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization());
 
-            IAudioJobRepository sut = fixture.Create<AudioJobRepository>();
+            IOldAudioJobRepository sut = fixture.Create<OldAudioJobRepository>();
 
             // Act
             var exception = Assert.Throws<ArgumentException>(() => sut.Add(new AudioJobRequest(), new List<AudioTranscodingJob>()));

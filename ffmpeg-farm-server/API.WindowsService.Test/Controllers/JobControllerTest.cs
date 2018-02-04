@@ -33,7 +33,7 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IJobRepository>>();
+            var repository = fixture.Freeze<Mock<IOldJobRepository>>();
             var sut = fixture.Create<JobController>();
 
             repository.Setup(m => m.DeleteJob(It.IsAny<Guid>()))
@@ -65,7 +65,7 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IJobRepository>>();
+            var repository = fixture.Freeze<Mock<IOldJobRepository>>();
             var sut = fixture.Create<JobController>();
 
             repository.Setup(m => m.ResumeJob(It.IsAny<Guid>()))
@@ -97,7 +97,7 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IJobRepository>>();
+            var repository = fixture.Freeze<Mock<IOldJobRepository>>();
             var sut = fixture.Create<JobController>();
 
             repository.Setup(m => m.PauseJob(It.IsAny<Guid>()))

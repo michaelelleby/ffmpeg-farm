@@ -7,10 +7,10 @@ namespace API.WindowsService.Controllers
 {
     public class JobController : ApiController
     {
-        private readonly IJobRepository _repository;
+        private readonly IOldJobRepository _repository;
         private readonly ILogging _logging;
 
-        public JobController(IJobRepository repository, ILogging logging)
+        public JobController(IOldJobRepository repository, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (logging == null) throw new ArgumentNullException(nameof(logging));

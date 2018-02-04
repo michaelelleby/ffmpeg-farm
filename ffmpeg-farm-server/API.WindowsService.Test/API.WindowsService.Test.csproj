@@ -87,6 +87,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Database\API.Database.csproj">
+      <Project>{C6B46691-1429-4D9B-A9DE-A0DC7BC84993}</Project>
+      <Name>API.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\API.Repository\API.Repository.csproj">
       <Project>{A1B19C7B-9D5E-4C7B-8FC0-CBCCC86BD83D}</Project>
       <Name>API.Repository</Name>

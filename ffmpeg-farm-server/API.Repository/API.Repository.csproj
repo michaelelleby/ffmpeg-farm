@@ -52,7 +52,14 @@
     <Reference Include="Dapper, Version=1.50.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Dapper.1.50.2\lib\net451\Dapper.dll</HintPath>
     </Reference>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
@@ -64,16 +71,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AudioJobRepository.cs" />
+    <Compile Include="AudioOldIJobRepository.cs" />
+    <Compile Include="AudioRequestRepository.cs" />
+    <Compile Include="BaseRepository.cs" />
+    <Compile Include="ClientRepository.cs" />
     <Compile Include="JobRepository.cs" />
-    <Compile Include="HardSubtitlesJobRepository.cs" />
-    <Compile Include="AudioDemuxJobRepository.cs" />
-    <Compile Include="MuxJobRepository.cs" />
+    <Compile Include="OldJobRepository.cs" />
+    <Compile Include="OldHardSubtitlesJobRepository.cs" />
+    <Compile Include="AudioDemuxOldIJobRepository.cs" />
+    <Compile Include="MuxOldIJobRepository.cs" />
+    <Compile Include="TaskRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
-    <Compile Include="VideoJobRepository.cs" />
+    <Compile Include="UnitOfWork.cs" />
+    <Compile Include="OldVideoJobRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Database\API.Database.csproj">
+      <Project>{C6B46691-1429-4D9B-A9DE-A0DC7BC84993}</Project>
+      <Name>API.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\API.Service\API.Service.csproj">
       <Project>{A015F759-529F-4B76-BD1D-94831FE886DF}</Project>
       <Name>API.Service</Name>
@@ -84,6 +101,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

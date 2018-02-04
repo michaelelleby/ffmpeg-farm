@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
+using API.Database;
+using API.Service;
 using Contract;
 using Dapper;
 
 namespace API.Repository
 {
-    public class VideoJobRepository : JobRepository, IVideoJobRepository
+    public class OldVideoJobRepository : OldJobRepository, IOldVideoJobRepository
     {
-        public VideoJobRepository(IHelper helper) : base(helper)
+        public OldVideoJobRepository(IHelper helper) : base(helper)
         {
             
         }

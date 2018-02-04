@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Transactions;
+using API.Database;
 using Contract;
 using Dapper;
 
@@ -10,18 +12,18 @@ namespace API.Repository
     /// <summary>
     /// Receives mux'ing preprocess jobs orders.
     /// </summary>
-    public class AudioDemuxJobRepository : JobRepository, IAudioDemuxJobRepository
+    public class MuxIOldJobRepository : OldJobRepository, IMuxIOldJobRepository
     {
         private readonly string _connectionString;
 
-        public AudioDemuxJobRepository(IHelper helper, string connectionString) : base(helper)
+        public MuxIOldJobRepository(IHelper helper, string connectionString) : base(helper)
         {
             if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentNullException(nameof(connectionString));
 
             _connectionString = connectionString;
         }
 
-        public Guid Add(AudioDemuxJobRequest request, ICollection<FFmpegJob> jobs)
+        public Guid Add(MuxJobRequest request, ICollection<FFmpegJob> jobs)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (jobs == null) throw new ArgumentNullException(nameof(jobs));
@@ -33,18 +35,19 @@ namespace API.Repository
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Execute(
-                        "INSERT INTO FfmpegMuxRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, '', @DestinationFilename, @OutputFolder, @Needed, @Created);",
+                        "INSERT INTO FfmpegMuxRequest (JobCorrelationId, VideoSourceFilename, AudioSourceFilename, DestinationFilename, OutputFolder, Needed, Created) VALUES(@JobCorrelationId, @VideoSourceFilename, @AudioSourceFilename, @DestinationFilename, @OutputFolder, @Needed, @Created);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
                             request.VideoSourceFilename,
+                            request.AudioSourceFilename,
                             request.Needed,
                             request.DestinationFilename,
                             request.OutputFolder,
                             Created = DateTime.UtcNow
                         });
 
-                    foreach (AudioDemuxJob job in jobs.Select(x => x as AudioDemuxJob))
+                    foreach (MuxJob job in jobs.Select(x => x as MuxJob))
                     {
                         var jobId = connection.ExecuteScalar<int>(
                             "INSERT INTO FfmpegJobs (JobCorrelationId, Created, Needed, JobState, JobType) VALUES(@JobCorrelationId, @Created, @Needed, @State, @JobType);SELECT @@IDENTITY;",

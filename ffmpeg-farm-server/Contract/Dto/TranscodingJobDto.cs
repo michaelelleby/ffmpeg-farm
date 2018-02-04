@@ -1,4 +1,5 @@
 using System;
+using API.Database;
 
 namespace Contract.Dto
 {

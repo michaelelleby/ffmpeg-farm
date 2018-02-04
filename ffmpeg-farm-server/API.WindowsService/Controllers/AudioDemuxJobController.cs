@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.Database;
 using API.WindowsService.Models;
 using Contract;
 
