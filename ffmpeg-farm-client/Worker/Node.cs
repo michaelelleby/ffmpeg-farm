@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,7 +32,7 @@ namespace FFmpegFarm.Worker
         private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
         private Step _currentStep;
-        private static readonly int TimeOut = (int) TimeSpan.FromMinutes(2).TotalMilliseconds;
+        private static readonly int TimeOut = (int)TimeSpan.FromMinutes(2).TotalMilliseconds;
         private readonly ILogger _logger;
         private int? _threadId; // main thread id, used for logging in child threads.
         private int _progressSpinner;
@@ -38,10 +40,11 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
+        private static ConcurrentDictionary<int, bool> _currentTaskList = new ConcurrentDictionary<int, bool>();
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string, string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -50,9 +53,9 @@ namespace FFmpegFarm.Worker
             _ffmpegPath = ffmpegPath;
             if (string.IsNullOrWhiteSpace(apiUri))
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
-            if(logger == null)
+            if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
-            if(envorimentVars == null)
+            if (envorimentVars == null)
                 throw new ArgumentNullException(nameof(envorimentVars));
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
             _output = new StringBuilder();
@@ -64,8 +67,8 @@ namespace FFmpegFarm.Worker
             _timeSinceLastProgressUpdate = new Stopwatch();
         }
 
-        public static Task GetNodeTask(string ffmpegPath, 
-            string apiUri, 
+        public static Task GetNodeTask(string ffmpegPath,
+            string apiUri,
             string logfilesPath,
             IDictionary<string, string> envorimentVars,
             ILogger logger,
@@ -73,8 +76,7 @@ namespace FFmpegFarm.Worker
             IApiWrapper apiWrapper = null)
         {
 
-            var t = Task.Run(() => 
-            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            var t = Task.Run(() => new Node(ffmpegPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -97,10 +99,12 @@ namespace FFmpegFarm.Worker
                     try
                     {
                         ExecuteJob();
+                        if (_currentTask != null)
+                            _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                     }
                     catch (Exception e)
                     {
-                        _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
+                        _logger.Warn($"Job failed {_currentTask?.Id}, with error: {e}" +
                              $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
                              $"\n\tffmpeg process output:\n\n{_output}", _threadId);
 
@@ -109,6 +113,7 @@ namespace FFmpegFarm.Worker
                         {
                             _currentTask.State = FFmpegTaskDtoState.Failed;
                             UpdateTask(_currentTask);
+                            _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                             _currentTask = null;
                         }
                         Monitor.Exit(_lock);
@@ -117,7 +122,8 @@ namespace FFmpegFarm.Worker
                 }
                 ct.ThrowIfCancellationRequested();
             }
-            finally {
+            finally
+            {
                 if (_currentTask != null)
                 {
                     try
@@ -134,6 +140,7 @@ namespace FFmpegFarm.Worker
                             Done = _currentTask.State == FFmpegTaskDtoState.Done
                         };
                         _apiWrapper.UpdateProgress(model, true);
+                        _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                     }
                     catch (Exception e)
                     {
@@ -148,6 +155,12 @@ namespace FFmpegFarm.Worker
 
         private void ExecuteJob()
         {
+            if (_currentTaskList.TryAdd(_currentTask.Id.Value, true) == false)
+            {
+                _logger.Warn($"Failed to add task {_currentTask.Id.Value} to dictionary, it is already there?");
+                return;
+            }
+
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
             _stopwatch.Restart();
@@ -324,7 +337,7 @@ namespace FFmpegFarm.Worker
                 var path = Path.Combine(_logfilesPath, _currentTask.Started.Value.ToString("yyyy"), _currentTask.Started.Value.ToString("MM"), _currentTask.Started.Value.ToString("dd"));
 
                 Directory.CreateDirectory(path);
-                
+
                 string logPath = Path.Combine(path, $@"task_{_currentTask.Id}_output.txt");
                 using (Stream file = File.Create(logPath))
                 {
@@ -365,7 +378,7 @@ namespace FFmpegFarm.Worker
                 || Regex.IsMatch(_output.ToString(), @"^Error",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.Multiline);
         }
-        
+
         private void KillProcess(string reason)
         {
             lock (_lock)
@@ -426,8 +439,8 @@ namespace FFmpegFarm.Worker
                 _timeSinceLastProgressUpdate.Restart();
             }
 
-            if (_progressSpinner++%ProgressSkip == 0) // only print every 10 line
-                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds/_stopwatch.ElapsedMilliseconds:P1}", _threadId);
+            if (_progressSpinner++ % ProgressSkip == 0) // only print every 10 line
+                _logger.Debug($"\n\tFile progress : {_progress:g}\n\tTime elapsed  : {_stopwatch.Elapsed:g}\n\tSpeed: {_progress.TotalMilliseconds / _stopwatch.ElapsedMilliseconds:P1}", _threadId);
 
             _timeSinceLastUpdate.Change(TimeOut, TimeOut); //start
         }

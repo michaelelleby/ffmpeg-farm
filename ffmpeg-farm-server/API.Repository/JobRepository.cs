@@ -249,51 +249,17 @@ namespace API.Repository
                 {
                     return null;
                 }
-            }
 
-            do
-            {
-                using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.Serializable))
+                var data = new
                 {
-                    using (var connection = Helper.GetConnection())
-                    {
-                        try
-                        {
-                            var data = new
-                            {
-                                QueuedState = TranscodingJobState.Queued,
-                                InProgressState = TranscodingJobState.InProgress,
-                                Timeout = timeout,
-                                Timestamp = now
-                            };
+                    QueuedState = TranscodingJobState.Queued,
+                    InProgressState = TranscodingJobState.InProgress,
+                    Timeout = timeout,
+                    Timestamp = now
+                };
 
-                            connection.Open();
-
-                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
-                            if (task == null)
-                                return null;
-
-                            // Safety check to ensure that the data is being returned correctly in the SQL query
-                            if (task.Id < 0 || task.FfmpegJobsId < 0 || string.IsNullOrWhiteSpace(task.Arguments))
-                                throw new InvalidOperationException("One or more parameters were not set by SQL query.");
-
-                            scope.Complete();
-
-                            return task;
-                        }
-                        catch (SqlException e)
-                        {
-                            // Retry in case of deadlocks
-                            if (e.Number == 1205)
-                            {
-                                continue;
-                            }
-
-                            throw;
-                        }
-                    }
-                }
-            } while (true);
+                return connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
+            }
         }
 
         private static IEnumerable<FFmpegJobDto> GetActiveJobs(string machineName, IDbConnection connection)
