@@ -15,13 +15,13 @@ using Contract;
 namespace API.WindowsService.Controllers
 {
     /// <summary>
-    /// Receives audio jobs orders.
+    ///     Receives audio jobs orders.
     /// </summary>
     public class AudioJobController : ApiController
     {
-        private readonly IOldAudioJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
+        private readonly IOldAudioJobRepository _repository;
 
         public AudioJobController(IOldAudioJobRepository repository, IHelper helper, ILogging logging)
         {
@@ -35,29 +35,35 @@ namespace API.WindowsService.Controllers
         }
 
         /// <summary>
-        /// Create a new job
+        ///     Create a new job
         /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
         [HttpPost]
         public Guid CreateNew(AudioJobRequestModel input)
         {
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
-            }
 
             var res = HandleNewAudioJob(input);
-            _logging.Info($"Created new audio job : {res}");
-            return res;
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                var jobRequest = unitOfWork.AudioRequests.Add(res.Item1);
+                var job = unitOfWork.Jobs.Add(res.Item2);
+
+                unitOfWork.Complete();
+
+                _logging.Info($"Created new audio job : {job.JobCorrelationId}");
+
+                return job.JobCorrelationId;
+            }
         }
 
-        private Guid HandleNewAudioJob(AudioJobRequestModel request)
+        private Tuple<FfmpegAudioRequest, FfmpegJobs> HandleNewAudioJob(AudioJobRequestModel request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            AudioJobRequest jobRequest = new AudioJobRequest
+            var jobRequest = new AudioJobRequest
             {
                 Needed = request.Needed.LocalDateTime,
                 Inpoint = request.Inpoint,
@@ -66,37 +72,44 @@ namespace API.WindowsService.Controllers
                 OutputFolder = request.OutputFolder,
                 DestinationFilename = request.DestinationFilenamePrefix
             };
-            Guid jobCorrelationId = Guid.NewGuid();
+            var jobCorrelationId = Guid.NewGuid();
 
-            string sourceFilename = request.SourceFilenames.First();
-            string uniqueNamePart = Guid.NewGuid().ToString();//Used to avoid file collisions when transcoding the same file multiple times to the same location
+            var sourceFilename = request.SourceFilenames.First();
+            var uniqueNamePart =
+                Guid.NewGuid()
+                    .ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location
 
             var frameCount = _helper.GetDuration(sourceFilename);
 
             var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
             {
-                string extension = ContainerHelper.GetExtension(target.Format);
+                var extension = ContainerHelper.GetExtension(target.Format);
 
-                string destinationFilename = $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
-                string destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
-                string arguments = string.Empty;
-                string outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
+                var destinationFilename =
+                    $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
+                var destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
+                var arguments = string.Empty;
+                var outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
                     ? @"|TEMP|"
                     : destinationFullPath;
 
                 if (jobRequest.SourceFilenames.Count == 1)
                 {
                     if (target.Format == ContainerFormat.MP4)
-                    {
-                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                                .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    }
+                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {
+                                target.AudioCodec.ToString().ToLowerInvariant()
+                            } -b:a {
+                                target
+                                    .Bitrate
+                            }k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                     else
-                    {
-                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                                .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    }
+                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {
+                                target.AudioCodec.ToString().ToLowerInvariant()
+                            } -b:a {
+                                target
+                                    .Bitrate
+                            }k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                 }
                 else
                 {
@@ -107,8 +120,8 @@ namespace API.WindowsService.Controllers
                      * [0:0][1:0][2:0]concat=n=3:a=1:v=0
                      * -c:a mp3 -b:a 64k -vn -map_metadata -1 -f MP3 \\ondnas01\MediaCache\Test\marvin\ffmpeg\test2.mp3
                     */
-                    string filenameArguments = String.Empty, streams = String.Empty;
-                    int streamCount = 0;
+                    string filenameArguments = string.Empty, streams = string.Empty;
+                    var streamCount = 0;
                     foreach (var filename in jobRequest.SourceFilenames)
                     {
                         filenameArguments += $@" -i ""{filename}"" ";
@@ -118,17 +131,21 @@ namespace API.WindowsService.Controllers
                     streams = $"{streams}concat=n={streamCount}:a=1:v=0";
 
                     if (target.Format == ContainerFormat.MP4)
-                    {
                         arguments =
-                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                                .Bitrate}k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    }
+                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {
+                                    target.AudioCodec.ToString().ToLowerInvariant()
+                                } -b:a {
+                                    target
+                                        .Bitrate
+                                }k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                     else
-                    {
                         arguments =
-                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {target.AudioCodec.ToString().ToLowerInvariant()} -b:a {target
-                                .Bitrate}k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    }
+                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {
+                                    target.AudioCodec.ToString().ToLowerInvariant()
+                                } -b:a {
+                                    target
+                                        .Bitrate
+                                }k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
                 }
 
                 var transcodingJob = new AudioTranscodingJob
@@ -149,40 +166,30 @@ namespace API.WindowsService.Controllers
             Directory.CreateDirectory(request.OutputFolder);
             if (!Directory.Exists(request.OutputFolder))
                 throw new ArgumentException($@"Destination folder {request.OutputFolder} does not exist.");
-
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            
+            var ffmpegrequest = new FfmpegAudioRequest
             {
-                var ffmpegrequest = new FfmpegAudioRequest
-                {
-                    JobCorrelationId = jobCorrelationId,
-                    Created = DateTimeOffset.UtcNow,
-                    DestinationFilename = request.DestinationFilenamePrefix,
-                    Needed = request.Needed,
-                    OutputFolder = request.OutputFolder,
-                    SourceFilename = string.Join(",", request.SourceFilenames)
-                };
-                unitOfWork.AudioRequests.Add(ffmpegrequest);
+                JobCorrelationId = jobCorrelationId,
+                Created = DateTimeOffset.UtcNow,
+                DestinationFilename = request.DestinationFilenamePrefix,
+                Needed = request.Needed,
+                OutputFolder = request.OutputFolder,
+                SourceFilename = string.Join(",", request.SourceFilenames)
+            };
+            ICollection<FfmpegTasks> tasks = jobs.Select(j => new FfmpegTasks
+            {
+                Arguments = j.Arguments,
+                DestinationDurationSeconds = j.DestinationDurationSeconds,
+                DestinationFilename = j.DestinationFilename
+            }).ToList();
+            var ffmpegjob = new FfmpegJobs
+            {
+                Created = DateTimeOffset.UtcNow,
+                JobCorrelationId = jobCorrelationId,
+                FfmpegTasks = tasks
+            };
 
-                ICollection<FfmpegTasks> tasks = jobs.Select(j => new FfmpegTasks
-                {
-                    Arguments = j.Arguments,
-                    DestinationDurationSeconds = j.DestinationDurationSeconds,
-                    DestinationFilename = j.DestinationFilename
-                }).ToList();
-
-                var ffmpegjob = new FfmpegJobs
-                {
-                    Created = DateTimeOffset.UtcNow,
-                    JobCorrelationId = jobCorrelationId,
-                    FfmpegTasks = tasks
-                };
-
-                unitOfWork.Jobs.Add(ffmpegjob);
-
-                unitOfWork.Complete();
-            }
-            //return _repository.Add(jobRequest, jobs);
-            return Guid.Empty;
+            return Tuple.Create(ffmpegrequest, ffmpegjob);
         }
     }
 }

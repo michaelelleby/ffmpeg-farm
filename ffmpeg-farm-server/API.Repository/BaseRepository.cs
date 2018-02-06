@@ -18,9 +18,9 @@ namespace API.Repository
             Context = context;
         }
 
-        public void Add(TEntity entity)
+        public TEntity Add(TEntity entity)
         {
-            Context.Set<TEntity>().Add(entity);
+            return Context.Set<TEntity>().Add(entity);
         }
 
         public TEntity Get(int id)

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Data.Entity.Infrastructure;
+using System.Linq;
+using System.Threading;
 using System.Web.Http;
 using API.Database;
 using API.Repository;
@@ -22,23 +24,29 @@ namespace API.WindowsService.Controllers
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
                 FfmpegTasks task;
-                try
+
+                do
                 {
-                    task = unitOfWork.Tasks.GetNext(TimeSpan.FromMinutes(5));
+                    try
+                    {
+                        task = unitOfWork.Tasks.GetNext(TimeSpan.FromMinutes(5));
 
-                    if (task == null)
-                        return null;
+                        if (task == null)
+                            return null;
 
-                    task.TaskState = TranscodingJobState.InProgress;
-                    task.Heartbeat = DateTimeOffset.UtcNow;
-                    task.HeartbeatMachineName = machineName;
+                        task.TaskState = TranscodingJobState.InProgress;
+                        task.Heartbeat = DateTimeOffset.UtcNow;
+                        task.HeartbeatMachineName = machineName;
 
-                    unitOfWork.Complete();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    return null;
-                }
+                        unitOfWork.Complete();
+
+                        break;
+                    }
+                    catch (DbUpdateConcurrencyException ex)
+                    {
+                        ex.Entries.Single().Reload();
+                    }
+                } while (true);
 
                 return new FFmpegTaskDto
                 {
