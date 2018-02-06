@@ -63,6 +63,15 @@
     <Compile Include="FfmpegVideoRequest.cs" />
     <Compile Include="FfmpegVideoRequestTargets.cs" />
     <Compile Include="Log.cs" />
+    <Compile Include="Migrations\201802060631098_InitialCreate.cs" />
+    <Compile Include="Migrations\201802060631098_InitialCreate.Designer.cs">
+      <DependentUpon>201802060631098_InitialCreate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.cs" />
+    <Compile Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.Designer.cs">
+      <DependentUpon>201802060632221_AddRowVersionToFfmpegTasksTable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Mp4boxJobs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TranscodingJobState.cs" />
@@ -70,6 +79,14 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\201802060631098_InitialCreate.resx">
+      <DependentUpon>201802060631098_InitialCreate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.resx">
+      <DependentUpon>201802060632221_AddRowVersionToFfmpegTasksTable.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

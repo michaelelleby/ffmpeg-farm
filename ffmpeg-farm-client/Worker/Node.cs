@@ -40,7 +40,7 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
-        private static ConcurrentBag<int> _currentTaskList;
+        private static ConcurrentDictionary<int, bool> _currentTaskList = new ConcurrentDictionary<int, bool>();
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
@@ -65,7 +65,6 @@ namespace FFmpegFarm.Worker
             _logfilesPath = logfilesPath;
             _envorimentVars = envorimentVars;
             _timeSinceLastProgressUpdate = new Stopwatch();
-            _currentTaskList = new ConcurrentBag<int>();
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
@@ -77,8 +76,7 @@ namespace FFmpegFarm.Worker
             IApiWrapper apiWrapper = null)
         {
 
-            var t = Task.Run(() => 
-            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            var t = Task.Run(() => new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -101,6 +99,7 @@ namespace FFmpegFarm.Worker
                     try
                     {
                         ExecuteJob();
+                        _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                     }
                     catch (Exception e)
                     {
@@ -113,6 +112,7 @@ namespace FFmpegFarm.Worker
                         {
                             _currentTask.State = FFmpegTaskDtoState.Failed;
                             UpdateTask(_currentTask);
+                            _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                             _currentTask = null;
                         }
                         Monitor.Exit(_lock);
@@ -138,6 +138,7 @@ namespace FFmpegFarm.Worker
                             Done = _currentTask.State == FFmpegTaskDtoState.Done
                         };
                         _apiWrapper.UpdateProgress(model, true);
+                        _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
                     }
                     catch (Exception e)
                     {
@@ -152,13 +153,11 @@ namespace FFmpegFarm.Worker
 
         private void ExecuteJob()
         {
-            if (_currentTaskList.Contains(_currentTask.Id.Value))
+            if (_currentTaskList.TryAdd(_currentTask.Id.Value, true) == false)
             {
-                _logger.Warn($"Got task id {_currentTask.Id} that other worker is already working on! Skipping.");
+                _logger.Warn($"Failed to add task {_currentTask.Id.Value} to dictionary, it is already there?");
                 return;
             }
-
-            _currentTaskList.Add(_currentTask.Id.Value);
 
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);

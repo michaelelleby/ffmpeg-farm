@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,17 +10,15 @@ using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 using Contract.Models;
-using WebApi.OutputCache.V2;
 
 namespace API.WindowsService.Controllers
 {
     public class StatusController : ApiController
     {
         /// <summary>
-        /// Get status for all jobs
+        ///     Get status for all jobs
         /// </summary>
         /// <returns></returns>
-        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
         [HttpGet]
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
@@ -31,16 +30,15 @@ namespace API.WindowsService.Controllers
         }
 
         /// <summary>
-        /// Get status for a specific job
+        ///     Get status for a specific job
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
         /// <returns></returns>
-        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
         [HttpGet]
         public FfmpegJobModel Get(Guid id)
         {
             if (id == Guid.Empty)
-                throw new ArgumentOutOfRangeException(nameof(id), "ID must be a valid GUID");
+                throw new ArgumentOutOfRangeException(nameof(id), @"ID must be a valid GUID");
 
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
@@ -59,10 +57,9 @@ namespace API.WindowsService.Controllers
         }
 
         /// <summary>
-        /// Update progress of an active job.
-        /// 
-        /// This also serves as a heartbeat, to tell the server
-        /// that the client is still working actively on the job
+        ///     Update progress of an active job.
+        ///     This also serves as a heartbeat, to tell the server
+        ///     that the client is still working actively on the job
         /// </summary>
         /// <param name="model"></param>
         [HttpPatch]
@@ -72,21 +69,19 @@ namespace API.WindowsService.Controllers
                 throw new ArgumentNullException(nameof(model));
 
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
-            }
 
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                var task = unitOfWork.Tasks.Get(model.Id);
-                if (task == null)
-                    throw new ArgumentOutOfRangeException(nameof(model), $"No task found with id {model.Id}");
-
-                TranscodingJobState jobState = model.Failed
+                var jobState = model.Failed
                     ? TranscodingJobState.Failed
                     : model.Done
                         ? TranscodingJobState.Done
                         : TranscodingJobState.InProgress;
+
+                var task = unitOfWork.Tasks.Get(model.Id);
+                if (task == null)
+                    throw new ArgumentOutOfRangeException(nameof(model), $@"No task found with id {model.Id}");
 
                 task.TaskState = jobState;
                 task.Progress = model.Progress.TotalSeconds;
@@ -94,7 +89,15 @@ namespace API.WindowsService.Controllers
                 task.Heartbeat = DateTimeOffset.UtcNow;
                 task.HeartbeatMachineName = model.MachineName;
 
-                unitOfWork.Complete();
+                try
+                {
+                    unitOfWork.Complete();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    // Reload the entity so we can return the current TaskState
+                    ex.Entries.Single().Reload();
+                }
 
                 return task.TaskState;
             }
@@ -115,10 +118,9 @@ namespace API.WindowsService.Controllers
                     State = j.TaskState,
                     Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
                     VerifyProgres = j.VerifyProgress == null ? (decimal?) null : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    DestinationFilename = j.DestinationFilename,
+                    DestinationFilename = j.DestinationFilename
                 })
             };
         }
     }
 }
-

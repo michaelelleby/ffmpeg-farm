@@ -16,7 +16,7 @@ namespace API.Repository
         {
             Context.Set<FfmpegJobs>().Load();
 
-            DateTimeOffset latest = DateTimeOffset.UtcNow.Add(timeout);
+            DateTimeOffset latest = DateTimeOffset.UtcNow.Subtract(timeout);
 
             return Context.Set<FfmpegTasks>()
                 .Where(t => t.TaskState == TranscodingJobState.Queued ||

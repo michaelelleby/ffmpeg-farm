@@ -35,5 +35,8 @@ namespace API.Database
         public bool VerifyOutput { get; set; }
 
         public virtual FfmpegJobs Job { get; set; }
+
+        [Timestamp]
+        public virtual byte[] Rowversion { get; set; }
     }
 }
