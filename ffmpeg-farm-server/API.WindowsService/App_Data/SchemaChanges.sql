@@ -19,8 +19,8 @@ BEGIN
 			WHERE TaskState = @QueuedState OR (TaskState = @InProgressState AND HeartBeat < @Timeout)
 			ORDER BY Jobs.Needed ASC, Jobs.Id ASC
 
-		-- No tasks found
 		IF @TaskID = 0
+			-- No tasks found so break the loop and prevent an infinite loop
 			BREAK
 
 		UPDATE FfmpegTasks SET TaskState = @InProgressState WHERE Id = @TaskID AND VersionColumn = @RowVer
@@ -33,6 +33,7 @@ BEGIN
 		END
 		ELSE
 		BEGIN
+			-- Task was successfully reserved so retrieve the task data and break the loop to prevent an infinite loop
 			SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, VerifyOutput FROM FfmpegTasks WHERE Id = @TaskID
 			BREAK
 		END
