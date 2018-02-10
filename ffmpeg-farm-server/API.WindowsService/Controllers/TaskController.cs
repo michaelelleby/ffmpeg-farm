@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Threading;
 using System.Web.Http;
 using API.Database;
 using API.Repository;
@@ -24,6 +23,13 @@ namespace API.WindowsService.Controllers
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
                 FfmpegTasks task;
+
+                Clients client = unitOfWork.Clients.Find(c => c.MachineName == machineName).FirstOrDefault()
+                                 ?? new Clients { MachineName = machineName };
+
+                client.LastHeartbeat = DateTimeOffset.UtcNow;
+
+                unitOfWork.Complete();
 
                 do
                 {

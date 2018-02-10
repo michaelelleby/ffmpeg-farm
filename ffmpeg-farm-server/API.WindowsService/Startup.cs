@@ -69,32 +69,6 @@ namespace API.WindowsService
             var container = new Container();
             container.Configure(_ =>
             {
-                _.For<IOldVideoJobRepository>()
-                    .Use<OldVideoJobRepository>();
-
-                _.For<IOldAudioJobRepository>()
-                    .Use<OldAudioJobRepository>()
-                    .Ctor<string>("connectionString")
-                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
-
-                _.For<IAudioDemuxJobRepository>()
-                    .Use<AudioDemuxJobRepository>()
-                    .Ctor<string>("connectionString")
-                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
-
-                _.For<IMuxIOldJobRepository>()
-                    .Use<MuxIOldJobRepository>()
-                    .Ctor<string>("connectionString")
-                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
-
-                _.For<IHardSubtitlesJobRepository>()
-                    .Use<OldHardSubtitlesJobRepository>()
-                    .Ctor<string>("connectionString")
-                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
-
-                _.For<IJobRepository>()
-                    .Use<JobRepository>();
-
                 _.For<IHelper>()
                     .Use<Helper>();
 

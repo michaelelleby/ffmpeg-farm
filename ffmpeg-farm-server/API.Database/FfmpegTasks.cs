@@ -37,6 +37,6 @@ namespace API.Database
         public virtual FfmpegJobs Job { get; set; }
 
         [Timestamp]
-        public virtual byte[] Rowversion { get; set; }
+        public virtual byte[] VersionColumn { get; set; }
     }
 }

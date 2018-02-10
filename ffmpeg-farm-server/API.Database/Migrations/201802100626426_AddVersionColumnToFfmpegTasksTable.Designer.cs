@@ -7,13 +7,13 @@ namespace API.Database.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.2.0-61023")]
-    public sealed partial class AddRowVersionToFfmpegTasksTable : IMigrationMetadata
+    public sealed partial class AddVersionColumnToFfmpegTasksTable : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(AddRowVersionToFfmpegTasksTable));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(AddVersionColumnToFfmpegTasksTable));
         
         string IMigrationMetadata.Id
         {
-            get { return "201802060632221_AddRowVersionToFfmpegTasksTable"; }
+            get { return "201802100626426_AddVersionColumnToFfmpegTasksTable"; }
         }
         
         string IMigrationMetadata.Source

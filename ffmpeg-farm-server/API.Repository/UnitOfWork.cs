@@ -18,12 +18,16 @@ namespace API.Repository
             Tasks = new TaskRepository(context);
             Clients = new ClientRepository(context);
             AudioRequests = new AudioRequestRepository(context);
+            MuxRequests = new MuxJobRepository(context);
+            HardSubtitlesRequest=new HardSubtitlesRequestRepository(context);
         }
 
         public IJobRepository Jobs { get; }
         public ITaskRepository Tasks { get; }
         public IClientRepository Clients { get; }
         public IAudioRequestRepository AudioRequests { get; }
+        public IMuxJobRepository MuxRequests { get; set; }
+        public IHardSubtitlesRequestRepository HardSubtitlesRequest { get; set; }
 
         public void Complete()
         {

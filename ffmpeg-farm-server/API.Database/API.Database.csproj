@@ -67,9 +67,13 @@
     <Compile Include="Migrations\201802060631098_InitialCreate.Designer.cs">
       <DependentUpon>201802060631098_InitialCreate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.cs" />
-    <Compile Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.Designer.cs">
-      <DependentUpon>201802060632221_AddRowVersionToFfmpegTasksTable.cs</DependentUpon>
+    <Compile Include="Migrations\201802100626426_AddVersionColumnToFfmpegTasksTable.cs" />
+    <Compile Include="Migrations\201802100626426_AddVersionColumnToFfmpegTasksTable.Designer.cs">
+      <DependentUpon>201802100626426_AddVersionColumnToFfmpegTasksTable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201802100628000_ChangedAudioSourceFilenameInFfmpegMuxRequestToNullable.cs" />
+    <Compile Include="Migrations\201802100628000_ChangedAudioSourceFilenameInFfmpegMuxRequestToNullable.Designer.cs">
+      <DependentUpon>201802100628000_ChangedAudioSourceFilenameInFfmpegMuxRequestToNullable.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Mp4boxJobs.cs" />
@@ -84,8 +88,11 @@
     <EmbeddedResource Include="Migrations\201802060631098_InitialCreate.resx">
       <DependentUpon>201802060631098_InitialCreate.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201802060632221_AddRowVersionToFfmpegTasksTable.resx">
-      <DependentUpon>201802060632221_AddRowVersionToFfmpegTasksTable.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\201802100626426_AddVersionColumnToFfmpegTasksTable.resx">
+      <DependentUpon>201802100626426_AddVersionColumnToFfmpegTasksTable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201802100628000_ChangedAudioSourceFilenameInFfmpegMuxRequestToNullable.resx">
+      <DependentUpon>201802100628000_ChangedAudioSourceFilenameInFfmpegMuxRequestToNullable.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

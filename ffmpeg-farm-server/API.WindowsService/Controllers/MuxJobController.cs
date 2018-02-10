@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using API.Database;
+using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 
@@ -12,19 +13,13 @@ namespace API.WindowsService.Controllers
 {
     public class MuxJobController : ApiController
     {
-        private readonly IMuxIOldJobRepository _repository;
         private readonly IHelper _helper;
-        private readonly ILogging _logging;
 
-        public MuxJobController(IMuxIOldJobRepository repository, IHelper helper, ILogging logging)
+        public MuxJobController(IHelper helper)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
 
-            _repository = repository;
             _helper = helper;
-            _logging = logging;
         }
 
         [HttpPost]
@@ -35,12 +30,16 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
-            var res = HandleNewMuxJob(input);
-            _logging.Info($"Created new mux job : {res}");
-            return res;
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                var job = HandleNewMuxJob(input);
+                
+                unitOfWork.MuxRequests.Add(job.Item2);
+                return unitOfWork.Jobs.Add(job.Item1).JobCorrelationId;
+            }
         }
 
-        private Guid HandleNewMuxJob(MuxJobRequestModel model)
+        private Tuple<FfmpegJobs, FfmpegMuxRequest> HandleNewMuxJob(MuxJobRequestModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
@@ -53,17 +52,23 @@ namespace API.WindowsService.Controllers
                 arguments += $"-ss {model.Inpoint:g} ";
             }
             arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -i ""{model.AudioSourceFilename}"" -map 0:v:0 -map 1:a:0 -c copy -y ""{outputFilename}""";
-            var jobs = new List<FFmpegJob>
+            var jobs = new FfmpegJobs
             {
-                new MuxJob
+                JobCorrelationId = Guid.NewGuid(),
+                Created = DateTimeOffset.UtcNow,
+                Needed = model.Needed,
+                FfmpegTasks = new List<FfmpegTasks>
                 {
-                    Arguments = arguments,
-                    State = TranscodingJobState.Queued,
-                    DestinationFilename = outputFilename,
-                    DestinationDurationSeconds = frameCount
+                    new FfmpegTasks
+                    {
+                        Arguments = arguments,
+                        TaskState = TranscodingJobState.Queued,
+                        DestinationFilename = outputFilename,
+                        DestinationDurationSeconds = frameCount
+                    }
                 }
             };
-            var request = new MuxJobRequest
+            var request = new FfmpegMuxRequest
             {
                 AudioSourceFilename = model.AudioSourceFilename,
                 VideoSourceFilename = model.VideoSourceFilename,
@@ -71,7 +76,7 @@ namespace API.WindowsService.Controllers
                 OutputFolder = model.OutputFolder
             };
 
-            return _repository.Add(request, jobs);
+            return Tuple.Create(jobs, request);
         }
     }
 }

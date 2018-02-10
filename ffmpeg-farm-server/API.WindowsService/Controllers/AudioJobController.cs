@@ -14,22 +14,16 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
-    /// <summary>
-    ///     Receives audio jobs orders.
-    /// </summary>
     public class AudioJobController : ApiController
     {
         private readonly IHelper _helper;
         private readonly ILogging _logging;
-        private readonly IOldAudioJobRepository _repository;
 
-        public AudioJobController(IOldAudioJobRepository repository, IHelper helper, ILogging logging)
+        public AudioJobController(IHelper helper, ILogging logging)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (logging == null) throw new ArgumentNullException(nameof(logging));
 
-            _repository = repository;
             _helper = helper;
             _logging = logging;
         }
@@ -47,14 +41,14 @@ namespace API.WindowsService.Controllers
 
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                var jobRequest = unitOfWork.AudioRequests.Add(res.Item1);
-                var job = unitOfWork.Jobs.Add(res.Item2);
+                unitOfWork.AudioRequests.Add(res.Item1);
+                Guid jobId = unitOfWork.Jobs.Add(res.Item2).JobCorrelationId;
 
                 unitOfWork.Complete();
 
-                _logging.Info($"Created new audio job : {job.JobCorrelationId}");
+                _logging.Info($"Created new audio job : {jobId}");
 
-                return job.JobCorrelationId;
+                return jobId;
             }
         }
 
@@ -89,7 +83,7 @@ namespace API.WindowsService.Controllers
                 var destinationFilename =
                     $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
                 var destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
-                var arguments = string.Empty;
+                string arguments;
                 var outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
                     ? @"|TEMP|"
                     : destinationFullPath;

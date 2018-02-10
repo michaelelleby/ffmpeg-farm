@@ -8,6 +8,8 @@ namespace Contract
         ITaskRepository Tasks { get; }
         IClientRepository Clients { get; }
         IAudioRequestRepository AudioRequests { get; }
+        IMuxJobRepository MuxRequests { get; set; }
+        IHardSubtitlesRequestRepository HardSubtitlesRequest { get; set; }
         void Complete();
     }
 }

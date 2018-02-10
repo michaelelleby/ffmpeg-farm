@@ -71,14 +71,14 @@ namespace API.WindowsService.Controllers
             if (!ModelState.IsValid)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
 
+            var jobState = model.Failed
+                ? TranscodingJobState.Failed
+                : model.Done
+                    ? TranscodingJobState.Done
+                    : TranscodingJobState.InProgress;
+
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                var jobState = model.Failed
-                    ? TranscodingJobState.Failed
-                    : model.Done
-                        ? TranscodingJobState.Done
-                        : TranscodingJobState.InProgress;
-
                 var task = unitOfWork.Tasks.Get(model.Id);
                 if (task == null)
                     throw new ArgumentOutOfRangeException(nameof(model), $@"No task found with id {model.Id}");

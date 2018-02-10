@@ -71,19 +71,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AudioOldIJobRepository.cs" />
     <Compile Include="AudioRequestRepository.cs" />
     <Compile Include="BaseRepository.cs" />
     <Compile Include="ClientRepository.cs" />
+    <Compile Include="HardSubtitlesRequestRepository.cs" />
     <Compile Include="JobRepository.cs" />
-    <Compile Include="OldJobRepository.cs" />
-    <Compile Include="OldHardSubtitlesJobRepository.cs" />
-    <Compile Include="AudioDemuxOldIJobRepository.cs" />
-    <Compile Include="MuxOldIJobRepository.cs" />
+    <Compile Include="MuxJobRepository.cs" />
     <Compile Include="TaskRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
     <Compile Include="UnitOfWork.cs" />
-    <Compile Include="OldVideoJobRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

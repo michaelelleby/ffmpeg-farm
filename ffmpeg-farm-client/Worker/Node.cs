@@ -99,11 +99,14 @@ namespace FFmpegFarm.Worker
                     try
                     {
                         ExecuteJob();
-                        _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
+                        if (_currentTask != null)
+                        {
+                            _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
+                        }
                     }
                     catch (Exception e)
                     {
-                        _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
+                        _logger.Warn($"Job failed {_currentTask?.Id}, with error: {e}" +
                              $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
                              $"\n\tffmpeg process output:\n\n{_output}", _threadId);
 
@@ -318,6 +321,7 @@ namespace FFmpegFarm.Worker
                 if (acquiredLock)
                 {
                     _commandlineProcess = null;
+                    _currentTaskList.TryRemove(_currentTask.Id.Value, out var result);
                     _currentTask = null;
 
                     Monitor.Exit(_lock);

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using API.Database;
+using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 
@@ -12,17 +13,14 @@ namespace API.WindowsService.Controllers
 {
     public class HardSubtitlesJobController : ApiController
     {
-        private readonly IHardSubtitlesJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
 
-        public HardSubtitlesJobController(IHardSubtitlesJobRepository repository, IHelper helper, ILogging logging)
+        public HardSubtitlesJobController(IHelper helper, ILogging logging)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (logging == null) throw new ArgumentNullException(nameof(logging));
 
-            _repository = repository;
             _helper = helper;
             _logging = logging;
         }
@@ -53,15 +51,19 @@ namespace API.WindowsService.Controllers
                 arguments += $"-ss {model.Inpoint:g} ";
             }
             arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\","\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -c:v mpeg4 -b:v 50M -c:a copy -y ""{outputFilename}""";
-            var jobs = new List<FFmpegJob>
+            var jobs = new FfmpegJobs
             {
-                new HardSubtitlesJob()
+                FfmpegTasks = new List<FfmpegTasks>
                 {
-                    Arguments = arguments,
-                    State = TranscodingJobState.Queued,
-                    DestinationFilename = outputFilename,
-                    DestinationDurationSeconds = frameCount
-                }
+                    new FfmpegTasks
+                    {
+                        Arguments = arguments,
+                        TaskState = TranscodingJobState.Queued,
+                        DestinationFilename = outputFilename,
+                        DestinationDurationSeconds = frameCount
+                    }
+                },
+                JobCorrelationId = Guid.NewGuid()
             };
             var request = new HardSubtitlesJobRequest()
             {
@@ -71,7 +73,15 @@ namespace API.WindowsService.Controllers
                 OutputFolder = model.OutputFolder
             };
 
-            return _repository.Add(request, jobs);
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                unitOfWork.HardSubtitlesRequest.Add(request);
+                unitOfWork.Jobs.Add(jobs);
+
+                unitOfWork.Complete();
+
+                return jobs.JobCorrelationId;
+            }
         }
     }
 }

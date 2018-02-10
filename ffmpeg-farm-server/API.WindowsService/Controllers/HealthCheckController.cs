@@ -1,43 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Web.Http;
-using API.Service;
 using Contract;
-using Dapper;
 using Contract.Models;
 using System.Configuration;
+using API.Database;
+using API.Repository;
 
 namespace API.WindowsService.Controllers
 {
     public class HealthCheckController : ApiController
     {
-        private readonly IHelper _helper;
         private readonly int _workerNonResponsiveAlertMinutes;
 
-        public HealthCheckController(IHelper helper)
+        public HealthCheckController()
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-
-            _helper = helper;
             _workerNonResponsiveAlertMinutes = Convert.ToInt32(ConfigurationManager.AppSettings["WorkerNonResponsiveAlertMinutes"]);
         }
 
+        [HttpGet]
         public ServiceStatus Get()
         {
-            using (var connection = _helper.GetConnection())
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                connection.Open();
-
-                var clients = connection.Query<ClientHeartbeat>("SELECT MachineName, LastHeartbeat FROM Clients;");
                 ServiceStatus result = new ServiceStatus();
                 DateTime timeLimit = DateTime.UtcNow - TimeSpan.FromMinutes(_workerNonResponsiveAlertMinutes);
 
-                foreach (ClientHeartbeat ch in clients)
+                foreach (Clients client in unitOfWork.Clients.GetAll())
                 {
                     WorkerStatusEnum thisStatus = WorkerStatusEnum.OK;
-                    if (ch.LastHeartbeat < timeLimit)
-                        thisStatus = WorkerStatusEnum.NonResponsive; 
-                    result.Workers.Add(new WorkerStatus() { Status = thisStatus, WorkerName = ch.MachineName });
+                    if (client.LastHeartbeat < timeLimit)
+                        thisStatus = WorkerStatusEnum.NonResponsive;
+                    result.Workers.Add(new WorkerStatus {Status = thisStatus, WorkerName = client.MachineName});
                 }
 
                 return result;

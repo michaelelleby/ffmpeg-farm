@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using API.Database;
+using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 
@@ -47,24 +48,39 @@ namespace API.WindowsService.Controllers
 
             //TODO: Fix the ffmpeg args so the job will work
             arguments += $"-i {model.VideoSourceFilename} {outputFilename} -y";
-            var jobs = new List<FFmpegJob>
+
+            var jobs = new FfmpegJobs()
             {
-                new AudioDemuxJob
+                Needed = model.Needed.LocalDateTime,
+                FfmpegTasks = new List<FfmpegTasks>
                 {
-                    Needed = model.Needed.LocalDateTime,
-                    Arguments = arguments,
-                    State = TranscodingJobState.Queued,
-                    DestinationFilename = outputFilename
-                }
+                    new FfmpegTasks
+                    {
+                        Arguments = arguments,
+                        TaskState = TranscodingJobState.Queued,
+                        DestinationFilename = outputFilename
+                    }
+                },
+                JobCorrelationId = Guid.NewGuid()
             };
-            var request = new AudioDemuxJobRequest
+            var request = new FfmpegMuxRequest
             {
                 VideoSourceFilename = model.VideoSourceFilename,
                 DestinationFilename = model.DestinationFilename,
-                OutputFolder = model.OutputFolder
+                OutputFolder = model.OutputFolder,
+                JobCorrelationId = jobs.JobCorrelationId
             };
 
-            return _repository.Add(request, jobs);
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                unitOfWork.MuxRequests.Add(request);
+                unitOfWork.Jobs.Add(jobs);
+
+                unitOfWork.Complete();
+            }
+
+            return jobs.JobCorrelationId;
         }
     }
 }

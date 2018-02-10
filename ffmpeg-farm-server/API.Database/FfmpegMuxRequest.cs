@@ -15,7 +15,6 @@ namespace API.Database
         [Required]
         public string VideoSourceFilename { get; set; }
 
-        [Required]
         public string AudioSourceFilename { get; set; }
 
         [Required]
