@@ -37,22 +37,22 @@ namespace API.WindowsService.Controllers
             if (!ModelState.IsValid)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
 
-            var res = HandleNewAudioJob(input);
+            (FfmpegAudioRequest request, FfmpegJobs job) = HandleNewAudioJob(input);
 
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                unitOfWork.AudioRequests.Add(res.Item1);
-                Guid jobId = unitOfWork.Jobs.Add(res.Item2).JobCorrelationId;
+                unitOfWork.AudioRequests.Add(request);
+                unitOfWork.Jobs.Add(job);
 
                 unitOfWork.Complete();
 
-                _logging.Info($"Created new audio job : {jobId}");
+                _logging.Info($"Created new audio job : {job.JobCorrelationId}");
 
-                return jobId;
+                return job.JobCorrelationId;
             }
         }
 
-        private Tuple<FfmpegAudioRequest, FfmpegJobs> HandleNewAudioJob(AudioJobRequestModel request)
+        private (FfmpegAudioRequest, FfmpegJobs) HandleNewAudioJob(AudioJobRequestModel request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -69,11 +69,9 @@ namespace API.WindowsService.Controllers
             var jobCorrelationId = Guid.NewGuid();
 
             var sourceFilename = request.SourceFilenames.First();
-            var uniqueNamePart =
-                Guid.NewGuid()
-                    .ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location
+            var uniqueNamePart = Guid.NewGuid().ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location;
 
-            var frameCount = _helper.GetDuration(sourceFilename);
+            var sourceDuration = _helper.GetDuration(sourceFilename);
 
             var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
@@ -151,7 +149,7 @@ namespace API.WindowsService.Controllers
                     DestinationFilename = destinationFullPath,
                     Bitrate = target.Bitrate,
                     Arguments = arguments,
-                    DestinationDurationSeconds = frameCount
+                    DestinationDurationSeconds = sourceDuration
                 };
 
                 jobs.Add(transcodingJob);
@@ -183,7 +181,7 @@ namespace API.WindowsService.Controllers
                 FfmpegTasks = tasks
             };
 
-            return Tuple.Create(ffmpegrequest, ffmpegjob);
+            return (ffmpegrequest, ffmpegjob);
         }
     }
 }

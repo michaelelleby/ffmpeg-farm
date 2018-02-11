@@ -1,11 +1,17 @@
+using System.Data.Common;
+
 namespace API.Database
 {
     using System.Data.Entity;
 
     public partial class FfmpegFarmContext : DbContext
     {
-        public FfmpegFarmContext()
-            : base("name=FfmpegFarmContext")
+        public FfmpegFarmContext() : base("name=FfmpegFarmContext")
+        {
+            Configuration.LazyLoadingEnabled = false;
+        }
+
+        public FfmpegFarmContext(DbConnection connection) : base(connection, true)
         {
             Configuration.LazyLoadingEnabled = false;
         }

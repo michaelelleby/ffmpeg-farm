@@ -30,21 +30,25 @@ namespace API.WindowsService.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
             }
 
+            (FfmpegJobs job, FfmpegMuxRequest request) = HandleNewMuxJob(input);
+
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                var job = HandleNewMuxJob(input);
-                
-                unitOfWork.MuxRequests.Add(job.Item2);
-                return unitOfWork.Jobs.Add(job.Item1).JobCorrelationId;
+                unitOfWork.MuxRequests.Add(request);
+                unitOfWork.Jobs.Add(job);
+
+                unitOfWork.Complete();
             }
+
+            return job.JobCorrelationId;
         }
 
-        private Tuple<FfmpegJobs, FfmpegMuxRequest> HandleNewMuxJob(MuxJobRequestModel model)
+        private (FfmpegJobs, FfmpegMuxRequest) HandleNewMuxJob(MuxJobRequestModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-            var frameCount = _helper.GetDuration(model.VideoSourceFilename);
+            string outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
+            int frameCount = _helper.GetDuration(model.VideoSourceFilename);
 
             string arguments = string.Empty;
             if (model.Inpoint > TimeSpan.Zero)
@@ -76,7 +80,7 @@ namespace API.WindowsService.Controllers
                 OutputFolder = model.OutputFolder
             };
 
-            return Tuple.Create(jobs, request);
+            return (jobs, request);
         }
     }
 }

@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using API.Database;
-using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 using Contract.Models;
@@ -15,6 +14,13 @@ namespace API.WindowsService.Controllers
 {
     public class StatusController : ApiController
     {
+        private readonly IUnitOfWork _unitOfWork;
+
+        public StatusController(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        }
+
         /// <summary>
         ///     Get status for all jobs
         /// </summary>
@@ -22,11 +28,8 @@ namespace API.WindowsService.Controllers
         [HttpGet]
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
-            {
-                return unitOfWork.Jobs.GetAll().Take(take)
-                    .Select(MapDtoToModel);
-            }
+            return _unitOfWork.Jobs.GetAll().Take(take)
+                .Select(MapDtoToModel);
         }
 
         /// <summary>
@@ -40,20 +43,17 @@ namespace API.WindowsService.Controllers
             if (id == Guid.Empty)
                 throw new ArgumentOutOfRangeException(nameof(id), @"ID must be a valid GUID");
 
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
-            {
-                var dto = unitOfWork.Jobs.Find(j => j.JobCorrelationId == id)
-                    .FirstOrDefault();
-                if (dto == null)
-                    return null;
+            var dto = _unitOfWork.Jobs.Find(j => j.JobCorrelationId == id)
+                .FirstOrDefault();
+            if (dto == null)
+                return null;
 
-                return new FfmpegJobModel
-                {
-                    JobCorrelationId = id,
-                    Created = dto.Created,
-                    Needed = dto.Needed
-                };
-            }
+            return new FfmpegJobModel
+            {
+                JobCorrelationId = id,
+                Created = dto.Created,
+                Needed = dto.Needed
+            };
         }
 
         /// <summary>
@@ -77,30 +77,27 @@ namespace API.WindowsService.Controllers
                     ? TranscodingJobState.Done
                     : TranscodingJobState.InProgress;
 
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            var task = _unitOfWork.Tasks.Get(model.Id);
+            if (task == null)
+                throw new ArgumentOutOfRangeException(nameof(model), $@"No task found with id {model.Id}");
+
+            task.TaskState = jobState;
+            task.Progress = model.Progress.TotalSeconds;
+            task.VerifyProgress = model.VerifyProgress?.TotalSeconds;
+            task.Heartbeat = DateTimeOffset.UtcNow;
+            task.HeartbeatMachineName = model.MachineName;
+
+            try
             {
-                var task = unitOfWork.Tasks.Get(model.Id);
-                if (task == null)
-                    throw new ArgumentOutOfRangeException(nameof(model), $@"No task found with id {model.Id}");
-
-                task.TaskState = jobState;
-                task.Progress = model.Progress.TotalSeconds;
-                task.VerifyProgress = model.VerifyProgress?.TotalSeconds;
-                task.Heartbeat = DateTimeOffset.UtcNow;
-                task.HeartbeatMachineName = model.MachineName;
-
-                try
-                {
-                    unitOfWork.Complete();
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    // Reload the entity so we can return the current TaskState
-                    ex.Entries.Single().Reload();
-                }
-
-                return task.TaskState;
+                _unitOfWork.Complete();
             }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // The current TaskState might be different from what we just tried to set it to, so reload from database to get the current state
+                ex.Entries.Single().Reload();
+            }
+
+            return task.TaskState;
         }
 
         private static FfmpegJobModel MapDtoToModel(FfmpegJobs job)

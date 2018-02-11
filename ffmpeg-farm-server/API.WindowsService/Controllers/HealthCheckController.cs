@@ -14,7 +14,7 @@ namespace API.WindowsService.Controllers
 
         public HealthCheckController()
         {
-            _workerNonResponsiveAlertMinutes = Convert.ToInt32(ConfigurationManager.AppSettings["WorkerNonResponsiveAlertMinutes"]);
+            _workerNonResponsiveAlertMinutes = int.Parse(ConfigurationManager.AppSettings["WorkerNonResponsiveAlertMinutes"]);
         }
 
         [HttpGet]

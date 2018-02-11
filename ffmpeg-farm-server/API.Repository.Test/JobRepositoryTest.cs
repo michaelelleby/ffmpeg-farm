@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using API.Database;
 using Contract;
 using Moq;
 using NUnit.Framework;
@@ -35,6 +36,10 @@ namespace API.Repository.Test
             const string machinename = "TESTMACHINENAME";
 
             Mock<IHelper> helper = new Mock<IHelper>();
+            var context = new FfmpegFarmContext("FFmpegFarmIntegrationTests");
+            IUnitOfWork unitOfWork = new UnitOfWork(context);
+            context.Database.Delete();
+            context.Database.Create();
             IHardSubtitlesJobRepository repository = new OldHardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
             IOldJobRepository sut = new OldJobRepository(helper.Object);
 

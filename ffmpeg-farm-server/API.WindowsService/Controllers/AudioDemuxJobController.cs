@@ -13,15 +13,12 @@ namespace API.WindowsService.Controllers
 {
     public class AudioDemuxJobController : ApiController
     {
-        private readonly IAudioDemuxJobRepository _repository;
         private readonly ILogging _logging;
 
-        public AudioDemuxJobController(IAudioDemuxJobRepository repository, ILogging logging)
+        public AudioDemuxJobController(ILogging logging)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (logging == null) throw new ArgumentNullException(nameof(logging));
 
-            _repository = repository;
             _logging = logging;
         }
 
@@ -43,8 +40,7 @@ namespace API.WindowsService.Controllers
             if (model == null) throw new ArgumentNullException(nameof(model));
 
             var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-
-            string arguments = string.Empty;
+            var arguments = string.Empty;
 
             //TODO: Fix the ffmpeg args so the job will work
             arguments += $"-i {model.VideoSourceFilename} {outputFilename} -y";

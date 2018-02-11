@@ -22,8 +22,6 @@ namespace API.WindowsService.Controllers
 
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                FfmpegTasks task;
-
                 Clients client = unitOfWork.Clients.Find(c => c.MachineName == machineName).FirstOrDefault()
                                  ?? new Clients { MachineName = machineName };
 
@@ -31,6 +29,7 @@ namespace API.WindowsService.Controllers
 
                 unitOfWork.Complete();
 
+                FfmpegTasks task;
                 do
                 {
                     try

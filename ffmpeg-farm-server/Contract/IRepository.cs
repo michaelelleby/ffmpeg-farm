@@ -9,7 +9,7 @@ namespace Contract
         TEntity Add(TEntity entity);
         TEntity Get(int id);
         IEnumerable<TEntity> GetAll();
-        void Remove(TEntity entity);
+        bool Remove(TEntity entity);
         IEnumerable<TEntity> Find(Expression<Func<TEntity, bool>> predicate);
     }
 }

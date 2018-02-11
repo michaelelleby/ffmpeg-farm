@@ -38,9 +38,9 @@ namespace API.Repository
             return Context.Set<TEntity>().ToList();
         }
 
-        public void Remove(TEntity entity)
+        public bool Remove(TEntity entity)
         {
-            Context.Set<TEntity>().Remove(entity);
+            return Context.Set<TEntity>().Remove(entity) != null;
         }
     }
 }
