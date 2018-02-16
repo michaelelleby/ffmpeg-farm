@@ -11,6 +11,7 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/muxjob")]
     public class MuxJobController : ApiController
     {
         private readonly IHelper _helper;
@@ -22,6 +23,7 @@ namespace API.WindowsService.Controllers
             _helper = helper;
         }
 
+        [Route]
         [HttpPost]
         public Guid CreateNew(MuxJobRequestModel input)
         {

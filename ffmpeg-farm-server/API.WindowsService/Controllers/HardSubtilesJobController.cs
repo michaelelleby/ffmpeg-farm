@@ -11,6 +11,7 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/hardsubtitlesjob")]
     public class HardSubtitlesJobController : ApiController
     {
         private readonly IHelper _helper;
@@ -25,6 +26,7 @@ namespace API.WindowsService.Controllers
             _logging = logging;
         }
 
+        [Route]
         [HttpPost]
         public Guid CreateNew(HardSubtitlesJobRequestModel input)
         {

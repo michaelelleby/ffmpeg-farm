@@ -8,13 +8,11 @@ namespace API.WindowsService
 {
     public class StructureMapScope : IDependencyScope
     {
-        private readonly IContainer container;
+        private readonly IContainer _container;
 
         public StructureMapScope(IContainer container)
         {
-            if (container == null)
-                throw new ArgumentNullException(nameof(container));
-            this.container = container;
+            _container = container ?? throw new ArgumentNullException(nameof(container));
         }
 
         object IDependencyScope.GetService(Type serviceType)
@@ -23,19 +21,19 @@ namespace API.WindowsService
                 return null;
 
             if (serviceType.IsAbstract || serviceType.IsInterface)
-                return container.TryGetInstance(serviceType);
+                return _container.TryGetInstance(serviceType);
 
-            return container.GetInstance(serviceType);
+            return _container.GetInstance(serviceType);
         }
 
         IEnumerable<object> IDependencyScope.GetServices(Type serviceType)
         {
-            return container.GetAllInstances(serviceType).Cast<object>();
+            return _container.GetAllInstances(serviceType).Cast<object>();
         }
 
         void IDisposable.Dispose()
         {
-            container.Dispose();
+            _container.Dispose();
         }
     }
 }

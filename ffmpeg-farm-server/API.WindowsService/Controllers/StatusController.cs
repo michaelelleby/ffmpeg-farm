@@ -12,6 +12,7 @@ using Contract.Models;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/status")]
     public class StatusController : ApiController
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -24,7 +25,7 @@ namespace API.WindowsService.Controllers
         /// <summary>
         ///     Get status for all jobs
         /// </summary>
-        /// <returns></returns>
+        [Route("{take:int}")]
         [HttpGet]
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
@@ -36,7 +37,7 @@ namespace API.WindowsService.Controllers
         ///     Get status for a specific job
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
-        /// <returns></returns>
+        [Route("{id:guid}")]
         [HttpGet]
         public FfmpegJobModel Get(Guid id)
         {
@@ -61,7 +62,7 @@ namespace API.WindowsService.Controllers
         ///     This also serves as a heartbeat, to tell the server
         ///     that the client is still working actively on the job
         /// </summary>
-        /// <param name="model"></param>
+        [Route]
         [HttpPatch]
         public TranscodingJobState UpdateProgress(TaskProgressModel model)
         {

@@ -9,12 +9,14 @@ using Contract.Dto;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/task")]
     public class TaskController : ApiController
     {
         /// <summary>
         ///     Get next waiting task.
         /// </summary>
         /// <param name="machineName">Caller-id</param>
+        [Route]
         [HttpGet]
         public FFmpegTaskDto GetNext(string machineName)
         {

@@ -122,6 +122,7 @@
     <Compile Include="DestinationFormat.cs" />
     <Compile Include="Dto\FFmpegTaskDto.cs" />
     <Compile Include="H264Profile.cs" />
+    <Compile Include="IApiSettings.cs" />
     <Compile Include="IAudioRequestRepository.cs" />
     <Compile Include="IHardSubtitlesRequestRepository.cs" />
     <Compile Include="IHelper.cs" />

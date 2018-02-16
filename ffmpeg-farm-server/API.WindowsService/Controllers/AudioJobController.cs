@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,24 +13,25 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/audiojob")]
     public class AudioJobController : ApiController
     {
         private readonly IHelper _helper;
         private readonly ILogging _logging;
+        private readonly ApiSettings _settings;
 
-        public AudioJobController(IHelper helper, ILogging logging)
+        public AudioJobController(IHelper helper, ILogging logging, ApiSettings settings)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _helper = helper;
-            _logging = logging;
+            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         /// <summary>
         ///     Create a new job
         /// </summary>
         [HttpPost]
+        [Route]
         public Guid CreateNew(AudioJobRequestModel input)
         {
             if (!ModelState.IsValid)
@@ -66,44 +66,31 @@ namespace API.WindowsService.Controllers
                 OutputFolder = request.OutputFolder,
                 DestinationFilename = request.DestinationFilenamePrefix
             };
-            var jobCorrelationId = Guid.NewGuid();
+            var id = Guid.NewGuid();
 
-            var sourceFilename = request.SourceFilenames.First();
-            var uniqueNamePart = Guid.NewGuid().ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location;
+            string sourceFilename = request.SourceFilenames.First();
+            string uniqueNamePart = Guid.NewGuid().ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location;
 
-            var sourceDuration = _helper.GetDuration(sourceFilename);
+            int sourceDuration = _helper.GetDuration(sourceFilename);
 
             var jobs = new List<AudioTranscodingJob>();
             foreach (var target in request.Targets)
             {
-                var extension = ContainerHelper.GetExtension(target.Format);
+                string extension = ContainerHelper.GetExtension(target.Format);
 
-                var destinationFilename =
+                string destinationFilename =
                     $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
-                var destinationFullPath = $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
-                string arguments;
-                var outputFullPath = Convert.ToBoolean(ConfigurationManager.AppSettings["TranscodeToLocalDisk"])
-                    ? @"|TEMP|"
-                    : destinationFullPath;
+                string destinationFullPath =
+                    $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
+                ICollection<string> commandline = new List<string>();
+                string outputFullPath = GetOutputFullPath(destinationFullPath);
 
-                if (jobRequest.SourceFilenames.Count == 1)
-                {
-                    if (target.Format == ContainerFormat.MP4)
-                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {
-                                target.AudioCodec.ToString().ToLowerInvariant()
-                            } -b:a {
-                                target
-                                    .Bitrate
-                            }k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    else
-                        arguments = $@"-y -xerror -i ""{sourceFilename}"" -c:a {
-                                target.AudioCodec.ToString().ToLowerInvariant()
-                            } -b:a {
-                                target
-                                    .Bitrate
-                            }k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                }
-                else
+                if (_settings.OverwriteOutput)
+                    commandline.Add("-y");
+                if (_settings.AbortOnError)
+                    commandline.Add("-xerror");
+
+                if (jobRequest.SourceFilenames.Count > 1)
                 {
                     /*RESULT:
                      * -y -xerror
@@ -112,44 +99,44 @@ namespace API.WindowsService.Controllers
                      * [0:0][1:0][2:0]concat=n=3:a=1:v=0
                      * -c:a mp3 -b:a 64k -vn -map_metadata -1 -f MP3 \\ondnas01\MediaCache\Test\marvin\ffmpeg\test2.mp3
                     */
-                    string filenameArguments = string.Empty, streams = string.Empty;
+                    string streams = string.Empty;
                     var streamCount = 0;
-                    foreach (var filename in jobRequest.SourceFilenames)
+                    foreach (string filename in jobRequest.SourceFilenames)
                     {
-                        filenameArguments += $@" -i ""{filename}"" ";
+                        commandline.Add($@"-i ""{filename}""");
                         streams = $"{streams}[{streamCount++}:0]";
                     }
 
                     streams = $"{streams}concat=n={streamCount}:a=1:v=0";
 
-                    if (target.Format == ContainerFormat.MP4)
-                        arguments =
-                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {
-                                    target.AudioCodec.ToString().ToLowerInvariant()
-                                } -b:a {
-                                    target
-                                        .Bitrate
-                                }k -vn -movflags +faststart -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
-                    else
-                        arguments =
-                            $@"-y -xerror{filenameArguments}-filter_complex {streams} -c:a {
-                                    target.AudioCodec.ToString().ToLowerInvariant()
-                                } -b:a {
-                                    target
-                                        .Bitrate
-                                }k -vn -map_metadata -1 -f {target.Format} ""{outputFullPath}""";
+                    commandline.Add($"-filter_complex {streams}");
                 }
+                else
+                {
+                    commandline.Add($@"-i ""{sourceFilename}""");
+                }
+
+                commandline.Add($"-c:a {target.AudioCodec.ToString().ToLower()}");
+                commandline.Add($"-b:a {target.Bitrate}k");
+                commandline.Add("-vn");
+
+                if (target.Format == ContainerFormat.MP4)
+                    commandline.Add("-movflags +faststart");
+
+                commandline.Add("-map_metadata -1");
+                commandline.Add($"-f {target.Format}");
+                commandline.Add($@"""{outputFullPath}");
 
                 var transcodingJob = new AudioTranscodingJob
                 {
-                    JobCorrelationId = jobCorrelationId,
+                    JobCorrelationId = id,
                     SourceFilename = sourceFilename,
-                    Needed = request.Needed.DateTime,
+                    Needed = request.Needed,
                     State = TranscodingJobState.Queued,
-                    DestinationFilename = destinationFullPath,
+                    OutputFilename = destinationFullPath,
                     Bitrate = target.Bitrate,
-                    Arguments = arguments,
-                    DestinationDurationSeconds = sourceDuration
+                    FfmpegCommandline = string.Join(" ", commandline),
+                    ExpectedDuration = sourceDuration
                 };
 
                 jobs.Add(transcodingJob);
@@ -161,27 +148,32 @@ namespace API.WindowsService.Controllers
             
             var ffmpegrequest = new FfmpegAudioRequest
             {
-                JobCorrelationId = jobCorrelationId,
+                JobCorrelationId = id,
                 Created = DateTimeOffset.UtcNow,
                 DestinationFilename = request.DestinationFilenamePrefix,
                 Needed = request.Needed,
                 OutputFolder = request.OutputFolder,
                 SourceFilename = string.Join(",", request.SourceFilenames)
             };
-            ICollection<FfmpegTasks> tasks = jobs.Select(j => new FfmpegTasks
+            ICollection<FfmpegTasks> tasks = jobs.Select(job => new FfmpegTasks
             {
-                Arguments = j.Arguments,
-                DestinationDurationSeconds = j.DestinationDurationSeconds,
-                DestinationFilename = j.DestinationFilename
+                Arguments = job.FfmpegCommandline,
+                DestinationDurationSeconds = job.ExpectedDuration,
+                DestinationFilename = job.OutputFilename
             }).ToList();
             var ffmpegjob = new FfmpegJobs
             {
                 Created = DateTimeOffset.UtcNow,
-                JobCorrelationId = jobCorrelationId,
+                JobCorrelationId = id,
                 FfmpegTasks = tasks
             };
 
             return (ffmpegrequest, ffmpegjob);
+        }
+
+        private string GetOutputFullPath(string destinationFullPath)
+        {
+            return _settings.TranscodeToLocalDisk ? @"|TEMP|" : destinationFullPath;
         }
     }
 }

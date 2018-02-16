@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ServiceProcess;
-using API.WindowsService;
 using Microsoft.Owin.Hosting;
 
 namespace API.WindowsService
@@ -22,9 +21,8 @@ namespace API.WindowsService
 
         public void Start()
         {
-            var port = 9000;
-            var url = Environment.UserInteractive ? $"http://localhost:{port}/" : $"http://+:{port}/";
-            var readableUrl = url.Replace("+", Environment.MachineName);
+            const int port = 9000;
+            string url = Environment.UserInteractive ? $"http://localhost:{port}/" : $"http://+:{port}/";
             _server = WebApp.Start<Startup>(url);
         }
 

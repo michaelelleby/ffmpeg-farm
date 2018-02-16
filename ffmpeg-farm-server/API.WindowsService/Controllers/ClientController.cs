@@ -8,6 +8,7 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/client")]
     public class ClientController : ApiController
     {
         [HttpGet]

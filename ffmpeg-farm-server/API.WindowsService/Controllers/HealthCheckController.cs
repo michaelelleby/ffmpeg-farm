@@ -8,6 +8,7 @@ using API.Repository;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/healthcheck")]
     public class HealthCheckController : ApiController
     {
         private readonly int _workerNonResponsiveAlertMinutes;
@@ -18,6 +19,7 @@ namespace API.WindowsService.Controllers
         }
 
         [HttpGet]
+        [Route]
         public ServiceStatus Get()
         {
             using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))

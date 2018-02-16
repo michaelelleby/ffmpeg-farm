@@ -6,6 +6,7 @@ using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/job")]
     public class JobController : ApiController
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -15,6 +16,7 @@ namespace API.WindowsService.Controllers
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
+        [Route]
         [HttpDelete]
         public bool DeleteJob(Guid jobCorrelationId)
         {
@@ -36,6 +38,7 @@ namespace API.WindowsService.Controllers
             return removed;
         }
 
+        [Route]
         [HttpPatch]
         public bool PatchJob(Guid jobCorrelationId, Command command)
         {
