@@ -14,45 +14,59 @@ namespace API.WindowsService.Controllers
     public class AudioDemuxJobController : ApiController
     {
         private readonly ILogging _logging;
+        private readonly IApiSettings _settings;
 
-        public AudioDemuxJobController(ILogging logging)
+        public AudioDemuxJobController(ILogging logging, IApiSettings settings)
         {
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _logging = logging;
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         [HttpPost]
         public Guid CreateNew(AudioDemuxJobRequestModel input)
         {
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+
+            var (request, job) = HandleNewAudioDemuxJob(input);
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                unitOfWork.MuxRequests.Add(request);
+                unitOfWork.Jobs.Add(job);
+
+                unitOfWork.Complete();
             }
 
-            var res = HandleNewAudioDemuxJob(input);
-            _logging.Info($"Created new mux job : {res}");
-            return res;
+            _logging.Info($"Created new mux job : {job.JobCorrelationId}");
+
+            return job.JobCorrelationId;
         }
 
-        private Guid HandleNewAudioDemuxJob(AudioDemuxJobRequestModel model)
+        private (FfmpegMuxRequest, FfmpegJobs) HandleNewAudioDemuxJob(AudioDemuxJobRequestModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-            var arguments = string.Empty;
+            string outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
+
+            ICollection<string> commandline = new List<string>();
+            if (_settings.OverwriteOutput)
+                commandline.Add("-y");
+            if (_settings.AbortOnError)
+                commandline.Add("-xerror");
 
             //TODO: Fix the ffmpeg args so the job will work
-            arguments += $"-i {model.VideoSourceFilename} {outputFilename} -y";
+            commandline.Add($@"-i ""{model.VideoSourceFilename}""");
+            commandline.Add($@"""{outputFilename}""");
 
-            var jobs = new FfmpegJobs()
+            var jobs = new FfmpegJobs
             {
                 Needed = model.Needed.LocalDateTime,
                 FfmpegTasks = new List<FfmpegTasks>
                 {
                     new FfmpegTasks
                     {
-                        Arguments = arguments,
+                        Arguments = string.Join(" ", commandline),
                         TaskState = TranscodingJobState.Queued,
                         DestinationFilename = outputFilename
                     }
@@ -67,16 +81,7 @@ namespace API.WindowsService.Controllers
                 JobCorrelationId = jobs.JobCorrelationId
             };
 
-
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
-            {
-                unitOfWork.MuxRequests.Add(request);
-                unitOfWork.Jobs.Add(jobs);
-
-                unitOfWork.Complete();
-            }
-
-            return jobs.JobCorrelationId;
+            return (request, jobs);
         }
     }
 }

@@ -16,14 +16,13 @@ namespace API.WindowsService.Controllers
     {
         private readonly IHelper _helper;
         private readonly ILogging _logging;
+        private readonly IApiSettings _settings;
 
-        public HardSubtitlesJobController(IHelper helper, ILogging logging)
+        public HardSubtitlesJobController(IHelper helper, ILogging logging, IApiSettings settings)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _helper = helper;
-            _logging = logging;
+            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         [Route]
@@ -31,35 +30,54 @@ namespace API.WindowsService.Controllers
         public Guid CreateNew(HardSubtitlesJobRequestModel input)
         {
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+
+            var (request, job) = HandleNewHardSubtitlesJob(input);
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                unitOfWork.HardSubtitlesRequest.Add(request);
+                unitOfWork.Jobs.Add(job);
+
+                unitOfWork.Complete();
             }
 
-            var res= HandleNewHardSubtitlesxJob(input);
-            _logging.Info($"Created new hard sub job : {res}");
-            return res;
+            _logging.Info($"Created new hard sub job : {job.JobCorrelationId}");
+
+            return job.JobCorrelationId;
         }
 
-        private Guid HandleNewHardSubtitlesxJob(HardSubtitlesJobRequestModel model)
+        private (HardSubtitlesJobRequest, FfmpegJobs) HandleNewHardSubtitlesJob(HardSubtitlesJobRequestModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-            var frameCount = _helper.GetDuration(model.VideoSourceFilename);
+            string outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
+            int frameCount = _helper.GetDuration(model.VideoSourceFilename);
 
-            string arguments = string.Empty;
+            ICollection<string> commandline = new List<string>();
+            if (_settings.OverwriteOutput)
+                commandline.Add("-y");
+            if (_settings.AbortOnError)
+                commandline.Add("-xerror");
+
             if (model.Inpoint > TimeSpan.Zero)
-            {
-                arguments += $"-ss {model.Inpoint:g} ";
-            }
-            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\","\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -c:v mpeg4 -b:v 50M -c:a copy -y ""{outputFilename}""";
+                commandline.Add($"-ss {model.Inpoint:g}");
+
+            commandline.Add($@"-i ""{model.VideoSourceFilename}""");
+            commandline.Add($@"-filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\", "\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'""");
+            commandline.Add("-preset ultrafast");
+            commandline.Add("-c:v mpeg4");
+            commandline.Add("-b:v 50M");
+            commandline.Add("-c:a copy");
+            commandline.Add($@"""{outputFilename}""");
+
             var jobs = new FfmpegJobs
             {
                 FfmpegTasks = new List<FfmpegTasks>
                 {
                     new FfmpegTasks
                     {
-                        Arguments = arguments,
+                        Arguments = string.Join(" ", commandline),
                         TaskState = TranscodingJobState.Queued,
                         DestinationFilename = outputFilename,
                         DestinationDurationSeconds = frameCount
@@ -67,7 +85,7 @@ namespace API.WindowsService.Controllers
                 },
                 JobCorrelationId = Guid.NewGuid()
             };
-            var request = new HardSubtitlesJobRequest()
+            var request = new HardSubtitlesJobRequest
             {
                 SubtitlesFilename = model.SubtitlesFilename,
                 VideoSourceFilename = model.VideoSourceFilename,
@@ -75,15 +93,7 @@ namespace API.WindowsService.Controllers
                 OutputFolder = model.OutputFolder
             };
 
-            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
-            {
-                unitOfWork.HardSubtitlesRequest.Add(request);
-                unitOfWork.Jobs.Add(jobs);
-
-                unitOfWork.Complete();
-
-                return jobs.JobCorrelationId;
-            }
+            return (request, jobs);
         }
     }
 }
