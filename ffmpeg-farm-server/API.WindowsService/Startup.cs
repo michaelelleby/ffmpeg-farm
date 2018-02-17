@@ -58,7 +58,9 @@ namespace API.WindowsService
                 handler: new RedirectHandler(SwaggerDocsConfig.DefaultRootUrlResolver, "/swagger"));
             config.MapHttpAttributeRoutes();
 
-            config.DependencyResolver = new StructureMapDependencyResolver(new Container(new ApiRegistry()));
+            IContainer container = new Container(new ApiRegistry());
+            container.AssertConfigurationIsValid();
+            config.DependencyResolver = new StructureMapDependencyResolver(container);
 
             config.Filters.Add(new ExceptionFilter((ILogging)config.DependencyResolver.GetService(typeof(ILogging))));
 

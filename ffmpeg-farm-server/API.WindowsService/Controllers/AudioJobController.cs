@@ -81,7 +81,7 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued,
                     OutputFilename = destinationFullPath,
                     Bitrate = target.Bitrate,
-                    FfmpegCommandline = _commandlineGenerator.GenerateAudioCommandline(target, request.SourceFilenames, request.DestinationFilenamePrefix, request.OutputFolder, destinationFullPath),
+                    FfmpegCommandline = _commandlineGenerator.GenerateAudioCommandline(target, request.SourceFilenames, destinationFullPath),
                     ExpectedDuration = sourceDuration
                 };
 

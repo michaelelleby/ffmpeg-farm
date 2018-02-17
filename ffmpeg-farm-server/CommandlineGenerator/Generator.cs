@@ -17,14 +17,11 @@ namespace CommandlineGenerator
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        public string GenerateAudioCommandline(AudioDestinationFormat target, IReadOnlyCollection<string> sourceFilenames, string outputFilenamePrefix, string outputPath, string getOutputFullPath)
+        public string GenerateAudioCommandline(AudioDestinationFormat target, IReadOnlyCollection<string> sourceFilenames, string fullpath)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));
             if (sourceFilenames == null) throw new ArgumentNullException(nameof(sourceFilenames));
-            if (outputFilenamePrefix == null) throw new ArgumentNullException(nameof(outputFilenamePrefix));
-            if (outputPath == null) throw new ArgumentNullException(nameof(outputPath));
             if (sourceFilenames.Any() == false) throw new ArgumentOutOfRangeException(nameof(sourceFilenames), "At least one source filename must be specified");
-            if (string.IsNullOrWhiteSpace(outputPath)) throw new ArgumentNullException(nameof(outputPath));
             
             ICollection<string> commandline = new List<string>();
 
@@ -57,10 +54,6 @@ namespace CommandlineGenerator
 
                 commandline.Add($"-filter_complex {streams}concat=n={streamCount}:a=1:v=0");
             }
-            else
-            {
-                commandline.Add($@"-i ""{sourceFilenames.First()}""");
-            }
 
             commandline.Add($"-c:a {target.AudioCodec.ToString().ToLower()}");
             commandline.Add($"-b:a {target.Bitrate}k");
@@ -70,8 +63,8 @@ namespace CommandlineGenerator
                 commandline.Add("-movflags +faststart");
 
             commandline.Add("-map_metadata -1");
-            commandline.Add($"-f {target.Format}");
-            commandline.Add($@"""{getOutputFullPath}");
+            commandline.Add($"-f {target.Format.ToString().ToLower()}");
+            commandline.Add($@"""{fullpath}""");
 
             return string.Join(" ", commandline);
         }
