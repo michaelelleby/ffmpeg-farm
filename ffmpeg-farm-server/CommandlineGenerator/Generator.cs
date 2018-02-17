@@ -68,5 +68,30 @@ namespace CommandlineGenerator
 
             return string.Join(" ", commandline);
         }
+
+        public string GenerateMuxCommandline(string inputVideoFilename, string inputAudioFilename,
+            string outputFilename, TimeSpan inpoint)
+        {
+            ICollection<string> commandline = new List<string>();
+
+            if (_settings.OverwriteOutput)
+                commandline.Add("-y");
+            if (_settings.AbortOnError)
+                commandline.Add("-xerror");
+
+            if (inpoint > TimeSpan.Zero)
+            {
+                commandline.Add($"-ss {inpoint:hh\\:mm\\:ss}");
+            }
+
+            commandline.Add($@"-i ""{inputVideoFilename}""");
+            commandline.Add($@"-i ""{inputAudioFilename}""");
+            commandline.Add("-map 0:v:0");
+            commandline.Add("-map 1:a:0");
+            commandline.Add("-c copy");
+            commandline.Add($@"""{outputFilename}""");
+
+            return string.Join(" ", commandline);
+        }
     }
 }

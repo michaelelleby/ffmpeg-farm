@@ -16,11 +16,13 @@ namespace API.WindowsService.Controllers
     {
         private readonly IHelper _helper;
         private readonly IApiSettings _settings;
+        private readonly IGenerator _commandlineGenerator;
 
-        public MuxJobController(IHelper helper, IApiSettings settings)
+        public MuxJobController(IHelper helper, IApiSettings settings, IGenerator commandlineGenerator)
         {
             _helper = helper ?? throw new ArgumentNullException(nameof(helper));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _commandlineGenerator = commandlineGenerator ?? throw new ArgumentNullException(nameof(commandlineGenerator));
         }
 
         [Route]
@@ -49,25 +51,8 @@ namespace API.WindowsService.Controllers
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            ICollection<string> commandline = new List<string>();
-            if (_settings.OverwriteOutput)
-                commandline.Add("-y");
-            if (_settings.AbortOnError)
-                commandline.Add("-xerror");
-
             string outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
             int frameCount = _helper.GetDuration(model.VideoSourceFilename);
-
-            if (model.Inpoint > TimeSpan.Zero)
-            {
-                commandline.Add($"-ss {model.Inpoint:g}");
-            }
-            commandline.Add($@"-i ""{model.VideoSourceFilename}""");
-            commandline.Add($@"-i ""{model.AudioSourceFilename}""");
-            commandline.Add("-map 0:v:0");
-            commandline.Add("-map 1:a:0");
-            commandline.Add("-c copy");
-            commandline.Add($@"""{outputFilename}""");
 
             FfmpegJobs jobs = new FfmpegJobs
             {
@@ -78,7 +63,7 @@ namespace API.WindowsService.Controllers
                 {
                     new FfmpegTasks
                     {
-                        Arguments = string.Join(" ", commandline),
+                        Arguments = _commandlineGenerator.GenerateMuxCommandline(model.VideoSourceFilename, model.AudioSourceFilename, outputFilename, model.Inpoint),
                         TaskState = TranscodingJobState.Queued,
                         DestinationFilename = outputFilename,
                         DestinationDurationSeconds = frameCount
