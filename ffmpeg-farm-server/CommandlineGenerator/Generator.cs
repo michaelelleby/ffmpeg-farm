@@ -49,7 +49,7 @@ namespace CommandlineGenerator
 
                 for (streamCount = 0; streamCount < sourceFilenames.Count; streamCount++)
                 {
-                    streams.AppendFormat($"[{0}:0]", streamCount++);
+                    streams.AppendFormat("[{0}:0]", streamCount);
                 }
 
                 commandline.Add($"-filter_complex {streams}concat=n={streamCount}:a=1:v=0");
