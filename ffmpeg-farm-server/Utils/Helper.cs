@@ -7,7 +7,7 @@ using System.Globalization;
 using System.IO;
 using Contract;
 
-namespace API.Service
+namespace Utils
 {
     public class Helper : IHelper
     {

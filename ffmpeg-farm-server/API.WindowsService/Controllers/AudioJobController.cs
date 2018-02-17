@@ -10,6 +10,7 @@ using API.Repository;
 using API.Service;
 using API.WindowsService.Models;
 using Contract;
+using Utils;
 
 namespace API.WindowsService.Controllers
 {
@@ -19,12 +20,16 @@ namespace API.WindowsService.Controllers
         private readonly IHelper _helper;
         private readonly ILogging _logging;
         private readonly ApiSettings _settings;
+        private readonly IGenerator _commandlineGenerator;
+        private readonly IOutputFilenameGenerator _filenameGenerator;
 
-        public AudioJobController(IHelper helper, ILogging logging, ApiSettings settings)
+        public AudioJobController(IHelper helper, ILogging logging, ApiSettings settings, IGenerator commandlineGenerator, IOutputFilenameGenerator filenameGenerator)
         {
             _helper = helper ?? throw new ArgumentNullException(nameof(helper));
             _logging = logging ?? throw new ArgumentNullException(nameof(logging));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _commandlineGenerator = commandlineGenerator ?? throw new ArgumentNullException(nameof(commandlineGenerator));
+            _filenameGenerator = filenameGenerator ?? throw new ArgumentNullException(nameof(filenameGenerator));
         }
 
         /// <summary>
@@ -57,17 +62,7 @@ namespace API.WindowsService.Controllers
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            var jobRequest = new AudioJobRequest
-            {
-                Needed = request.Needed.LocalDateTime,
-                Inpoint = request.Inpoint,
-                Targets = request.Targets,
-                SourceFilenames = request.SourceFilenames,
-                OutputFolder = request.OutputFolder,
-                DestinationFilename = request.DestinationFilenamePrefix
-            };
-            var id = Guid.NewGuid();
-
+            Guid id = Guid.NewGuid();
             string sourceFilename = request.SourceFilenames.First();
             string uniqueNamePart = Guid.NewGuid().ToString(); //Used to avoid file collisions when transcoding the same file multiple times to the same location;
 
@@ -77,56 +72,7 @@ namespace API.WindowsService.Controllers
             foreach (var target in request.Targets)
             {
                 string extension = ContainerHelper.GetExtension(target.Format);
-
-                string destinationFilename =
-                    $@"{request.DestinationFilenamePrefix}_{uniqueNamePart}_{target.Bitrate}.{extension}";
-                string destinationFullPath =
-                    $@"{request.OutputFolder}{Path.DirectorySeparatorChar}{destinationFilename}";
-                ICollection<string> commandline = new List<string>();
-                string outputFullPath = GetOutputFullPath(destinationFullPath);
-
-                if (_settings.OverwriteOutput)
-                    commandline.Add("-y");
-                if (_settings.AbortOnError)
-                    commandline.Add("-xerror");
-
-                if (jobRequest.SourceFilenames.Count > 1)
-                {
-                    /*RESULT:
-                     * -y -xerror
-                     * -i "\\ondnas01\MediaCache\Test\test.mp3" -i "\\ondnas01\MediaCache\Test\radioavis.mp3" -i "\\ondnas01\MediaCache\Test\temp.mp3"
-                     * -filter_complex
-                     * [0:0][1:0][2:0]concat=n=3:a=1:v=0
-                     * -c:a mp3 -b:a 64k -vn -map_metadata -1 -f MP3 \\ondnas01\MediaCache\Test\marvin\ffmpeg\test2.mp3
-                    */
-                    string streams = string.Empty;
-                    var streamCount = 0;
-                    foreach (string filename in jobRequest.SourceFilenames)
-                    {
-                        commandline.Add($@"-i ""{filename}""");
-                        streams = $"{streams}[{streamCount++}:0]";
-                    }
-
-                    streams = $"{streams}concat=n={streamCount}:a=1:v=0";
-
-                    commandline.Add($"-filter_complex {streams}");
-                }
-                else
-                {
-                    commandline.Add($@"-i ""{sourceFilename}""");
-                }
-
-                commandline.Add($"-c:a {target.AudioCodec.ToString().ToLower()}");
-                commandline.Add($"-b:a {target.Bitrate}k");
-                commandline.Add("-vn");
-
-                if (target.Format == ContainerFormat.MP4)
-                    commandline.Add("-movflags +faststart");
-
-                commandline.Add("-map_metadata -1");
-                commandline.Add($"-f {target.Format}");
-                commandline.Add($@"""{outputFullPath}");
-
+                string destinationFullPath = _filenameGenerator.Generate(request.DestinationFilenamePrefix, uniqueNamePart, target.Bitrate, extension, request.OutputFolder);
                 var transcodingJob = new AudioTranscodingJob
                 {
                     JobCorrelationId = id,
@@ -135,7 +81,7 @@ namespace API.WindowsService.Controllers
                     State = TranscodingJobState.Queued,
                     OutputFilename = destinationFullPath,
                     Bitrate = target.Bitrate,
-                    FfmpegCommandline = string.Join(" ", commandline),
+                    FfmpegCommandline = _commandlineGenerator.GenerateAudioCommandline(target, request.SourceFilenames, request.DestinationFilenamePrefix, request.OutputFolder, destinationFullPath),
                     ExpectedDuration = sourceDuration
                 };
 
@@ -169,11 +115,6 @@ namespace API.WindowsService.Controllers
             };
 
             return (ffmpegrequest, ffmpegjob);
-        }
-
-        private string GetOutputFullPath(string destinationFullPath)
-        {
-            return _settings.TranscodeToLocalDisk ? @"|TEMP|" : destinationFullPath;
         }
     }
 }

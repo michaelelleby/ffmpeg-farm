@@ -1,9 +1,9 @@
 ﻿using System;
 using Contract;
 
-namespace API.Service
+namespace Utils
 {
-    public class ContainerHelper
+    public static class ContainerHelper
     {
         public static string GetExtension(ContainerFormat containerFormat)
         {

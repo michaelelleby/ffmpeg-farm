@@ -198,6 +198,10 @@
       <Project>{c5ab7e69-27b9-4071-a0d1-6a6e22df7d8c}</Project>
       <Name>API.Contract</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Utils\Utils.csproj">
+      <Project>{CC252215-FF16-4EAD-A8BB-C72E20313820}</Project>
+      <Name>Utils</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\Contract.xml">
