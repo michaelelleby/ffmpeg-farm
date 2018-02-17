@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using API.Database;
 using Contract;
 using Moq;
 using NUnit.Framework;
@@ -35,8 +36,12 @@ namespace API.Repository.Test
             const string machinename = "TESTMACHINENAME";
 
             Mock<IHelper> helper = new Mock<IHelper>();
-            IHardSubtitlesJobRepository repository = new HardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
-            IJobRepository sut = new JobRepository(helper.Object);
+            var context = new FfmpegFarmContext("FFmpegFarmIntegrationTests");
+            IUnitOfWork unitOfWork = new UnitOfWork(context);
+            context.Database.Delete();
+            context.Database.Create();
+            IHardSubtitlesJobRepository repository = new OldHardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
+            IOldJobRepository sut = new OldJobRepository(helper.Object);
 
             helper.Setup(m => m.GetConnection())
                 .Returns(() => new SqlConnection(_fixture.ConnectionString));
@@ -73,9 +78,9 @@ namespace API.Repository.Test
             const string machinename = "TESTMACHINENAME";
 
             Mock<IHelper> helper = new Mock<IHelper>();
-            IAudioJobRepository audioJobRepository = new AudioJobRepository(helper.Object);
-            IHardSubtitlesJobRepository hardSubtitlesJobRepository = new HardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
-            IJobRepository sut = new JobRepository(helper.Object);
+            IOldAudioJobRepository oldAudioJobRepository = new OldAudioJobRepository(helper.Object);
+            IHardSubtitlesJobRepository hardSubtitlesJobRepository = new OldHardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
+            IOldJobRepository sut = new OldJobRepository(helper.Object);
 
             helper.Setup(m => m.GetConnection())
                 .Returns(() => new SqlConnection(_fixture.ConnectionString));
@@ -98,7 +103,7 @@ namespace API.Repository.Test
                 }
             });
 
-            audioJobRepository.Add(new AudioJobRequest
+            oldAudioJobRepository.Add(new AudioJobRequest
             {
                 DestinationFilename = "testoutputfilename",
                 Needed = DateTimeOffset.Now,
@@ -132,8 +137,6 @@ namespace API.Repository.Test
             var job = sut.GetNextJob(machinename);
             Assert.That(job, Is.Not.Null);
 
-            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), machinename);
-
             var result = sut.GetNextJob(machinename);
 
             // Assert
@@ -147,14 +150,14 @@ namespace API.Repository.Test
             const string machinename = "TESTMACHINENAME";
 
             Mock<IHelper> helper = new Mock<IHelper>();
-            IAudioJobRepository audioJobRepository = new AudioJobRepository(helper.Object);
-            IHardSubtitlesJobRepository hardSubtitlesJobRepository = new HardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
-            IJobRepository sut = new JobRepository(helper.Object);
+            IOldAudioJobRepository oldAudioJobRepository = new OldAudioJobRepository(helper.Object);
+            IHardSubtitlesJobRepository hardSubtitlesJobRepository = new OldHardSubtitlesJobRepository(helper.Object, _fixture.ConnectionString);
+            IOldJobRepository sut = new OldJobRepository(helper.Object);
 
             helper.Setup(m => m.GetConnection())
                 .Returns(() => new SqlConnection(_fixture.ConnectionString));
 
-            audioJobRepository.Add(new AudioJobRequest
+            oldAudioJobRepository.Add(new AudioJobRequest
             {
                 DestinationFilename = "testoutputfilename",
                 Needed = DateTimeOffset.Now,
@@ -184,7 +187,7 @@ namespace API.Repository.Test
                 }
             });
 
-            audioJobRepository.Add(new AudioJobRequest
+            oldAudioJobRepository.Add(new AudioJobRequest
             {
                 DestinationFilename = "testoutputfilename",
                 Needed = DateTimeOffset.Now,
@@ -216,7 +219,6 @@ namespace API.Repository.Test
 
             // Act
             var job = sut.GetNextJob(machinename);
-            sut.SaveProgress(job.Id, false, false, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), machinename);
 
             var result = sut.GetNextJob(machinename);
 

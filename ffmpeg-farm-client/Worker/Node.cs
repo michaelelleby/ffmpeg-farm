@@ -76,7 +76,7 @@ namespace FFmpegFarm.Worker
             IApiWrapper apiWrapper = null)
         {
 
-            var t = Task.Run(() => new Node(ffmpegPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            var t = Task.Run(() => new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -100,7 +100,9 @@ namespace FFmpegFarm.Worker
                     {
                         ExecuteJob();
                         if (_currentTask != null)
+                        {
                             _currentTaskList.TryRemove(_currentTask.Id.Value, out var taskid);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -320,6 +322,7 @@ namespace FFmpegFarm.Worker
                 if (acquiredLock)
                 {
                     _commandlineProcess = null;
+                    _currentTaskList.TryRemove(_currentTask.Id.Value, out var result);
                     _currentTask = null;
 
                     Monitor.Exit(_lock);

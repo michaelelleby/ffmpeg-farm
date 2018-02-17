@@ -1,84 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.Database;
 using API.WindowsService.Models;
 using Contract;
-using Contract.Dto;
 using Contract.Models;
-using WebApi.OutputCache.V2;
-
-//using FfmpegTaskModel = Contract.Models.FfmpegTaskModel;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/status")]
     public class StatusController : ApiController
     {
-        private readonly IJobRepository _repository;
-        private readonly IHelper _helper;
-        private readonly ILogging _logging;
-        private static readonly string _logPath = ConfigurationManager.AppSettings["FFmpegLogPath"];
+        private readonly IUnitOfWork _unitOfWork;
 
-        public StatusController(IJobRepository repository, IHelper helper, ILogging logging)
+        public StatusController(IUnitOfWork unitOfWork)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _repository = repository;
-            _helper = helper;
-            _logging = logging;
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
         /// <summary>
-        /// Get status for all jobs
+        ///     Get status for all jobs
         /// </summary>
-        /// <returns></returns>
-        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [Route("{take:int}")]
         [HttpGet]
         public IEnumerable<FfmpegJobModel> Get(int take = 10)
         {
-            ICollection<FFmpegJobDto> jobStatuses = _repository.Get(take);
-            if (jobStatuses.Count > 0)
-            {
-                return jobStatuses.Select(MapDtoToModel);
-            }
-
-            return new List<FfmpegJobModel>();
+            return _unitOfWork.Jobs.GetAll().Take(take)
+                .Select(MapDtoToModel);
         }
-        
+
         /// <summary>
-        /// Get status for a specific job
+        ///     Get status for a specific job
         /// </summary>
         /// <param name="id">ID of job to get status of</param>
-        /// <returns></returns>
-        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
+        [Route("{id:guid}")]
         [HttpGet]
         public FfmpegJobModel Get(Guid id)
         {
             if (id == Guid.Empty)
-                throw new ArgumentOutOfRangeException(nameof(id), "ID must be a valid GUID");
+                throw new ArgumentOutOfRangeException(nameof(id), @"ID must be a valid GUID");
 
-            FFmpegJobDto job = _repository.Get(id);
+            var dto = _unitOfWork.Jobs.Find(j => j.JobCorrelationId == id)
+                .FirstOrDefault();
+            if (dto == null)
+                return null;
 
-            if (job == null)
-                throw new ArgumentException($"No job found with id {id:B}", "id");
-
-            var result = MapDtoToModel(job);
-
-            return result;
+            return new FfmpegJobModel
+            {
+                JobCorrelationId = id,
+                Created = dto.Created,
+                Needed = dto.Needed
+            };
         }
 
         /// <summary>
-        /// Update progress of an active job.
-        /// 
-        /// This also serves as a heartbeat, to tell the server
-        /// that the client is still working actively on the job
+        ///     Update progress of an active job.
+        ///     This also serves as a heartbeat, to tell the server
+        ///     that the client is still working actively on the job
         /// </summary>
-        /// <param name="model"></param>
+        [Route]
         [HttpPatch]
         public TranscodingJobState UpdateProgress(TaskProgressModel model)
         {
@@ -86,36 +70,55 @@ namespace API.WindowsService.Controllers
                 throw new ArgumentNullException(nameof(model));
 
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+
+            var jobState = model.Failed
+                ? TranscodingJobState.Failed
+                : model.Done
+                    ? TranscodingJobState.Done
+                    : TranscodingJobState.InProgress;
+
+            var task = _unitOfWork.Tasks.Get(model.Id);
+            if (task == null)
+                throw new ArgumentOutOfRangeException(nameof(model), $@"No task found with id {model.Id}");
+
+            task.TaskState = jobState;
+            task.Progress = model.Progress.TotalSeconds;
+            task.VerifyProgress = model.VerifyProgress?.TotalSeconds;
+            task.Heartbeat = DateTimeOffset.UtcNow;
+            task.HeartbeatMachineName = model.MachineName;
+
+            try
+            {
+                _unitOfWork.Complete();
             }
-            if (model.Failed)
-                _logging.Warn($"Task {model.Id} failed at {model.MachineName}");
-            if (model.Done)
-                _logging.Info($"Task {model.Id} done at {model.MachineName}");
-            return _repository.SaveProgress(model.Id, model.Failed, model.Done, model.Progress, model.VerifyProgress, model.MachineName);
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // The current TaskState might be different from what we just tried to set it to, so reload from database to get the current state
+                ex.Entries.Single().Reload();
+            }
+
+            return task.TaskState;
         }
 
-        private static FfmpegJobModel MapDtoToModel(FFmpegJobDto dto)
+        private static FfmpegJobModel MapDtoToModel(FfmpegJobs job)
         {
             return new FfmpegJobModel
             {
-                JobCorrelationId = dto.JobCorrelationId,
-                Needed = dto.Needed,
-                Created = dto.Created,
-                Tasks = dto.Tasks.Select(j => new FfmpegTaskModel
+                JobCorrelationId = job.JobCorrelationId,
+                Needed = job.Needed,
+                Created = job.Created,
+                Tasks = job.FfmpegTasks.Select(j => new FfmpegTaskModel
                 {
                     Started = j.Started,
                     Heartbeat = j.Heartbeat,
                     HeartbeatMachine = j.HeartbeatMachineName,
-                    State = j.State,
+                    State = j.TaskState,
                     Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
                     VerifyProgres = j.VerifyProgress == null ? (decimal?) null : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    DestinationFilename = j.DestinationFilename,
-                    LogPath = j.Started != null ?  $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt" : string.Empty
-            }),
+                    DestinationFilename = j.DestinationFilename
+                })
             };
         }
     }
 }
-

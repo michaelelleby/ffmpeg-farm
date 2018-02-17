@@ -2,11 +2,11 @@
 
 namespace Contract
 {
-    public class FFmpegJob : BaseJob
+    public abstract class FFmpegJob : BaseJob
     {
-        public string Arguments { get; set; }
+        public string FfmpegCommandline { get; set; }
         public DateTimeOffset Needed { get; set; }
-        public string DestinationFilename { get; set; }
-        public int DestinationDurationSeconds { get; set; }
+        public string OutputFilename { get; set; }
+        public int ExpectedDuration { get; set; }
     }
 }

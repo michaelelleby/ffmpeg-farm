@@ -4,65 +4,88 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using API.Database;
+using API.Repository;
 using API.WindowsService.Models;
 using Contract;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/hardsubtitlesjob")]
     public class HardSubtitlesJobController : ApiController
     {
-        private readonly IHardSubtitlesJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
+        private readonly IApiSettings _settings;
 
-        public HardSubtitlesJobController(IHardSubtitlesJobRepository repository, IHelper helper, ILogging logging)
+        public HardSubtitlesJobController(IHelper helper, ILogging logging, IApiSettings settings)
         {
-            if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (logging == null) throw new ArgumentNullException(nameof(logging));
-
-            _repository = repository;
-            _helper = helper;
-            _logging = logging;
+            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
+            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
+        [Route]
         [HttpPost]
         public Guid CreateNew(HardSubtitlesJobRequestModel input)
         {
             if (!ModelState.IsValid)
-            {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState));
+
+            var (request, job) = HandleNewHardSubtitlesJob(input);
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                unitOfWork.HardSubtitlesRequest.Add(request);
+                unitOfWork.Jobs.Add(job);
+
+                unitOfWork.Complete();
             }
 
-            var res= HandleNewHardSubtitlesxJob(input);
-            _logging.Info($"Created new hard sub job : {res}");
-            return res;
+            _logging.Info($"Created new hard sub job : {job.JobCorrelationId}");
+
+            return job.JobCorrelationId;
         }
 
-        private Guid HandleNewHardSubtitlesxJob(HardSubtitlesJobRequestModel model)
+        private (HardSubtitlesJobRequest, FfmpegJobs) HandleNewHardSubtitlesJob(HardSubtitlesJobRequestModel model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-            var frameCount = _helper.GetDuration(model.VideoSourceFilename);
+            string outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
+            int frameCount = _helper.GetDuration(model.VideoSourceFilename);
 
-            string arguments = string.Empty;
+            ICollection<string> commandline = new List<string>();
+            if (_settings.OverwriteOutput)
+                commandline.Add("-y");
+            if (_settings.AbortOnError)
+                commandline.Add("-xerror");
+
             if (model.Inpoint > TimeSpan.Zero)
+                commandline.Add($"-ss {model.Inpoint:g}");
+
+            commandline.Add($@"-i ""{model.VideoSourceFilename}""");
+            commandline.Add($@"-filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\", "\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'""");
+            commandline.Add("-preset ultrafast");
+            commandline.Add("-c:v mpeg4");
+            commandline.Add("-b:v 50M");
+            commandline.Add("-c:a copy");
+            commandline.Add($@"""{outputFilename}""");
+
+            var jobs = new FfmpegJobs
             {
-                arguments += $"-ss {model.Inpoint:g} ";
-            }
-            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\","\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -c:v mpeg4 -b:v 50M -c:a copy -y ""{outputFilename}""";
-            var jobs = new List<FFmpegJob>
-            {
-                new HardSubtitlesJob()
+                FfmpegTasks = new List<FfmpegTasks>
                 {
-                    Arguments = arguments,
-                    State = TranscodingJobState.Queued,
-                    DestinationFilename = outputFilename,
-                    DestinationDurationSeconds = frameCount
-                }
+                    new FfmpegTasks
+                    {
+                        Arguments = string.Join(" ", commandline),
+                        TaskState = TranscodingJobState.Queued,
+                        DestinationFilename = outputFilename,
+                        DestinationDurationSeconds = frameCount
+                    }
+                },
+                JobCorrelationId = Guid.NewGuid()
             };
-            var request = new HardSubtitlesJobRequest()
+            var request = new HardSubtitlesJobRequest
             {
                 SubtitlesFilename = model.SubtitlesFilename,
                 VideoSourceFilename = model.VideoSourceFilename,
@@ -70,7 +93,7 @@ namespace API.WindowsService.Controllers
                 OutputFolder = model.OutputFolder
             };
 
-            return _repository.Add(request, jobs);
+            return (request, jobs);
         }
     }
 }

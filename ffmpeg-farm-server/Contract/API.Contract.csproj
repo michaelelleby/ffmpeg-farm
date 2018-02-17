@@ -89,12 +89,17 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath Condition="Exists('..\packages\Newtonsoft.Json.9.0.1\lib\net45\')">..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <HintPath Condition="Exists('..\..\ffmpeg-farm-client\packages\Newtonsoft.Json.9.0.1\lib\net45\')">..\..\ffmpeg-farm-client\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -115,48 +120,40 @@
     <Compile Include="Channels.cs" />
     <Compile Include="ContainerFormat.cs" />
     <Compile Include="DestinationFormat.cs" />
-    <Compile Include="Dto\FFmpegJobDto.cs" />
     <Compile Include="Dto\FFmpegTaskDto.cs" />
-    <Compile Include="Dto\JobRequestDto.cs" />
-    <Compile Include="Dto\TranscodingJobDto.cs" />
-    <Compile Include="FfmpegPart.cs" />
-    <Compile Include="FfmpegTask.cs" />
     <Compile Include="H264Profile.cs" />
-    <Compile Include="IAudioJobRepository.cs" />
+    <Compile Include="IApiSettings.cs" />
+    <Compile Include="IAudioRequestRepository.cs" />
+    <Compile Include="IHardSubtitlesRequestRepository.cs" />
     <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
-    <Compile Include="IHardSubtitlesJobRepository.cs" />
-    <Compile Include="ILogging.cs" />
-    <Compile Include="IAudioDemuxJobRepository.cs" />
     <Compile Include="IMuxJobRepository.cs" />
-    <Compile Include="IVideoJobRepository.cs" />
-    <Compile Include="JobRequest.cs" />
+    <Compile Include="IRepository.cs" />
+    <Compile Include="IClientRepository.cs" />
+    <Compile Include="ITaskRepository.cs" />
+    <Compile Include="ILogging.cs" />
+    <Compile Include="IUnitOfWork.cs" />
     <Compile Include="JobRequestBase.cs" />
     <Compile Include="JobStatusModel.cs" />
-    <Compile Include="JobResultModel.cs" />
     <Compile Include="JobType.cs" />
     <Compile Include="Mediainfo.cs" />
-    <Compile Include="MergeJob.cs" />
     <Compile Include="Models\FfmpegJobModel.cs" />
     <Compile Include="Models\ServiceStatus.cs" />
     <Compile Include="Models\FfmpegTaskModel.cs" />
     <Compile Include="Models\WorkerStatus.cs" />
-    <Compile Include="Mp4boxJob.cs" />
-    <Compile Include="HardSubtitlesJob.cs" />
-    <Compile Include="AudioDemuxJob.cs" />
     <Compile Include="MuxJob.cs" />
     <Compile Include="HardSubtitlesJobRequest.cs" />
-    <Compile Include="AudioDemuxJobRequest.cs" />
-    <Compile Include="MuxJobRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Quality.cs" />
-    <Compile Include="Resolution.cs" />
     <Compile Include="FFmpegJob.cs" />
-    <Compile Include="VideoTranscodingJob.cs" />
-    <Compile Include="JobRequestExamples.cs" />
-    <Compile Include="TranscodingJobState.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\API.Database\API.Database.csproj">
+      <Project>{C6B46691-1429-4D9B-A9DE-A0DC7BC84993}</Project>
+      <Name>API.Database</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

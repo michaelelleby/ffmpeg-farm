@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using API.Database;
 
 namespace Contract
 {
-    public interface IMuxJobRepository : IJobRepository
+    public interface IMuxJobRepository : IRepository<FfmpegMuxRequest>
     {
-        Guid Add(MuxJobRequest request, ICollection<FFmpegJob> jobs);
     }
 }

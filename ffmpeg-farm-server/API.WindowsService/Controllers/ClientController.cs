@@ -1,38 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web.Http;
-using API.Service;
+using API.Database;
+using API.Repository;
 using Contract;
-using Dapper;
-using WebApi.OutputCache.V2;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("api/client")]
     public class ClientController : ApiController
     {
-        private readonly IHelper _helper;
-        private readonly IJobRepository _jobRepository;
-
-        public ClientController(IHelper helper, IJobRepository jobRepository)
-        {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
-            if (jobRepository ==null ) throw new ArgumentNullException(nameof(jobRepository));
-            _helper = helper;
-            _jobRepository = jobRepository;
-        }
-
-        [CacheOutput(ClientTimeSpan = 5, ServerTimeSpan = 5)]
         [HttpGet]
         public IEnumerable<ClientHeartbeat> Get()
         {
-            using (var connection = _helper.GetConnection())
+            IEnumerable<Clients> clients;
+            using (IUnitOfWork unitofwork = new UnitOfWork(new FfmpegFarmContext()))
             {
-                connection.Open();
-
-                return connection.Query<ClientHeartbeat>("SELECT MachineName, LastHeartbeat FROM Clients;");
+                clients = unitofwork.Clients.GetAll();
             }
-        }
 
+            return clients.Select(c => new ClientHeartbeat {LastHeartbeat = c.LastHeartbeat, MachineName = c.MachineName});
+        }
 
         /// <summary>
         /// Removes client which hasn't send an heart in the last hour. Admin use only, do NOT use unless you know what you are doing.
@@ -41,11 +30,20 @@ namespace API.WindowsService.Controllers
         /// <returns>Number of clients removed.</returns>
         [HttpPost]
         [Route("~/admin/PruneClients")]
-        
+
         public int PruneInactiveClients(TimeSpan? maxAge = null)
         {
             var maxAgeValue = maxAge ?? TimeSpan.FromHours(1);
-            return _jobRepository.PruneInactiveClients(maxAgeValue);
+            DateTimeOffset timeout = DateTimeOffset.UtcNow.Subtract(maxAgeValue);
+
+            using (IUnitOfWork unitOfWork = new UnitOfWork(new FfmpegFarmContext()))
+            {
+                int clientsRemoved = unitOfWork.Clients.PruneInactiveClients(timeout);
+
+                unitOfWork.Complete();
+
+                return clientsRemoved;
+            }
         }
     }
 }

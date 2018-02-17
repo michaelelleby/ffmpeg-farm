@@ -24,8 +24,7 @@ namespace API.WindowsService.Validators
 
             protected override bool IsValid(PropertyValidatorContext context)
             {
-                var model = context.Instance as AudioDemuxJobRequestModel;
-                if (model == null)
+                if (!(context.Instance is AudioDemuxJobRequestModel model))
                     throw new ArgumentException(nameof(context));
 
                 if (model.OutputFolder.Equals(Path.GetDirectoryName(model.VideoSourceFilename), StringComparison.InvariantCultureIgnoreCase)

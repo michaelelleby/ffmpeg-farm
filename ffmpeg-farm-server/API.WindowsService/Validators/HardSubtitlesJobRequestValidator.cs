@@ -28,8 +28,7 @@ namespace API.WindowsService.Validators
 
             protected override bool IsValid(PropertyValidatorContext context)
             {
-                var model = context.Instance as HardSubtitlesJobRequestModel;
-                if (model == null)
+                if (!(context.Instance is HardSubtitlesJobRequestModel model))
                     throw new ArgumentException(nameof(context));
 
                 if (model.OutputFolder.Equals(Path.GetDirectoryName(model.VideoSourceFilename), StringComparison.InvariantCultureIgnoreCase)

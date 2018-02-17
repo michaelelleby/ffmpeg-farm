@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Net;
 using System.Web.Http;
+using API.Database;
 using API.WindowsService.Controllers;
 using API.WindowsService.Test.Helpers;
 using Contract;
-using Contract.Dto;
 using Moq;
 using NUnit.Framework;
 using Ploeh.AutoFixture;
@@ -34,17 +36,20 @@ namespace API.WindowsService.Test.Controllers
         {
             // Arrange
             var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
-            var repository = fixture.Freeze<Mock<IJobRepository>>();
+            var unitofwork = fixture.Freeze<Mock<IUnitOfWork>>();
+            var jobsrepository = new Mock<IJobRepository>();
             var sut = fixture.Create<StatusController>();
 
-            repository.Setup(m => m.Get(It.IsAny<Guid>()))
-                .Returns((FFmpegJobDto) null);
+            unitofwork.Setup(m => m.Jobs)
+                .Returns(jobsrepository.Object);
+            jobsrepository.Setup(m => m.Find(It.IsAny<Expression<Func<FfmpegJobs, bool>>>()))
+                .Returns(new List<FfmpegJobs>());
 
             // Act
-            var exception = Assert.Throws<ArgumentException>(() => sut.Get(Guid.NewGuid()));
+            var result = sut.Get(Guid.NewGuid());
 
             // Assert
-            Assert.That(exception.ParamName, Is.EqualTo("id"));
+            Assert.That(result, Is.Null);
         }
 
         [Test]
