@@ -150,7 +150,7 @@ namespace FFmpegFarm.Worker
         {
             _currentTask.HeartbeatMachineName = Environment.MachineName;
             _logger.Information($"New job recived {_currentTask.Id}", _threadId);
-            _stopwatch.Start();
+            _stopwatch.Restart();
 
             bool acquiredLock = false;
 

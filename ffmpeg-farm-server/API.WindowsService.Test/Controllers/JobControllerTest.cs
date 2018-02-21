@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Web.Http;
 using API.WindowsService.Controllers;
 using API.WindowsService.Models;
 using API.WindowsService.Test.Helpers;
@@ -10,7 +8,7 @@ using NUnit.Framework;
 using Ploeh.AutoFixture;
 using Ploeh.AutoFixture.AutoMoq;
 
-namespace API.WindowsService.Test
+namespace API.WindowsService.Test.Controllers
 {
     [TestFixture]
     public class JobControllerTest

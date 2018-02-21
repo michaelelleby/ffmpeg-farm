@@ -20,7 +20,6 @@ namespace API.Repository
         public JobRepository(IHelper helper)
         {
             if (helper == null) throw new ArgumentNullException(nameof(helper));
-
             Helper = helper;
         }
 

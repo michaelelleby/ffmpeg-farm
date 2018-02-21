@@ -103,18 +103,36 @@ namespace API.WindowsService.Controllers
                 JobCorrelationId = dto.JobCorrelationId,
                 Needed = dto.Needed,
                 Created = dto.Created,
-                Tasks = dto.Tasks.Select(j => new FfmpegTaskModel
+                Tasks = dto.Tasks.Select(j =>
                 {
-                    Started = j.Started,
-                    Heartbeat = j.Heartbeat,
-                    HeartbeatMachine = j.HeartbeatMachineName,
-                    State = j.State,
-                    Progress = Math.Round(Convert.ToDecimal(j.Progress / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    VerifyProgres = j.VerifyProgress == null ? (decimal?) null : Math.Round(Convert.ToDecimal(j.VerifyProgress.Value / j.DestinationDurationSeconds * 100), 2, MidpointRounding.ToEven),
-                    DestinationFilename = j.DestinationFilename,
-                    LogPath = j.Started != null ?  $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt" : string.Empty
-            }),
+                    var progress = CalculateProgress(j);
+                    return new FfmpegTaskModel
+                    {
+                        Started = j.Started,
+                        Heartbeat = j.Heartbeat,
+                        HeartbeatMachine = j.HeartbeatMachineName,
+                        State = j.State,
+                        Progress = progress,
+                        VerifyProgres = j.VerifyProgress == null ? (decimal?) null : progress,
+                        DestinationFilename = j.DestinationFilename,
+                        LogPath = j.Started != null
+                            ? $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt"
+                            : string.Empty
+                    };
+                }),
             };
+        }
+
+        private static decimal CalculateProgress(FFmpegTaskDto j)
+        {
+            return Math.Round(Convert.ToDecimal(NotZero((int?)j.VerifyProgress) / NotZero(j.DestinationDurationSeconds * 100)), 2, MidpointRounding.ToEven);
+        }
+
+        private static int NotZero(int? number)
+        {
+            if (number.HasValue && number != 0)
+                return number.Value;
+            return 1;
         }
     }
 }

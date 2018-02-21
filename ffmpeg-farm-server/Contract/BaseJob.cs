@@ -37,6 +37,6 @@ namespace Contract
         /// <summary>
         /// 
         /// </summary>
-        public JobType Type { get;}
+        public virtual JobType Type { get;} 
     }
 }

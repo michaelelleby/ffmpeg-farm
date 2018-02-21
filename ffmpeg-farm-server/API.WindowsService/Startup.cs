@@ -77,6 +77,11 @@ namespace API.WindowsService
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
 
+                _.For<IAudioDemuxJobRepository>()
+                    .Use<AudioDemuxJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
                 _.For<IMuxJobRepository>()
                     .Use<MuxJobRepository>()
                     .Ctor<string>("connectionString")
