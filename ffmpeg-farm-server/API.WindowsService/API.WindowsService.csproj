@@ -158,9 +158,11 @@
     <Compile Include="Controllers\HardSubtilesJobController.cs" />
     <Compile Include="Controllers\AudioDemuxJobController.cs" />
     <Compile Include="Controllers\MuxJobController.cs" />
+    <Compile Include="Controllers\ScreenshotJobController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
     <Compile Include="Models\AudioDemuxJobRequestModel.cs" />
+    <Compile Include="Models\ScreenshotJobRequestModel.cs" />
     <Compile Include="Validators\HardSubtitlesJobRequestValidator.cs" />
     <Compile Include="Models\Command.cs" />
     <Compile Include="Models\MuxJobRequestModel.cs" />
@@ -182,6 +184,7 @@
     <Compile Include="Validators\AudioDestinationFormatValidator.cs" />
     <Compile Include="Validators\AudioDemuxJobRequestValidator.cs" />
     <Compile Include="Validators\MuxJobRequestValidator.cs" />
+    <Compile Include="Validators\SreenshotRequestValidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
