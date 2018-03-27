@@ -500,6 +500,3 @@ REFERENCES [dbo].[FfmpegVideoRequest] ([JobCorrelationId])
 GO
 ALTER TABLE [dbo].[Mp4boxJobs] CHECK CONSTRAINT [FK_Mp4boxJobs_FfmpegRequest]
 GO
-ALTER TABLE [dbo].[FfmpegTasks]
- ADD [VerifyProgress] [float] NULL
-GO
