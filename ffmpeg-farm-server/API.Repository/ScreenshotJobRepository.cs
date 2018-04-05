@@ -11,7 +11,8 @@ namespace API.Repository
 
         public ScreenshotJobRepository(IHelper helper) : base(helper)
         {
-            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
+            _helper = helper;
         }
 
         public Guid Add(ScreenshotJobRequest request, ICollection<ScreenshotJob> jobs)
