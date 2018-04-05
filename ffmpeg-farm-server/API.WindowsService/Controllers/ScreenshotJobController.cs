@@ -17,9 +17,13 @@ namespace API.WindowsService.Controllers
 
         public ScreenshotJobController(IScreenshotJobRepository repository, IHelper helper, ILogging logging)
         {
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
-            _logging = logging ?? throw new ArgumentNullException(nameof(logging));
+            if (repository == null) throw new ArgumentNullException(nameof(repository));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
+            if (logging == null) throw new ArgumentNullException(nameof(logging));
+            
+            _repository = repository;
+            _helper = helper;
+            _logging = logging;
         }
         
         /// <summary>
