@@ -92,6 +92,11 @@ namespace API.WindowsService
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
 
+                _.For<IScreenshotJobRepository>()
+                    .Use<ScreenshotJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
                 _.For<IJobRepository>()
                     .Use<JobRepository>();
 

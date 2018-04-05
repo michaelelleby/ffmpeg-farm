@@ -9,6 +9,7 @@ namespace Contract
         VideoMerge,
         Mux,
         HardSubtitles,
-        AudioDemux
+        AudioDemux,
+        Screenshot
     }
 }
