@@ -1,4 +1,4 @@
-﻿/****** Object:  Table [dbo].[FfmpegScreenshotRequest]    Script Date: 23-03-2018 10:08:51 ******/
+/****** Object:  Table [dbo].[FfmpegScreenshotRequest]    Script Date: 23-03-2018 10:08:51 ******/
 SET ANSI_NULLS ON
 GO
 
