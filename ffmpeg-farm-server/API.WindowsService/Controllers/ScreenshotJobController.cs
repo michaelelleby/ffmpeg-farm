@@ -14,6 +14,8 @@ namespace API.WindowsService.Controllers
         private readonly IScreenshotJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
+        private readonly int _defaultScreenshotWidth = 1024;
+        private readonly int _defaultScreenshotHeight = 576;
 
         public ScreenshotJobController(IScreenshotJobRepository repository, IHelper helper, ILogging logging)
         {
@@ -63,7 +65,7 @@ namespace API.WindowsService.Controllers
         
             string outputFilePath = Path.Combine(request.OutputFolder, $"{request.DestinationFilename}.png");
 
-            string ffmpegArguments = string.Format("-ss {1} -i \"{0}\" -vframes 1 -deinterlace -s {3}x{4} -an -y -v 0 -f image2 \"{2}\"", request.VideoSourceFilename, request.ScreenshotTime, outputFilePath, request.Width, request.Height);
+            string ffmpegArguments = string.Format("-ss {1} -i \"{0}\" -vframes 1 -deinterlace -s {3}x{4} -an -y -v 0 -f image2 \"{2}\"", request.VideoSourceFilename, request.ScreenshotTime, outputFilePath, _defaultScreenshotWidth, _defaultScreenshotHeight);
 
             // force_original_aspect_ratio=decrease will cause FFmpeg to generate black bars in the side of the generated screenshot
             // for 4:3 videos, to avoid stretching the original picture from the video,
@@ -72,7 +74,7 @@ namespace API.WindowsService.Controllers
                 ffmpegArguments =
                     string.Format(
                         "-ss {1} -i \"{0}\" -vframes 1 -filter_complex \"yadif=0:-1:0,scale={3}:{4}:force_original_aspect_ratio=decrease,pad={3}:{4}:(ow-iw)/2:(oh-ih)/2\" -an -y -v 0 -f image2 \"{2}\"",
-                        request.VideoSourceFilename, request.ScreenshotTime, outputFilePath, request.Width, request.Height);
+                        request.VideoSourceFilename, request.ScreenshotTime, outputFilePath, _defaultScreenshotWidth, _defaultScreenshotHeight);
             }
 
             var job = new ScreenshotJob
