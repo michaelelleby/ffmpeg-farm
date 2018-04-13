@@ -14,8 +14,8 @@ namespace API.WindowsService.Controllers
         private readonly IScreenshotJobRepository _repository;
         private readonly IHelper _helper;
         private readonly ILogging _logging;
-        private readonly int _defaultScreenshotWidth = 1024;
-        private readonly int _defaultScreenshotHeight = 576;
+        private readonly int _defaultScreenshotWidth = 1280;
+        private readonly int _defaultScreenshotHeight = 720;
 
         public ScreenshotJobController(IScreenshotJobRepository repository, IHelper helper, ILogging logging)
         {
