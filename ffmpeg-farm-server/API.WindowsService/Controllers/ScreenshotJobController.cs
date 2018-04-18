@@ -63,7 +63,7 @@ namespace API.WindowsService.Controllers
                 AspectRatio16_9 = request.AspectRatio16_9
             };
         
-            string outputFilePath = Path.Combine(request.OutputFolder, $"{request.DestinationFilename}.png");
+            string outputFilePath = Path.Combine(request.OutputFolder, $"{request.DestinationFilename}.jpg");
 
             string ffmpegArguments = string.Format("-ss {1} -i \"{0}\" -vframes 1 -deinterlace -s {3}x{4} -an -y -v 0 -f image2 \"{2}\"", request.VideoSourceFilename, request.ScreenshotTime, outputFilePath, _defaultScreenshotWidth, _defaultScreenshotHeight);
 
