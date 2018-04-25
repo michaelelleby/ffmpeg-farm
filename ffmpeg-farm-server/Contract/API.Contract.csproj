@@ -129,6 +129,7 @@
     <Compile Include="ILogging.cs" />
     <Compile Include="IAudioDemuxJobRepository.cs" />
     <Compile Include="IMuxJobRepository.cs" />
+    <Compile Include="IScreenshotJobRepository.cs" />
     <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobRequestBase.cs" />
@@ -152,6 +153,8 @@
     <Compile Include="Quality.cs" />
     <Compile Include="Resolution.cs" />
     <Compile Include="FFmpegJob.cs" />
+    <Compile Include="ScreenshotJob.cs" />
+    <Compile Include="ScreenshotJobRequest.cs" />
     <Compile Include="VideoTranscodingJob.cs" />
     <Compile Include="JobRequestExamples.cs" />
     <Compile Include="TranscodingJobState.cs" />
