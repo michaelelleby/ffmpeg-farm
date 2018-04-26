@@ -1,3 +1,0 @@
-[submodule "ffmpeg-farm-server/lib/media-info-wrapper"]
-	path = ffmpeg-farm-server/lib/media-info-wrapper
-	url = http://github01.net.dr.dk/on-demand/media-info-wrapper
