@@ -6,6 +6,7 @@ namespace Contract.Dto
     {
         public int Id { get; set; }
 
+        public string FfmpegExePath { get; set; }
         public int FfmpegJobsId { get; set; }
 
         public string Arguments { get; set; }

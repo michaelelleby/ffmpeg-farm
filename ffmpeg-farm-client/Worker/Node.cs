@@ -20,10 +20,10 @@ namespace FFmpegFarm.Worker
             Verify
         }
         private readonly object _lock = new object();
-        private readonly string _ffmpegPath;
         private readonly string _logfilesPath;
         private readonly Timer _timeSinceLastUpdate;
         private readonly Stopwatch _timeSinceLastProgressUpdate;
+        private string _ffmpegPath;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
@@ -96,6 +96,10 @@ namespace FFmpegFarm.Worker
                     }
                     try
                     {
+                        // we let the server override default ffmpeg
+                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) &&
+                            File.Exists(_currentTask.FfmpegExePath))
+                            _ffmpegPath = _currentTask.FfmpegExePath;
                         ExecuteJob();
                     }
                     catch (Exception e)
