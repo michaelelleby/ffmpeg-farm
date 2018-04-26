@@ -18,18 +18,15 @@ namespace API.WindowsService.Controllers
     public class StatusController : ApiController
     {
         private readonly IJobRepository _repository;
-        private readonly IHelper _helper;
         private readonly ILogging _logging;
         private static readonly string _logPath = ConfigurationManager.AppSettings["FFmpegLogPath"];
 
-        public StatusController(IJobRepository repository, IHelper helper, ILogging logging)
+        public StatusController(IJobRepository repository, ILogging logging)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (logging == null) throw new ArgumentNullException(nameof(logging));
 
             _repository = repository;
-            _helper = helper;
             _logging = logging;
         }
 

@@ -153,6 +153,7 @@
     <Compile Include="APIService.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controllers\ConfigurationWrapper.cs" />
     <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\HardSubtilesJobController.cs" />

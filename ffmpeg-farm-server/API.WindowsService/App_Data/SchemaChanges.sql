@@ -14,3 +14,6 @@ CREATE TABLE [dbo].[FfmpegScreenshotRequest](
 	[OutputFolder] [nvarchar](max) NOT NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+
+ALTER TABLE [dbo].[FfmpegTasks] ADD FfmpegExePath NVARCHAR(500) NULL
+GO

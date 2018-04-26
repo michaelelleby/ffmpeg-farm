@@ -51,6 +51,7 @@ namespace API.WindowsService.Controllers
                 new AudioDemuxJob
                 {
                     Needed = model.Needed.LocalDateTime,
+                    FfmpegExePath = ConfigurationWrapper.FFmpeg32,
                     Arguments = arguments,
                     State = TranscodingJobState.Queued,
                     DestinationFilename = outputFilename

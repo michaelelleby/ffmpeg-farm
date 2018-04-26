@@ -326,7 +326,7 @@ namespace API.Repository
                 string jobidSql = "(" + ids.Aggregate((a, b) => a + "," + b) + ")";
 
                 tasks = connection.Query<FFmpegTaskDto>(
-                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationDurationSeconds, DestinationFilename 
+                        @"SELECT id, FfmpegJobs_id AS FfmpegJobsId, FfmpegExePath, Arguments, TaskState AS State, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationDurationSeconds, DestinationFilename 
                               FROM FfmpegTasks
                               WHERE FfmpegJobs_id in " + jobidSql
                     )
@@ -364,7 +364,7 @@ namespace API.Repository
                     return null;
 
                 job.Tasks = connection.Query<FFmpegTaskDto>(
-                        "SELECT id, FfmpegJobs_id, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
+                        "SELECT id, FfmpegJobs_id, FfmpegExePath, Arguments, TaskState AS State, DestinationDurationSeconds, Started, Heartbeat, HeartbeatMachineName, Progress, VerifyProgress, DestinationFilename FROM FfmpegTasks WHERE FfmpegJobs_id = @Id;",
                         new {job.Id})
                     .ToList();
 

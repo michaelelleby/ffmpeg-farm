@@ -57,6 +57,7 @@ namespace API.WindowsService.Controllers
                 new MuxJob
                 {
                     Arguments = arguments,
+                    FfmpegExePath = ConfigurationWrapper.FFmpeg32,
                     State = TranscodingJobState.Queued,
                     DestinationFilename = outputFilename,
                     DestinationDurationSeconds = frameCount

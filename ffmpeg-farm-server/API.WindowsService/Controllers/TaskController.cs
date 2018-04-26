@@ -8,17 +8,14 @@ namespace API.WindowsService.Controllers
 {
     public class TaskController : ApiController
     {
-        private readonly IHelper _helper;
         private readonly IJobRepository _repository;
         private readonly ILogging _logging;
 
-        public TaskController(IHelper helper, IJobRepository repository, ILogging logging)
+        public TaskController(IJobRepository repository, ILogging logging)
         {
-            if (helper == null) throw new ArgumentNullException(nameof(helper));
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (logging == null) throw new ArgumentNullException(nameof(logging));
 
-            _helper = helper;
             _repository = repository;
             _logging = logging;
         }

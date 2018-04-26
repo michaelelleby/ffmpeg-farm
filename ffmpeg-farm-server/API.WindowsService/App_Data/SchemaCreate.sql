@@ -129,6 +129,7 @@ GO
 CREATE TABLE [dbo].[FfmpegTasks](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[FfmpegJobs_id] [int] NOT NULL,
+	FfmpegExePath NVARCHAR(500) NULL,
 	[Arguments] [nvarchar](max) NOT NULL,
 	[TaskState] [tinyint] NOT NULL,
 	[DestinationDurationSeconds] [int] NOT NULL,
@@ -468,7 +469,7 @@ BEGIN
 		UPDATE FfmpegJobs SET JobState = @InProgressState WHERE Id = @JobId AND JobState != @InProgressState;
 	END
 
-	SELECT id, FfmpegJobs_id AS FfmpegJobsId, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, VerifyOutput FROM FfmpegTasks WHERE Id = @TaskId;
+	SELECT id, FfmpegJobs_id AS FfmpegJobsId, FfmpegExePath, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, VerifyOutput FROM FfmpegTasks WHERE Id = @TaskId;
 END
 
 GO
