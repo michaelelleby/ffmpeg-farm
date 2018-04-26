@@ -7,30 +7,4 @@ namespace FFmpegFarm.Worker.Client
     {
         public static readonly object Locker = new object();
     }
-    
-    public partial class TaskClient
-    {
-        partial void PrepareRequest(HttpClient request, ref string url)
-        {
-            #if DEBUGAPI
-            lock (ClientHelper.Locker)
-            {
-                Console.WriteLine($"> {url}");
-            }
-            #endif
-        }
-    }
-
-    public partial class StatusClient
-    {
-        partial void PrepareRequest(HttpClient request, ref string url)
-        {
-            #if DEBUGAPI
-            lock (ClientHelper.Locker)
-            {
-                Console.WriteLine($"> {url}");
-            }
-            #endif 
-        }
-    }
 }
