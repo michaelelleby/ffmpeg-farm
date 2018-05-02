@@ -130,7 +130,6 @@
     <Compile Include="IAudioDemuxJobRepository.cs" />
     <Compile Include="IMuxJobRepository.cs" />
     <Compile Include="IScreenshotJobRepository.cs" />
-    <Compile Include="IVideoJobRepository.cs" />
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobRequestBase.cs" />
     <Compile Include="JobStatusModel.cs" />

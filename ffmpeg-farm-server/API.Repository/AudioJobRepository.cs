@@ -67,10 +67,11 @@ namespace API.Repository
                     foreach (AudioTranscodingJob transcodingJob in jobs)
                     {
                         connection.Execute(
-                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
+                            "INSERT INTO FfmpegTasks (FfmpegJobs_id,FfmpegExePath,  Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId,@FfmpegExePath, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
                             new
                             {
                                 FfmpegJobsId = jobId,
+                                transcodingJob.FfmpegExePath,
                                 transcodingJob.Arguments,
                                 TaskState = TranscodingJobState.Queued,
                                 transcodingJob.DestinationFilename,

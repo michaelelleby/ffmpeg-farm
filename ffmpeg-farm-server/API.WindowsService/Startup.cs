@@ -69,9 +69,6 @@ namespace API.WindowsService
             var container = new Container();
             container.Configure(_ =>
             {
-                _.For<IVideoJobRepository>()
-                    .Use<VideoJobRepository>();
-
                 _.For<IAudioJobRepository>()
                     .Use<AudioJobRepository>()
                     .Ctor<string>("connectionString")

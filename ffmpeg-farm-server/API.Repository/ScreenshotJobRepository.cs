@@ -53,10 +53,11 @@ namespace API.Repository
                     foreach (ScreenshotJob screenshotJob in jobs)
                     {
                         connection.Execute(
-                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
+                            "INSERT INTO FfmpegTasks (FfmpegJobs_id, FfmpegExePath, Arguments, TaskState, DestinationFilename, DestinationDurationSeconds, VerifyOutput) VALUES(@FfmpegJobsId,@FfmpegExePath, @Arguments, @TaskState, @DestinationFilename, @DestinationDurationSeconds, @VerifyOutput);",
                             new
                             {
                                 FfmpegJobsId = jobId,
+                                screenshotJob.FfmpegExePath,
                                 screenshotJob.Arguments,
                                 TaskState = TranscodingJobState.Queued,
                                 screenshotJob.DestinationFilename,

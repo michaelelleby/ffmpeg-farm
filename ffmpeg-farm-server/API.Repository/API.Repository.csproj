@@ -72,7 +72,6 @@
     <Compile Include="MuxJobRepository.cs" />
     <Compile Include="ScreenshotJobRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
-    <Compile Include="VideoJobRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
