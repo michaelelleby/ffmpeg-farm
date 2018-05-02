@@ -15,5 +15,7 @@ namespace API.WindowsService.Models
 
         [Required]
         public string DestinationFilename { get; set; }
+
+        public string CodecId { get; set; }
     }
 }
