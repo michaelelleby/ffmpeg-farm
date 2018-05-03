@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Web.Http;
 using API.WindowsService.Controllers;
 using API.WindowsService.Test.Helpers;
 using Contract;

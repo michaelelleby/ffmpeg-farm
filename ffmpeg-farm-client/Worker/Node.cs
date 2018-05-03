@@ -104,19 +104,29 @@ namespace FFmpegFarm.Worker
                     }
                     catch (Exception e)
                     {
-                        _logger.Warn($"Job failed {_currentTask.Id}, with error: {e}" +
-                             $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
-                             $"\n\tffmpeg process output:\n\n{_output}", _threadId);
+                        var text = $"Job failed {_currentTask.Id}, with error: {e}" +
+                                   $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
+                                   $"\n\tffmpeg process output:\n\n{_output}";
 
-                        Monitor.Enter(_lock);
-                        if (_currentTask != null)
+                        _logger.Warn(text, _threadId);
+                        _output.AppendLine(text);
+                        try
                         {
-                            _currentTask.State = FFmpegTaskDtoState.Failed;
-                            UpdateTask(_currentTask);
-                            _currentTask = null;
+                            Monitor.Enter(_lock);
+                            if (_currentTask != null)
+                            {
+                                _currentTask.State = FFmpegTaskDtoState.Failed;
+                                UpdateTask(_currentTask);
+                                _currentTask = null;
+                            }
+                            Monitor.Exit(_lock);
                         }
-                        Monitor.Exit(_lock);
+                        catch (Exception exception)
+                        {
+                            _output.AppendLine(exception.Message + exception.StackTrace);
+                        }
                     }
+                    WriteOutputToLogfile();
                     _output.Clear();
                 }
                 ct.ThrowIfCancellationRequested();
@@ -144,6 +154,9 @@ namespace FFmpegFarm.Worker
                         // Prevent uncaught exceptions in the finally {} block
                         // since this will bring down the entire worker service
                         _logger.Exception(e, _threadId, "Run");
+                        _output.AppendLine(e.Message + e.StackTrace);
+                        WriteOutputToLogfile();
+                        _output.Clear();
                     }
                 }
                 _logger.Debug("Cancel recived shutting down...");
@@ -218,7 +231,8 @@ namespace FFmpegFarm.Worker
                     // status updates
                     _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
 
-                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
+                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename,
+                            StringComparison.OrdinalIgnoreCase) != 0)
                     {
                         File.Move(outputFullPath, _currentTask.DestinationFilename);
                     }
@@ -284,11 +298,19 @@ namespace FFmpegFarm.Worker
                 else
                 {
                     _currentTask.State = FFmpegTaskDtoState.Done;
-                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}", _threadId);
+                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}",
+                        _threadId);
                 }
                 UpdateTask(_currentTask);
 
                 Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
+            }
+            catch (Exception e)
+            {
+                _logger.Exception(e, _threadId, "ExecuteJob");
+                _output.AppendLine(e.Message + e.StackTrace);
+                WriteOutputToLogfile();
+                _output.Clear();
             }
             finally
             {
@@ -306,6 +328,9 @@ namespace FFmpegFarm.Worker
                 catch (Exception e)
                 {
                     _logger.Exception(e, _threadId, "ExecuteJob");
+                    _output.AppendLine(e.Message + e.StackTrace);
+                    WriteOutputToLogfile();
+                    _output.Clear();
                 }
 
                 if (acquiredLock)
