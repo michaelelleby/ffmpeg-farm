@@ -88,6 +88,7 @@ namespace FFmpegFarm.Worker
                 _cancellationToken = ct;
                 while (!_cancellationToken.IsCancellationRequested)
                 {
+                    _currentTask = null;
                     _currentTask = _apiWrapper.GetNext(Environment.MachineName);
                     if (_currentTask == null)
                     {
@@ -117,7 +118,6 @@ namespace FFmpegFarm.Worker
                             {
                                 _currentTask.State = FFmpegTaskDtoState.Failed;
                                 UpdateTask(_currentTask);
-                                _currentTask = null;
                             }
                             Monitor.Exit(_lock);
                         }
@@ -125,9 +125,12 @@ namespace FFmpegFarm.Worker
                         {
                             _output.AppendLine(exception.Message + exception.StackTrace);
                         }
+                        finally
+                        {
+                            WriteOutputToLogfile();
+                            _output.Clear();
+                        }
                     }
-                    WriteOutputToLogfile();
-                    _output.Clear();
                 }
                 ct.ThrowIfCancellationRequested();
             }
