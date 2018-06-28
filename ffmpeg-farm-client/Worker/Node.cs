@@ -128,7 +128,6 @@ namespace FFmpegFarm.Worker
                         finally
                         {
                             WriteOutputToLogfile();
-                            _output.Clear();
                         }
                     }
                 }
@@ -159,7 +158,6 @@ namespace FFmpegFarm.Worker
                         _logger.Exception(e, _threadId, "Run");
                         _output.AppendLine(e.Message + e.StackTrace);
                         WriteOutputToLogfile();
-                        _output.Clear();
                     }
                 }
                 _logger.Debug("Cancel recived shutting down...");
@@ -313,7 +311,6 @@ namespace FFmpegFarm.Worker
                 _logger.Exception(e, _threadId, "ExecuteJob");
                 _output.AppendLine(e.Message + e.StackTrace);
                 WriteOutputToLogfile();
-                _output.Clear();
             }
             finally
             {
@@ -333,7 +330,6 @@ namespace FFmpegFarm.Worker
                     _logger.Exception(e, _threadId, "ExecuteJob");
                     _output.AppendLine(e.Message + e.StackTrace);
                     WriteOutputToLogfile();
-                    _output.Clear();
                 }
 
                 if (acquiredLock)
@@ -369,6 +365,10 @@ namespace FFmpegFarm.Worker
             catch
             {
                 // Prevent this from ever crashing the worker
+            }
+            finally
+            {
+                _output.Clear();
             }
         }
 
