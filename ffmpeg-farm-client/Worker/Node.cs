@@ -211,6 +211,7 @@ namespace FFmpegFarm.Worker
                         env[e.Key] = e.Value;
                     }
                     _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                    _output.AppendLine("ffmpeg " + _commandlineProcess.StartInfo.Arguments + Environment.NewLine);
 
                     _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                     _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
