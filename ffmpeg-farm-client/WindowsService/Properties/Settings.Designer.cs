@@ -12,7 +12,7 @@ namespace FFmpegFarm.WindowsService.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "14.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.7.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -68,6 +68,33 @@ namespace FFmpegFarm.WindowsService.Properties {
         public string EnvorimentVars {
             get {
                 return ((string)(this["EnvorimentVars"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Temp\\ffmpegfarm\\stereotool\\stereo_tool_cmd.exe")]
+        public string StereoToolPath {
+            get {
+                return ((string)(this["StereoToolPath"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Temp\\ffmpegfarm\\stereotool\\presets\\")]
+        public string StereoToolPresetsPath {
+            get {
+                return ((string)(this["StereoToolPresetsPath"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Temp\\ffmpegfarm\\stereotool\\license")]
+        public string StereoToolLicensePath {
+            get {
+                return ((string)(this["StereoToolLicensePath"]));
             }
         }
     }

@@ -72,6 +72,9 @@
     <Content Include="Data\ffmpeg.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Data\stereo_tool_cmd.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Data\test.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

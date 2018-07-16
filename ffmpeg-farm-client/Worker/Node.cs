@@ -24,6 +24,9 @@ namespace FFmpegFarm.Worker
         private readonly Timer _timeSinceLastUpdate;
         private readonly Stopwatch _timeSinceLastProgressUpdate;
         private string _ffmpegPath;
+        private string _stereotoolPath;
+        private string _stereotoolLicensePath;
+        private string _stereotoolPresetsPath;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
@@ -41,13 +44,16 @@ namespace FFmpegFarm.Worker
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
             if (!File.Exists(ffmpegPath))
                 throw new FileNotFoundException(ffmpegPath);
             _ffmpegPath = ffmpegPath;
+            _stereotoolPath = stereotoolPath;
+            _stereotoolLicensePath = stereotoolLicensePath;
+            _stereotoolPresetsPath = stereotoolPresetsPath;
             if (string.IsNullOrWhiteSpace(apiUri))
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
@@ -65,6 +71,9 @@ namespace FFmpegFarm.Worker
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
+            string stereotoolPath,
+            string stereotoolLicensePath,
+            string stereotoolPresetsPath,
             string apiUri, 
             string logfilesPath,
             IDictionary<string, string> envorimentVars,
@@ -74,7 +83,7 @@ namespace FFmpegFarm.Worker
         {
 
             var t = Task.Run(() => 
-            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -183,8 +192,13 @@ namespace FFmpegFarm.Worker
                 {
                     _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
-                    string arguments = _currentTask.Arguments;
-
+                    var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
+                    string arguments = _currentTask.Arguments
+                        .Replace("{FFMpegPath}", _ffmpegPath)
+                        .Replace("{StereoToolPath}", _stereotoolPath)
+                        .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
+                        .Replace("{StereoToolLicensePath}", File.ReadAllText(_stereotoolLicensePath));
+                    
                     // <TEMP> as output filename means we should transcode the file to the local disk
                     // and move it to destination path after it is done transcoding
                     if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
@@ -202,8 +216,8 @@ namespace FFmpegFarm.Worker
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         UseShellExecute = false,
-                        FileName = _ffmpegPath,
-                        Arguments = arguments
+                        FileName = useCmdExe ? "cmd.exe" : _ffmpegPath,
+                        Arguments = $"{(useCmdExe ? "/c ": "")}{arguments}"
                     };
                     var env = _commandlineProcess.StartInfo.Environment;
                     foreach (var e in _envorimentVars)
