@@ -13,13 +13,16 @@ namespace Worker.Test
     [TestFixture]
     public class NodeTest
     {
+
+        private static string stereotoolCfgPath =>
+            Environment.GetEnvironmentVariable("StereoToolCfgPath") ?? @"C:\Temp\ffmpegfarm\stereotool\";
         private static readonly IDictionary<string,string> envs = new Dictionary<string, string>();
         private static readonly string destinationFilename = @"C:\temp\unit-test\lol.mp4";
         private static readonly bool writeOutputFileToDisk = false;
         private static readonly string ffmpegPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Data", "ffmpeg.exe");
         private static readonly string stereotoolPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Data", "stereo_tool_cmd.exe");
-        private static readonly string stereotoolPresetsPath = @"C:\Temp\ffmpegfarm\stereotool\presets"; // Folder containing your presets.
-        private static readonly string stereotoolLicensePath = @"C:\Temp\ffmpegfarm\stereotool\license"; // Fil containing your license key.
+        private static readonly string stereotoolPresetsPath = $"{stereotoolCfgPath}presets"; // Folder containing your presets.
+        private static readonly string stereotoolLicensePath = $"{stereotoolCfgPath}license"; // File containing your license key.
 
         [OneTimeSetUp]
         public void OneTimeSetup()
