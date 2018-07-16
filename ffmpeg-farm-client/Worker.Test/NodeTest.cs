@@ -21,6 +21,28 @@ namespace Worker.Test
         private static readonly string stereotoolPresetsPath = @"C:\Temp\ffmpegfarm\stereotool\presets"; // Folder containing your presets.
         private static readonly string stereotoolLicensePath = @"C:\Temp\ffmpegfarm\stereotool\license"; // Fil containing your license key.
 
+        [OneTimeSetUp]
+        public void OneTimeSetup()
+        {
+            if (!Directory.Exists(stereotoolPresetsPath))
+            {
+                throw new DirectoryNotFoundException($"Couldn't load stereo tool presets {stereotoolPresetsPath}");
+            }
+            if (!File.Exists(stereotoolLicensePath))
+            {
+                throw new FileNotFoundException("Couldn't load stereo tool license", stereotoolLicensePath);
+            }
+            if (!File.Exists(stereotoolPath))
+            {
+                throw new FileNotFoundException("Couldn't load stereo_tool_cmd, check download step in csproj", stereotoolPath);
+            }
+            if (!File.Exists(ffmpegPath))
+            {
+                throw new FileNotFoundException("Couldn't load ffmpeg, check download step in csproj", ffmpegPath);
+
+            }
+        }
+
         [Test]
         public async Task CanWaveAndStereoToolPreset()
         {
