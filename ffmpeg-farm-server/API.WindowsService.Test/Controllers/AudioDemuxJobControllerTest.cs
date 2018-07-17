@@ -34,8 +34,10 @@ namespace API.WindowsService.Test.Controllers
             var repositoryMock = fixture.Freeze<Mock<IAudioDemuxJobRepository>>();
             var sut = fixture.Create<AudioDemuxJobController>();
             var expectedAudioDemuxJobRequest = CreateAudioDemuxJobRequestMapping();
+            _audioDemuxJobRequestModel.LeftStream = 1;
+            _audioDemuxJobRequestModel.LeftStream = 1;
 
-            var expectedFFmpegJob = CreateFFmpegJobMapping();
+            var expectedFFmpegJob = CreateFFmpegJobMappingSingleStereoStream();
 
             repositoryMock.Setup(x => x.Add(It.IsAny<AudioDemuxJobRequest>(), It.IsAny<ICollection<FFmpegJob>>()))
                 .Callback<AudioDemuxJobRequest, ICollection<FFmpegJob>>((actualAudioDemuxJobRequest, actualFFmpegJobs) =>
@@ -51,6 +53,33 @@ namespace API.WindowsService.Test.Controllers
             // Asserts are above in callback
         }
 
+        [Test]
+        public void CreateMultiChannel_Repository_Mapping()
+        {
+            // Arrange
+            var fixture = new Fixture().Customize(new AutoMoqCustomization()).Customize(new ApiControllerConventions());
+            var repositoryMock = fixture.Freeze<Mock<IAudioDemuxJobRepository>>();
+            var sut = fixture.Create<AudioDemuxJobController>();
+            var expectedAudioDemuxJobRequest = CreateAudioDemuxJobRequestMapping();
+            _audioDemuxJobRequestModel.LeftStream = 1;
+            _audioDemuxJobRequestModel.LeftStream = 2;
+
+            var expectedFFmpegJob = CreateFFmpegJobMappingMultiStream();
+
+            repositoryMock.Setup(x => x.Add(It.IsAny<AudioDemuxJobRequest>(), It.IsAny<ICollection<FFmpegJob>>()))
+                .Callback<AudioDemuxJobRequest, ICollection<FFmpegJob>>((actualAudioDemuxJobRequest, actualFFmpegJobs) =>
+                {
+                    expectedAudioDemuxJobRequest.ShouldEqual(actualAudioDemuxJobRequest);
+                    Assert.AreEqual(1, actualFFmpegJobs.Count);
+                    expectedFFmpegJob.ShouldEqual(actualFFmpegJobs.Cast<AudioDemuxJob>().Single());
+                });
+
+            // Act
+            sut.CreateNew(_audioDemuxJobRequestModel);
+
+            // Asserts are above in callback
+        }
+
         private Likeness<AudioDemuxJobRequest, AudioDemuxJobRequest> CreateAudioDemuxJobRequestMapping()
         {
             return new Likeness<AudioDemuxJobRequest, AudioDemuxJobRequest>(new AudioDemuxJobRequest
@@ -61,16 +90,29 @@ namespace API.WindowsService.Test.Controllers
             });
         }
 
-        private Likeness<AudioDemuxJob, AudioDemuxJob> CreateFFmpegJobMapping()
+        private Likeness<AudioDemuxJob, AudioDemuxJob> CreateFFmpegJobMappingSingleStereoStream()
         {
             var destinationFilename = $"{_audioDemuxJobRequestModel.OutputFolder}{Path.DirectorySeparatorChar}{_audioDemuxJobRequestModel.DestinationFilename}";
             return new Likeness<AudioDemuxJob, AudioDemuxJob>(new AudioDemuxJob
             {
                 DestinationFilename = destinationFilename,
                 Needed = _audioDemuxJobRequestModel.Needed.LocalDateTime,
-                Arguments = $"-i {_audioDemuxJobRequestModel.VideoSourceFilename} {destinationFilename} -y",
+                Arguments = $"-i {_audioDemuxJobRequestModel.VideoSourceFilename} -map 0:{_audioDemuxJobRequestModel.LeftStream} {destinationFilename} -y",
                 State = TranscodingJobState.Queued,
                 
+            });
+        }
+
+        private Likeness<AudioDemuxJob, AudioDemuxJob> CreateFFmpegJobMappingMultiStream()
+        {
+            var destinationFilename = $"{_audioDemuxJobRequestModel.OutputFolder}{Path.DirectorySeparatorChar}{_audioDemuxJobRequestModel.DestinationFilename}";
+            return new Likeness<AudioDemuxJob, AudioDemuxJob>(new AudioDemuxJob
+            {
+                DestinationFilename = destinationFilename,
+                Needed = _audioDemuxJobRequestModel.Needed.LocalDateTime,
+                Arguments = $"-i {_audioDemuxJobRequestModel.VideoSourceFilename} -filter_complex \"[0:{_audioDemuxJobRequestModel.LeftStream}][0:{_audioDemuxJobRequestModel.RightStream}]amerge = inputs = 2[aout]\" -map \"[aout]\" {destinationFilename} -y",
+                State = TranscodingJobState.Queued,
+
             });
         }
     }
