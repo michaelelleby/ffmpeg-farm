@@ -12,5 +12,17 @@ namespace API.WindowsService.Models
 
         [Required]
         public string DestinationFilename { get; set; }
+
+        /// <summary>
+        /// Indicates witch stream from the input file to use as left stereo channel. Default is 1.
+        /// If left and right streams are the same we assume the stream is stereo already.
+        /// </summary>
+        public int LeftStream { get; set; } = 1;
+
+        /// <summary>
+        /// Indicates witch stream from the input file to use as left stereo channel. Default is one.
+        /// If left and right streams are the same we assume the stream is stereo already.
+        /// </summary>
+        public int RightStream { get; set; } = 1;
     }
 }

@@ -44,8 +44,12 @@ namespace API.WindowsService.Controllers
 
             string arguments = string.Empty;
 
-            //TODO: Fix the ffmpeg args so the job will work
-            arguments += $"-i {model.VideoSourceFilename} {outputFilename} -y";
+            if (model.LeftStream == model.RightStream)
+                arguments += $"-i {model.VideoSourceFilename} -map 0:{model.LeftStream} {outputFilename} -y"; //We assume the stream is stereo already
+            else
+                arguments += $"-i {model.VideoSourceFilename} -filter_complex \"[0:{model.LeftStream}][0:{model.RightStream}]amerge = inputs = 2[aout]\" -map \"[aout]\" {outputFilename} -y";
+
+
             var jobs = new List<FFmpegJob>
             {
                 new AudioDemuxJob
