@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _timeSinceLastProgressUpdate;
         private string _ffmpegPath;
         private string _stereotoolPath;
-        private string _stereotoolLicensePath;
+        private string _stereotoolLicense;
         private string _stereotoolPresetsPath;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
@@ -49,11 +50,30 @@ namespace FFmpegFarm.Worker
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
             if (!File.Exists(ffmpegPath))
-                throw new FileNotFoundException(ffmpegPath);
+                throw new FileNotFoundException("FFMPEG not found", ffmpegPath);
             _ffmpegPath = ffmpegPath;
-            _stereotoolPath = stereotoolPath;
-            _stereotoolLicensePath = stereotoolLicensePath;
-            _stereotoolPresetsPath = stereotoolPresetsPath;
+            if (string.IsNullOrEmpty(stereotoolPath))
+            {
+                _stereotoolPath = null;
+                _stereotoolLicense = null;
+                _stereotoolPresetsPath = null;
+            }
+            else
+            {
+                if (!File.Exists(stereotoolPath))
+                    throw new FileNotFoundException("Stereo tool not found", stereotoolPath);
+                _stereotoolPath = stereotoolPath;
+                
+                if (!File.Exists(stereotoolLicensePath))
+                    throw new FileNotFoundException("Stereo tool licence", stereotoolPath);
+                _stereotoolLicense = File.ReadAllText(stereotoolLicensePath);
+
+                if (!Directory.Exists(stereotoolPresetsPath) || !Directory.GetFiles(stereotoolPresetsPath)
+                        .Any(p => p.EndsWith(".sts", StringComparison.InvariantCultureIgnoreCase)))
+                    throw new ArgumentException($"No preset directory or presets found in {stereotoolPresetsPath}");
+                _stereotoolPresetsPath = stereotoolPresetsPath;
+            }
+
             if (string.IsNullOrWhiteSpace(apiUri))
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
@@ -183,6 +203,11 @@ namespace FFmpegFarm.Worker
 
             try
             {
+                if (_currentTask.Arguments.Contains("{StereoToolPath}") && _stereotoolPath == null)
+                {
+                    throw new Exception("Stereo tool is unconfigured. Unable to execute current task.");
+                }
+
                 var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
                 if (!Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
@@ -193,11 +218,12 @@ namespace FFmpegFarm.Worker
                     _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
                     var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
+                    
                     string arguments = _currentTask.Arguments
                         .Replace("{FFMpegPath}", _ffmpegPath)
                         .Replace("{StereoToolPath}", _stereotoolPath)
                         .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
-                        .Replace("{StereoToolLicensePath}", File.ReadAllText(_stereotoolLicensePath));
+                        .Replace("{StereoToolLicense}", _stereotoolLicense);
                     
                     // <TEMP> as output filename means we should transcode the file to the local disk
                     // and move it to destination path after it is done transcoding
