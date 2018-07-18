@@ -65,7 +65,7 @@ namespace FFmpegFarm.Worker
                 _stereotoolPath = stereotoolPath;
                 
                 if (!File.Exists(stereotoolLicensePath))
-                    throw new FileNotFoundException("Stereo tool licence", stereotoolPath);
+                    throw new FileNotFoundException("Stereo tool licence not found", stereotoolLicensePath);
                 _stereotoolLicense = File.ReadAllText(stereotoolLicensePath);
 
                 if (!Directory.Exists(stereotoolPresetsPath) || !Directory.GetFiles(stereotoolPresetsPath)
