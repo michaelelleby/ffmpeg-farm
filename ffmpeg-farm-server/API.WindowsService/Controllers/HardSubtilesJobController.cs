@@ -52,21 +52,30 @@ namespace API.WindowsService.Controllers
                 arguments += $"-ss {model.Inpoint:g} ";
             }
 
+            string audioFilter = "";
+            string audioMap = $"-map 0:{model.LeftStream}";
+            if (model.LeftStream != model.RightStream)
+            {
+                //merge two audio streams into one stereostream
+                audioFilter = ";[0:1][0:2]amerge=inputs=2[aout]";
+                audioMap = "-map \"[aout]\"";
+            }
+
+            string outputCodec = "mpeg2video";
             if (!string.IsNullOrEmpty(model.CodecId) && model.CodecId.ToLower().Contains("dv")) 
             {
-                // Only transcode to mpeg4 if origin is DVCPRO
-                arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\","\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -c:v mpeg4 -b:v 50M -c:a copy -y ""{outputFilename}""";
+                // Only transcode to mpeg4 if origin is DVCPRO. DVCPRO to mpeg2video fails for some reason.
+                outputCodec = "mpeg4";
             }
-            else
-            {
-                arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\","\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'"" -preset ultrafast -c:v mpeg2video -b:v 50M -c:a copy -y ""{outputFilename}""";
-            }
+
+            arguments += $@"-xerror -i ""{model.VideoSourceFilename}"" -filter_complex ""subtitles='{model.SubtitlesFilename.Replace("\\", "\\\\")}':force_style='{_helper.HardSubtitlesStyle()}'{audioFilter}"" -preset ultrafast -c:v {outputCodec} -b:v 50M {audioMap} -y ""{outputFilename}""";
 
             var jobs = new List<FFmpegJob>
             {
                 new HardSubtitlesJob()
                 {
                     Arguments = arguments,
+                    Needed = model.Needed,
                     State = TranscodingJobState.Queued,
                     DestinationFilename = outputFilename,
                     DestinationDurationSeconds = frameCount
