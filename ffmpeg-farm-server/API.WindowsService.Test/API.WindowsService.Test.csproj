@@ -79,6 +79,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\HardSubtitlesJobControllerTest.cs" />
     <Compile Include="Controllers\AudioDemuxJobControllerTest.cs" />
     <Compile Include="Controllers\StatusControllerTest.cs" />
     <Compile Include="Helpers\ApiControllerConventions.cs" />
