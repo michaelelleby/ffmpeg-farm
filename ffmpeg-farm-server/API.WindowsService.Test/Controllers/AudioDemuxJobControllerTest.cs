@@ -34,8 +34,8 @@ namespace API.WindowsService.Test.Controllers
             var repositoryMock = fixture.Freeze<Mock<IAudioDemuxJobRepository>>();
             var sut = fixture.Create<AudioDemuxJobController>();
             var expectedAudioDemuxJobRequest = CreateAudioDemuxJobRequestMapping();
-            _audioDemuxJobRequestModel.LeftStream = 1;
-            _audioDemuxJobRequestModel.LeftStream = 1;
+            _audioDemuxJobRequestModel.LeftStream = 1; //Stream 1 is a stereo stream
+            _audioDemuxJobRequestModel.RightStream = _audioDemuxJobRequestModel.LeftStream; //Same stream as left since stream 1 is stereo
 
             var expectedFFmpegJob = CreateFFmpegJobMappingSingleStereoStream();
 
@@ -61,8 +61,8 @@ namespace API.WindowsService.Test.Controllers
             var repositoryMock = fixture.Freeze<Mock<IAudioDemuxJobRepository>>();
             var sut = fixture.Create<AudioDemuxJobController>();
             var expectedAudioDemuxJobRequest = CreateAudioDemuxJobRequestMapping();
-            _audioDemuxJobRequestModel.LeftStream = 1;
-            _audioDemuxJobRequestModel.LeftStream = 2;
+            _audioDemuxJobRequestModel.LeftStream = 1; //Stream 1 is a mono stream
+            _audioDemuxJobRequestModel.RightStream = 2; //Stream 2 is a mono stream
 
             var expectedFFmpegJob = CreateFFmpegJobMappingMultiStream();
 

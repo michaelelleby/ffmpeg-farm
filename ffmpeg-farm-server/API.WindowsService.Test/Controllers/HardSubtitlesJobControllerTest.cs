@@ -50,8 +50,8 @@ namespace API.WindowsService.Test.Controllers
             // Arrange
             var sut = fixture.Create<HardSubtitlesJobController>();
             var expectedHardSubtitlesJobRequest = CreateHardSubtitlesJobRequestMapping();
-            _requestModel.LeftStream = 1;
-            _requestModel.LeftStream = 1;
+            _requestModel.LeftStream = 1; //Stream 1 is a Stereo stream
+            _requestModel.RightStream = _requestModel.LeftStream; //Same stream as left since stream 1 is stereo
             _requestModel.CodecId = "xd5c";
 
             var expectedFFmpegJob = CreateFFmpegJobMappingXDCAM();
@@ -125,8 +125,8 @@ namespace API.WindowsService.Test.Controllers
             // Arrange
             var sut = fixture.Create<HardSubtitlesJobController>();
             var expectedHardSubtitlesJobRequest = CreateHardSubtitlesJobRequestMapping();
-            _requestModel.LeftStream = 1;
-            _requestModel.RightStream = 2;
+            _requestModel.LeftStream = 1; //Stream 1 is a mono stream
+            _requestModel.RightStream = 2; //Stream 2 is a mono stream
 
             var expectedFFmpegJob = CreateFFmpegJobMappingMappedStereo();
 
@@ -162,8 +162,8 @@ namespace API.WindowsService.Test.Controllers
             // Arrange
             var sut = fixture.Create<HardSubtitlesJobController>();
             var expectedHardSubtitlesJobRequest = CreateHardSubtitlesJobRequestMapping();
-            _requestModel.LeftStream = 1;
-            _requestModel.RightStream = 2;
+            _requestModel.LeftStream = 1; //Stream 1 is a mono stream
+            _requestModel.RightStream = 2; //Stream 2 is a mono stream
             _requestModel.Inpoint = TimeSpan.FromSeconds(30);
 
             var expectedFFmpegJob = CreateFFmpegJobMappingWithInpoint();
