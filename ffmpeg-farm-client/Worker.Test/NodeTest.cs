@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace Worker.Test
     {
 
         private static string stereotoolCfgPath =>
-            Environment.GetEnvironmentVariable("StereoToolCfgPath") ?? @"C:\Temp\ffmpegfarm\stereotool\";
+            ConfigurationManager.AppSettings["StereoToolCfgPath"] ?? @"C:\Temp\ffmpegfarm\stereotool\";
         private static readonly IDictionary<string,string> envs = new Dictionary<string, string>();
         private static readonly string destinationFilename = @"C:\temp\unit-test\lol.mp4";
         private static readonly bool writeOutputFileToDisk = false;
