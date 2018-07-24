@@ -81,7 +81,6 @@ namespace API.WindowsService.Controllers
                 if (jobRequest.SourceFilenames.Count == 1)
                 {
                     arguments = $"{{FFMpegPath}} -xerror -i \"{sourceFilename}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - \"{outputFullPath}\" -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q";
-                    //arguments = $"{{FFMpegPath}} -i \"{sourceFilename}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - \"{outputFullPath}\" -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q";
                 }
                 else
                 {

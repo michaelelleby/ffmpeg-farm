@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Contract;
 using Dapper;
 
@@ -49,7 +46,7 @@ namespace API.Repository
                             Created = DateTimeOffset.UtcNow,
                             request.Needed,
                             JobState = TranscodingJobState.Queued,
-                            JobType = JobType.Audio
+                            JobType = JobType.StereoTool
                         });
 
                     foreach (LoudnessJob lj in jobs)
