@@ -158,11 +158,13 @@
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\HardSubtilesJobController.cs" />
     <Compile Include="Controllers\AudioDemuxJobController.cs" />
+    <Compile Include="Controllers\LoudnessJobController.cs" />
     <Compile Include="Controllers\MuxJobController.cs" />
     <Compile Include="Controllers\ScreenshotJobController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
     <Compile Include="Models\AudioDemuxJobRequestModel.cs" />
+    <Compile Include="Models\LoudnessJobRequestModel.cs" />
     <Compile Include="Models\ScreenshotJobRequestModel.cs" />
     <Compile Include="Validators\HardSubtitlesJobRequestValidator.cs" />
     <Compile Include="Models\Command.cs" />
@@ -233,6 +235,7 @@
     <Content Include="App_Data\Contract.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="App_Data\SchemaChanges_180720_loudness.sql" />
     <Content Include="App_Data\SchemaCreate.sql" />
     <Content Include="App_Data\SchemaChanges.sql" />
     <Content Include="App_Data\WindowsService.XML">

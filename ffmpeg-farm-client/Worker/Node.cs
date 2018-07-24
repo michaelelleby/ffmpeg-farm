@@ -72,6 +72,8 @@ namespace FFmpegFarm.Worker
                         .Any(p => p.EndsWith(".sts", StringComparison.InvariantCultureIgnoreCase)))
                     throw new ArgumentException($"No preset directory or presets found in {stereotoolPresetsPath}");
                 _stereotoolPresetsPath = stereotoolPresetsPath;
+                if (_stereotoolPresetsPath.EndsWith(@"\"))
+                    _stereotoolPresetsPath = _stereotoolPresetsPath.Remove(_stereotoolPresetsPath.LastIndexOf(@"\", StringComparison.Ordinal), 1);
             }
 
             if (string.IsNullOrWhiteSpace(apiUri))
@@ -127,8 +129,7 @@ namespace FFmpegFarm.Worker
                     try
                     {
                         // we let the server override default ffmpeg
-                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) &&
-                            File.Exists(_currentTask.FfmpegExePath))
+                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) && File.Exists(_currentTask.FfmpegExePath))
                             _ffmpegPath = _currentTask.FfmpegExePath;
                         ExecuteJob();
                     }
@@ -236,13 +237,13 @@ namespace FFmpegFarm.Worker
                     {
                         outputFullPath = _currentTask.DestinationFilename;
                     }
-
+                    
                     _commandlineProcess.StartInfo = new ProcessStartInfo
                     {
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         UseShellExecute = false,
-                        FileName = useCmdExe ? "cmd.exe" : _ffmpegPath,
+                        FileName = useCmdExe ? $"{Environment.SystemDirectory}{Path.DirectorySeparatorChar}cmd.exe" : _ffmpegPath,
                         Arguments = $"{(useCmdExe ? "/c ": "")}{arguments}"
                     };
                     var env = _commandlineProcess.StartInfo.Environment;
@@ -250,8 +251,8 @@ namespace FFmpegFarm.Worker
                     {
                         env[e.Key] = e.Value;
                     }
-                    _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
-                    _output.AppendLine("ffmpeg " + _commandlineProcess.StartInfo.Arguments + Environment.NewLine);
+                    _logger.Debug($"{(useCmdExe ? "cmd.exe" : "ffmpeg")} arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                    _output.AppendLine(useCmdExe ? "cmd.exe /c " : "ffmpeg " + _commandlineProcess.StartInfo.Arguments + Environment.NewLine);
 
                     _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                     _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
