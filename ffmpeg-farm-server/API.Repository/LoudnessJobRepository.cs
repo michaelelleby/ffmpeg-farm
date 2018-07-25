@@ -11,7 +11,8 @@ namespace API.Repository
 
         public LoudnessJobRepository(IHelper helper) : base(helper)
         {
-            _helper = helper ?? throw new ArgumentNullException(nameof(helper));
+            if (helper == null) throw new ArgumentNullException(nameof(helper));
+            _helper = helper;
         }
 
         public Guid Add(LoudnessJobRequest request, ICollection<LoudnessJob> jobs)
