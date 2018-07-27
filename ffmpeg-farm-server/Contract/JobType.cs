@@ -10,6 +10,7 @@ namespace Contract
         Mux,
         HardSubtitles,
         AudioDemux,
-        Screenshot
+        Screenshot,
+        StereoTool
     }
 }

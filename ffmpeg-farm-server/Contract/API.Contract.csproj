@@ -135,6 +135,9 @@
     <Compile Include="JobStatusModel.cs" />
     <Compile Include="JobResultModel.cs" />
     <Compile Include="JobType.cs" />
+    <Compile Include="LoudnessJob.cs" />
+    <Compile Include="ILoudnessJobRepository.cs" />
+    <Compile Include="LoudnessJobRequest.cs" />
     <Compile Include="Mediainfo.cs" />
     <Compile Include="MergeJob.cs" />
     <Compile Include="Models\FfmpegJobModel.cs" />

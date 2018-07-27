@@ -44,6 +44,9 @@ namespace FFmpegFarm.WindowsService
 
                 var task = Node.GetNodeTask(
                     Settings.Default.FFmpegPath,
+                    Settings.Default.StereoToolPath,
+                    Settings.Default.StereoToolLicensePath,
+                    Settings.Default.StereoToolPresetsPath,
                     Settings.Default.ControllerApi,
                     Settings.Default.FFmpegLogPath,
                     env,

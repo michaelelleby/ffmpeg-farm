@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -24,6 +25,9 @@ namespace FFmpegFarm.Worker
         private readonly Timer _timeSinceLastUpdate;
         private readonly Stopwatch _timeSinceLastProgressUpdate;
         private string _ffmpegPath;
+        private string _stereotoolPath;
+        private string _stereotoolLicense;
+        private string _stereotoolPresetsPath;
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
@@ -41,13 +45,37 @@ namespace FFmpegFarm.Worker
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
             if (!File.Exists(ffmpegPath))
-                throw new FileNotFoundException(ffmpegPath);
+                throw new FileNotFoundException("FFMPEG not found", ffmpegPath);
             _ffmpegPath = ffmpegPath;
+            if (string.IsNullOrEmpty(stereotoolPath))
+            {
+                _stereotoolPath = null;
+                _stereotoolLicense = null;
+                _stereotoolPresetsPath = null;
+            }
+            else
+            {
+                if (!File.Exists(stereotoolPath))
+                    throw new FileNotFoundException("Stereo tool not found", stereotoolPath);
+                _stereotoolPath = stereotoolPath;
+                
+                if (!File.Exists(stereotoolLicensePath))
+                    throw new FileNotFoundException("Stereo tool licence not found", stereotoolLicensePath);
+                _stereotoolLicense = File.ReadAllText(stereotoolLicensePath);
+
+                if (!Directory.Exists(stereotoolPresetsPath) || !Directory.GetFiles(stereotoolPresetsPath)
+                        .Any(p => p.EndsWith(".sts", StringComparison.InvariantCultureIgnoreCase)))
+                    throw new ArgumentException($"No preset directory or presets found in {stereotoolPresetsPath}");
+                _stereotoolPresetsPath = stereotoolPresetsPath;
+                if (_stereotoolPresetsPath.EndsWith(@"\"))
+                    _stereotoolPresetsPath = _stereotoolPresetsPath.Remove(_stereotoolPresetsPath.LastIndexOf(@"\", StringComparison.Ordinal), 1);
+            }
+
             if (string.IsNullOrWhiteSpace(apiUri))
                 throw new ArgumentNullException(nameof(apiUri), "Api uri supplied");
             if(logger == null)
@@ -65,6 +93,9 @@ namespace FFmpegFarm.Worker
         }
 
         public static Task GetNodeTask(string ffmpegPath, 
+            string stereotoolPath,
+            string stereotoolLicensePath,
+            string stereotoolPresetsPath,
             string apiUri, 
             string logfilesPath,
             IDictionary<string, string> envorimentVars,
@@ -74,7 +105,7 @@ namespace FFmpegFarm.Worker
         {
 
             var t = Task.Run(() => 
-            new Node(ffmpegPath,apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -98,8 +129,7 @@ namespace FFmpegFarm.Worker
                     try
                     {
                         // we let the server override default ffmpeg
-                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) &&
-                            File.Exists(_currentTask.FfmpegExePath))
+                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) && File.Exists(_currentTask.FfmpegExePath))
                             _ffmpegPath = _currentTask.FfmpegExePath;
                         ExecuteJob();
                     }
@@ -174,6 +204,11 @@ namespace FFmpegFarm.Worker
 
             try
             {
+                if (_currentTask.Arguments.Contains("{StereoToolPath}") && _stereotoolPath == null)
+                {
+                    throw new Exception("Stereo tool is unconfigured. Unable to execute current task.");
+                }
+
                 var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
                 if (!Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
@@ -183,35 +218,43 @@ namespace FFmpegFarm.Worker
                 {
                     _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
-                    string arguments = _currentTask.Arguments;
-
+                    var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
+                    
+                    string arguments = _currentTask.Arguments
+                        .Replace("{FFMpegPath}", _ffmpegPath)
+                        .Replace("{StereoToolPath}", _stereotoolPath)
+                        .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
+                        .Replace("{StereoToolLicense}", _stereotoolLicense);
+                    
                     // <TEMP> as output filename means we should transcode the file to the local disk
                     // and move it to destination path after it is done transcoding
                     if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
                     {
-                        outputFullPath = Path.GetTempFileName();
+                        //It is important that the file extention is the correct type, ffmpeg will not like the .tmp extension for its outputs
+                        outputFullPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
+                        
                         arguments = arguments.Replace(@"|TEMP|", outputFullPath);
                     }
                     else
                     {
                         outputFullPath = _currentTask.DestinationFilename;
                     }
-
+                    
                     _commandlineProcess.StartInfo = new ProcessStartInfo
                     {
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         UseShellExecute = false,
-                        FileName = _ffmpegPath,
-                        Arguments = arguments
+                        FileName = useCmdExe ? $"{Environment.SystemDirectory}{Path.DirectorySeparatorChar}cmd.exe" : _ffmpegPath,
+                        Arguments = $"{(useCmdExe ? "/c ": "")}{arguments}"
                     };
                     var env = _commandlineProcess.StartInfo.Environment;
                     foreach (var e in _envorimentVars)
                     {
                         env[e.Key] = e.Value;
                     }
-                    _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
-                    _output.AppendLine("ffmpeg " + _commandlineProcess.StartInfo.Arguments + Environment.NewLine);
+                    _logger.Debug($"{(useCmdExe ? "cmd.exe" : "ffmpeg")} arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                    _output.AppendLine(useCmdExe ? "cmd.exe /c " : "ffmpeg " + _commandlineProcess.StartInfo.Arguments + Environment.NewLine);
 
                     _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                     _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;

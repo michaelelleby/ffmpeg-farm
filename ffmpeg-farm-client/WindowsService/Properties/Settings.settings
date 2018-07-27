@@ -11,11 +11,20 @@
     <Setting Name="ControllerApi" Type="(Web Service URL)" Scope="Application">
       <Value Profile="(Default)">http://od01udv.net.dr.dk:9000</Value>
     </Setting>
-    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCache\ffmpeg-farm\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
-    </Setting>
     <Setting Name="EnvorimentVars" Type="System.String" Scope="Application">
       <Value Profile="(Default)">FC_CONFIG_DIR=\\ondnas01\MediaCache;FONTCONFIG_FILE=\\ondnas01\MediaCache\fonts.conf;FONTCONFIG_PATH=\\ondnas01\MediaCache</Value>
+    </Setting>
+    <Setting Name="FFmpegPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\net.dr.dk\od$\Tools\ffmpeg-3.2-win64-static\bin\ffmpeg.exe</Value>
+    </Setting>
+    <Setting Name="StereoToolPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCacheTest\ffmpeg-farm\stereotool\stereo_tool_cmd.exe</Value>
+    </Setting>
+    <Setting Name="StereoToolPresetsPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCacheTest\ffmpeg-farm\stereotool\presets\</Value>
+    </Setting>
+    <Setting Name="StereoToolLicensePath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCacheTest\ffmpeg-farm\stereotool\license</Value>
     </Setting>
   </Settings>
 </SettingsFile>
