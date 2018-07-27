@@ -230,7 +230,9 @@ namespace FFmpegFarm.Worker
                     // and move it to destination path after it is done transcoding
                     if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
                     {
-                        outputFullPath = Path.GetTempFileName();
+                        //It is important that the file extention is the correct type, ffmpeg will not like the .tmp extension for its outputs
+                        outputFullPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
+                        
                         arguments = arguments.Replace(@"|TEMP|", outputFullPath);
                     }
                     else
