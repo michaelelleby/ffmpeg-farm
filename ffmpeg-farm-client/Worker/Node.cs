@@ -357,6 +357,8 @@ namespace FFmpegFarm.Worker
                 _logger.Exception(e, _threadId, "ExecuteJob");
                 _output.AppendLine(e.Message + e.StackTrace);
                 WriteOutputToLogfile();
+                _currentTask.State = FFmpegTaskDtoState.Failed;
+                UpdateTask(_currentTask);
             }
             finally
             {
