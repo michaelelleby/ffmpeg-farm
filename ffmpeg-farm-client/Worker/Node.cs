@@ -278,10 +278,11 @@ namespace FFmpegFarm.Worker
                     // status updates
                     _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
 
-                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename,
-                            StringComparison.OrdinalIgnoreCase) != 0)
+                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
                     {
-                        File.Move(outputFullPath, _currentTask.DestinationFilename);
+                        //Alternative "move", with forced overwrite.
+                        File.Copy(outputFullPath, _currentTask.DestinationFilename, true);
+                        File.Delete(outputFullPath);
                     }
 
                     _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
