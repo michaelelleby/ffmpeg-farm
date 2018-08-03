@@ -157,6 +157,7 @@
     <Compile Include="FFmpegJob.cs" />
     <Compile Include="ScreenshotJob.cs" />
     <Compile Include="ScreenshotJobRequest.cs" />
+    <Compile Include="SpriteSheetSize.cs" />
     <Compile Include="VideoTranscodingJob.cs" />
     <Compile Include="JobRequestExamples.cs" />
     <Compile Include="TranscodingJobState.cs" />
