@@ -62,7 +62,7 @@ namespace API.Repository
                                 TaskState = TranscodingJobState.Queued,
                                 lj.DestinationFilename,
                                 lj.DestinationDurationSeconds,
-                                VerifyOutput = true
+                                VerifyOutput = false
                             });
                     }
                 }
