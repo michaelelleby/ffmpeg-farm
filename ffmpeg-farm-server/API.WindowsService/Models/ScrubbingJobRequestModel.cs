@@ -11,6 +11,9 @@ namespace API.WindowsService.Models
     public class ScrubbingJobRequestModel : JobRequestModel
     {
         [Required]
+        public string SourceFilename { get; set; }
+
+        [Required]
         public int FirstThumbnailOffsetInSeconds { get; set; }
         [Required]
         public int MaxSecondsBetweenThumbnails { get; set; }
