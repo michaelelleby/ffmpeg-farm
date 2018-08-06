@@ -82,7 +82,7 @@ namespace API.WindowsService.Controllers
                 {
                     //When piping from ffmpeg to stereotool the output file will not have its chunksize header set correctly. We fix this by piping stereotool output through ffmpeg again with no options, that seems to fix the file. If the wav header is not correct ffmpeg wont transcode the wav file.
                     //ffmpeg decompress -> stereotool -> ffmpeg headerfix
-                    arguments = $"{{FFMpegPath}} -xerror -i \"{sourceFilename}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - \"{outputFullPath}\" -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q";
+                    arguments = $"{{FFMpegPath}} -xerror -i \"{sourceFilename}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - - -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q | {{FFMpegPath}} -i pipe:0 \"{outputFullPath}\"";
                 }
                 else
                 {
