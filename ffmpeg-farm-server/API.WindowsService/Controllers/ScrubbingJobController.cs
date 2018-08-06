@@ -61,7 +61,7 @@ namespace API.WindowsService.Controllers
                 FirstThumbnailOffsetInSeconds = request.FirstThumbnailOffsetInSeconds,
                 MaxSecondsBetweenThumbnails = request.MaxSecondsBetweenThumbnails,
                 SpriteSheetSizes = request.SpriteSheetSizes.ConvertAll(x => (SpriteSheetSize) Enum.Parse(typeof(SpriteSheetSize), x)),
-                ThumbnailResoultions = request.ThumbnailResoultions
+                ThumbnailResoultions = request.ThumbnailResolutions
             };
             Guid jobCorrelationId = Guid.NewGuid();
             string sourceFilename = jobRequest.SourceFilename;

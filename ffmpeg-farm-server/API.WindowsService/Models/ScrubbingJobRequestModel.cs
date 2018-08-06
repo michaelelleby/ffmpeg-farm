@@ -22,7 +22,7 @@ namespace API.WindowsService.Models
         /// Each resolution must be in the format w:h example 160:80
         /// </summary>
         [Required]
-        public List<string> ThumbnailResoultions { get; set; }
+        public List<string> ThumbnailResolutions { get; set; }
         
         /// <summary>
         /// Allowed values are "FiveByFive" and "TenByTen".
