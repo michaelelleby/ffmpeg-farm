@@ -61,7 +61,7 @@ namespace API.WindowsService.Controllers
                 FirstThumbnailOffsetInSeconds = request.FirstThumbnailOffsetInSeconds,
                 MaxSecondsBetweenThumbnails = request.MaxSecondsBetweenThumbnails,
                 SpriteSheetSizes = request.SpriteSheetSizes.ConvertAll(x => (SpriteSheetSize) Enum.Parse(typeof(SpriteSheetSize), x)),
-                ThumbnailResoultions = request.ThumbnailResolutions
+                ThumbnailResolutions = request.ThumbnailResolutions
             };
             Guid jobCorrelationId = Guid.NewGuid();
             string sourceFilename = jobRequest.SourceFilename;
@@ -73,7 +73,7 @@ namespace API.WindowsService.Controllers
                 var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out var hTiles, out var vTiles);
                 var framesBetweenDumps = calculateFramesBetweenDumps(info.Duration, numberOfThumbnailsPerFile, info.Framerate, jobRequest.MaxSecondsBetweenThumbnails, jobRequest.FirstThumbnailOffsetInSeconds);
 
-                foreach (var resolution in jobRequest.ThumbnailResoultions)
+                foreach (var resolution in jobRequest.ThumbnailResolutions)
                 {
                     var outputBaseFilename = $"{Path.GetFileNameWithoutExtension(sourceFilename)}-{resolution.Replace(":","x")}-{spriteSheetSize.ToString()}";
 

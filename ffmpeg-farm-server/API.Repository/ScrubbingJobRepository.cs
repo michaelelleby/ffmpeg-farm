@@ -31,7 +31,7 @@ namespace API.Repository
                 using (var connection = _helper.GetConnection())
                 {
                     connection.Execute(
-                        "INSERT INTO [FfmpegScrubbingRequest] (JobCorrelationId, SourceFilename, Needed, Created, OutputFolder, SpriteSheetSizes, ThumbnailResoultions, FirstThumbnailOffsetInSeconds, MaxSecondsBetweenThumbnails) VALUES(@JobCorrelationId, @SourceFilename, @Needed, @Created, @OutputFolder, @SpriteSheetSizes, @ThumbnailResoultions, @FirstThumbnailOffsetInSeconds, @MaxSecondsBetweenThumbnails);",
+                        "INSERT INTO [FfmpegScrubbingRequest] (JobCorrelationId, SourceFilename, Needed, Created, OutputFolder, SpriteSheetSizes, ThumbnailResolutions, FirstThumbnailOffsetInSeconds, MaxSecondsBetweenThumbnails) VALUES(@JobCorrelationId, @SourceFilename, @Needed, @Created, @OutputFolder, @SpriteSheetSizes, @ThumbnailResolutions, @FirstThumbnailOffsetInSeconds, @MaxSecondsBetweenThumbnails);",
                         new
                         {
                             JobCorrelationId = jobCorrelationId,
@@ -40,7 +40,7 @@ namespace API.Repository
                             Created = DateTime.UtcNow,
                             OutputFolder = request.OutputFolder,
                             SpriteSheetSizes = string.Join(";", request.SpriteSheetSizes),
-                            ThumbnailResoultions = string.Join(";", request.ThumbnailResoultions),
+                            ThumbnailResolutions = string.Join(";", request.ThumbnailResolutions),
                             FirstThumbnailOffsetInSeconds = request.FirstThumbnailOffsetInSeconds,
                             MaxSecondsBetweenThumbnails = request.MaxSecondsBetweenThumbnails
                         });

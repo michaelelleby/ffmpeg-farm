@@ -11,7 +11,7 @@ CREATE TABLE [dbo].[FfmpegScrubbingRequest](
 	[Created] [datetimeoffset](7) NOT NULL,
 	[OutputFolder] [nvarchar](max) NOT NULL,
 	[SpriteSheetSizes] [nvarchar](max) NOT NULL,
-	[ThumbnailResoultions] [nvarchar](max) NOT NULL,
+	[ThumbnailResolutions] [nvarchar](max) NOT NULL,
 	[FirstThumbnailOffsetInSeconds] [int] NOT NULL,
 	[MaxSecondsBetweenThumbnails] [int] NOT NULL,
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]

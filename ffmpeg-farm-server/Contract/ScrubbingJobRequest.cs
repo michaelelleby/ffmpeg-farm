@@ -14,7 +14,7 @@ namespace Contract
         /// <summary>
         /// Each resolution must be in the format w:h example 160:80
         /// </summary>
-        public List<string> ThumbnailResoultions { get; set; }
+        public List<string> ThumbnailResolutions { get; set; }
         public List<SpriteSheetSize> SpriteSheetSizes { get; set; }
     }
 }
