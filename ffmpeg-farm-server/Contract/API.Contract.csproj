@@ -130,6 +130,7 @@
     <Compile Include="IAudioDemuxJobRepository.cs" />
     <Compile Include="IMuxJobRepository.cs" />
     <Compile Include="IScreenshotJobRepository.cs" />
+    <Compile Include="IScrubbingJobRepository.cs" />
     <Compile Include="JobRequest.cs" />
     <Compile Include="JobRequestBase.cs" />
     <Compile Include="JobStatusModel.cs" />
@@ -157,6 +158,8 @@
     <Compile Include="FFmpegJob.cs" />
     <Compile Include="ScreenshotJob.cs" />
     <Compile Include="ScreenshotJobRequest.cs" />
+    <Compile Include="ScrubbingJob.cs" />
+    <Compile Include="ScrubbingJobRequest.cs" />
     <Compile Include="SpriteSheetSize.cs" />
     <Compile Include="VideoTranscodingJob.cs" />
     <Compile Include="JobRequestExamples.cs" />

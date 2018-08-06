@@ -238,6 +238,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="App_Data\SchemaChanges_180720_loudness.sql" />
+    <Content Include="App_Data\SchemaChanges_180806_scrubbing.sql" />
     <Content Include="App_Data\SchemaCreate.sql" />
     <Content Include="App_Data\SchemaChanges.sql" />
     <Content Include="App_Data\WindowsService.XML">

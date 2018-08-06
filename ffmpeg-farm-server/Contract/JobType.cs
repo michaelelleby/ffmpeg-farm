@@ -11,6 +11,7 @@ namespace Contract
         HardSubtitles,
         AudioDemux,
         Screenshot,
-        StereoTool
+        StereoTool,
+        Scrubbing
     }
 }

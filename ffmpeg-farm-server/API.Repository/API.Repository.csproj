@@ -72,6 +72,8 @@
     <Compile Include="LoudnessJobRepository.cs" />
     <Compile Include="MuxJobRepository.cs" />
     <Compile Include="ScreenshotJobRepository.cs" />
+    <Compile Include="ScrubbingJobRepository.cs" />
+    <Compile Include="ScrubbingRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
