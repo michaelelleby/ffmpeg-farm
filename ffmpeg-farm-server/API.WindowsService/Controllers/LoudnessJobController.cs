@@ -107,7 +107,7 @@ namespace API.WindowsService.Controllers
 
                     streams = $"{streams}concat=n={streamCount}:a=1:v=0";
 
-                    arguments = $"{{FFMpegPath}} -xerror{filenameArguments}-filter_complex {streams} -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - \"{outputFullPath}\" -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q";
+                    arguments = $"{{FFMpegPath}} -xerror{filenameArguments}-filter_complex {streams} -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - - -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}{request.AudioPresetFile}\" -k \"{{StereoToolLicense}}\" -q | {{FFMpegPath}} -i pipe:0 \"{outputFullPath}\"";
                 }
 
                 var loudnessJob = new LoudnessJob
