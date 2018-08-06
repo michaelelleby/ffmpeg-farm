@@ -60,7 +60,7 @@ namespace API.WindowsService.Controllers
                 OutputFolder = request.OutputFolder,
                 FirstThumbnailOffsetInSeconds = request.FirstThumbnailOffsetInSeconds,
                 MaxSecondsBetweenThumbnails = request.MaxSecondsBetweenThumbnails,
-                SpriteSheetSizes = request.SpriteSheetSizes,
+                SpriteSheetSizes = request.SpriteSheetSizes.ConvertAll(x => (SpriteSheetSize) Enum.Parse(typeof(SpriteSheetSize), x)),
                 ThumbnailResoultions = request.ThumbnailResoultions
             };
             Guid jobCorrelationId = Guid.NewGuid();

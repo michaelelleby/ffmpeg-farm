@@ -24,7 +24,10 @@ namespace API.WindowsService.Models
         [Required]
         public List<string> ThumbnailResoultions { get; set; }
         
+        /// <summary>
+        /// Allowed values are "FiveByFive" and "TenByTen".
+        /// </summary>
         [Required]
-        public List<SpriteSheetSize> SpriteSheetSizes { get; set; }
+        public List<string> SpriteSheetSizes { get; set; }
     }
 }
