@@ -73,7 +73,8 @@ namespace API.WindowsService.Controllers
 
             foreach (var spriteSheetSize in jobRequest.SpriteSheetSizes)
             {
-                var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out var hTiles, out var vTiles);
+                int hTiles, vTiles;
+                var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out hTiles, out vTiles);
                 var framesBetweenDumps = calculateFramesBetweenDumps(info.Duration, numberOfThumbnailsPerFile, info.Framerate, jobRequest.MaxSecondsBetweenThumbnails, jobRequest.FirstThumbnailOffsetInSeconds);
 
                 foreach (var resolution in jobRequest.ThumbnailResolutions)
@@ -133,8 +134,10 @@ namespace API.WindowsService.Controllers
 
         private void generateWebVtt(string webVttFile, int numberOfFiles, string thumbBaseFilename, SpriteSheetSize spriteSheetSize, int framesBetweenDumps, int firstThumbnailOffsetInSeconds, int framePerSecond, int videoDurationInMilliseconds, string resolution)
         {
-            var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out var hTiles, out var vTiles);
-            getThumbWidthAndHeight(resolution, out var thumbWidth, out var thumbHeight);
+            int hTiles, vTiles;
+            var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out hTiles, out vTiles);
+            int thumbWidth, thumbHeight;
+            getThumbWidthAndHeight(resolution, out thumbWidth, out thumbHeight);
 
             var content = "WEBVTT ";
             var curThumb = 0;
