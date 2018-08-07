@@ -69,6 +69,11 @@ namespace API.WindowsService
             var container = new Container();
             container.Configure(_ =>
             {
+                _.For<IScrubbingJobRepository>()
+                    .Use<ScrubbingJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
                 _.For<ILoudnessJobRepository>()
                     .Use<LoudnessJobRepository>()
                     .Ctor<string>("connectionString")
