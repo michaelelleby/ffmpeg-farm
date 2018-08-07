@@ -81,6 +81,7 @@
   <ItemGroup>
     <Compile Include="Controllers\HardSubtitlesJobControllerTest.cs" />
     <Compile Include="Controllers\AudioDemuxJobControllerTest.cs" />
+    <Compile Include="Controllers\ScrubbingJobControllerTest.cs" />
     <Compile Include="Controllers\StatusControllerTest.cs" />
     <Compile Include="Helpers\ApiControllerConventions.cs" />
     <Compile Include="Helpers\ApiControllerCustomization.cs" />
