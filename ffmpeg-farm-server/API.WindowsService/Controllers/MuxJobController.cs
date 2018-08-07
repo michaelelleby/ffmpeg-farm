@@ -44,7 +44,7 @@ namespace API.WindowsService.Controllers
             if (model == null) throw new ArgumentNullException(nameof(model));
 
             var outputFilename = $"{model.OutputFolder}{Path.DirectorySeparatorChar}{model.DestinationFilename}";
-            var frameCount = _helper.GetDuration(model.VideoSourceFilename);
+            int frameCount = _helper.GetDuration(model.VideoSourceFilename);
 
             string arguments = string.Empty;
             if (model.Inpoint > TimeSpan.Zero)

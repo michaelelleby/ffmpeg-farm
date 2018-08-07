@@ -83,7 +83,11 @@ namespace API.Service
                 throw new Exception($@"MediaInfo returned non-zero exit code: {mediaInfoProcess.ExitCode}");
 
             string value = mediaInfoProcess.StandardOutput.ReadToEnd();
-            return Convert.ToInt32(value) / 1000;
+
+            int result = 0;
+            int.TryParse(value, out result); //Dvcpro files without mov wrapping have no duration
+
+            return result / 1000;
         }
 
         public string HardSubtitlesStyle()
