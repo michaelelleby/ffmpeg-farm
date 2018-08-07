@@ -68,6 +68,9 @@ namespace API.WindowsService.Controllers
 
             var jobs = new List<ScrubbingJob>();
             var info = _helper.GetMediainfo(sourceFilename);
+            if (info.Duration <= 0)
+                throw new InvalidDataException($"Scrubbing request failed. Input file is invalid. Duration: {info.Duration} sec.");
+
             foreach (var spriteSheetSize in jobRequest.SpriteSheetSizes)
             {
                 var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out var hTiles, out var vTiles);
