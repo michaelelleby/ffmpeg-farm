@@ -56,7 +56,7 @@ namespace Worker.Test
 
             var dto = new FFmpegTaskDto
             {
-                Arguments = $"{{FFMpegPath}} -i \"{srcFilePath}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - {(writeOutputFileToDisk ? $"\"{stereoToolOutputPath}\"" : "NUL")} -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}Ossian_Px_7threads_ny.sts\" -k \"{{StereoToolLicense}}\" -q",
+                Arguments = $"{{FFMpegPath}} -i \"{srcFilePath}\" -f wav -hide_banner -loglevel info - | \"{{StereoToolPath}}\" - {(writeOutputFileToDisk ? $"\"{stereoToolOutputPath}\"" : "NUL")} -s \"{{StereoToolPresetsPath}}{Path.DirectorySeparatorChar}Ossian_Px_7threads_ny.sts\"\"{{StereoToolLicense}}\" -q",
                 FfmpegJobsId = 1,
                 Id = 10,
                 State = FFmpegTaskDtoState.InProgress,

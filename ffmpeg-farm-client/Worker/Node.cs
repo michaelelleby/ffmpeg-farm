@@ -64,9 +64,8 @@ namespace FFmpegFarm.Worker
                     throw new FileNotFoundException("Stereo tool not found", stereotoolPath);
                 _stereotoolPath = stereotoolPath;
                 
-                if (!File.Exists(stereotoolLicensePath))
-                    throw new FileNotFoundException("Stereo tool licence not found", stereotoolLicensePath);
-                _stereotoolLicense = File.ReadAllText(stereotoolLicensePath);
+                if (File.Exists(stereotoolLicensePath)) //Test and dev runs Without the license
+                    _stereotoolLicense = File.ReadAllText(stereotoolLicensePath);
 
                 if (!Directory.Exists(stereotoolPresetsPath) || !Directory.GetFiles(stereotoolPresetsPath)
                         .Any(p => p.EndsWith(".sts", StringComparison.InvariantCultureIgnoreCase)))
@@ -219,12 +218,14 @@ namespace FFmpegFarm.Worker
                     _currentStep = Step.Work;
                     string outputFullPath = string.Empty;
                     var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
-                    
+
                     string arguments = _currentTask.Arguments
                         .Replace("{FFMpegPath}", _ffmpegPath)
                         .Replace("{StereoToolPath}", _stereotoolPath)
-                        .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
-                        .Replace("{StereoToolLicense}", _stereotoolLicense);
+                        .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath);
+
+                    if(!string.IsNullOrEmpty(_stereotoolLicense)) //Test and dev runs Without the license
+                        arguments.Replace("{StereoToolLicense}", " -k " + _stereotoolLicense);
                     
                     // <TEMP> as output filename means we should transcode the file to the local disk
                     // and move it to destination path after it is done transcoding
