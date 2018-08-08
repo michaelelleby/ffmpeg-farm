@@ -32,7 +32,7 @@ namespace API.Service
                 {
                     UseShellExecute = false,
                     Arguments =
-                        $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType%|%FrameCount% ""{sourceFilename}""",
+                        $@"--inform=Video;%Duration%|%FrameRate%|%Width%|%Height%|%ScanType%|%FrameCount%|%Format_Commercial% ""{sourceFilename}""",
                     RedirectStandardOutput = true,
                     FileName = mediaInfoPath
                 }
@@ -45,14 +45,19 @@ namespace API.Service
 
             string[] output = mediaInfoProcess.StandardOutput.ReadToEnd().Split('|');
 
+            // Since MediaInfo can't read duration from DVCPro files, we need to calculate it manually.
+            var calculatedDuration = 0;
+            var calculatedTotalFrames = 0;
+            var manualCalcDuration = calculateDvcProDuration(output[6], float.Parse(output[1], NumberFormatInfo.InvariantInfo), sourceFilename, ref calculatedDuration, ref calculatedTotalFrames);
+
             return new Mediainfo
             {
-                Duration = Convert.ToInt32(output[0]) / 1000, // Duration is reported in milliseconds
+                Duration = manualCalcDuration ? calculatedDuration : Convert.ToInt32(output[0]) / 1000, // Duration is reported in milliseconds
                 Framerate = float.Parse(output[1], NumberFormatInfo.InvariantInfo),
                 Width = Convert.ToInt32(output[2]),
                 Height = Convert.ToInt32(output[3]),
                 Interlaced = output[4].ToUpperInvariant() == "INTERLACED",
-                Frames = Convert.ToInt32(output[5])
+                Frames = manualCalcDuration ? calculatedTotalFrames : Convert.ToInt32(output[5]),
             };
         }
 
@@ -85,15 +90,43 @@ namespace API.Service
             string value = mediaInfoProcess.StandardOutput.ReadToEnd();
 
             int result = 0;
-            int.TryParse(value, out result); //Dvcpro files without mov wrapping have no duration
+            if (!int.TryParse(value, out result)) //Dvcpro files without mov wrapping have no duration
+                result = GetMediainfo(sourceFilename).Duration;
+            else
+                result = result / 1000;
 
-            return result / 1000;
+            return result;
         }
 
         public string HardSubtitlesStyle()
         {
             var cfgStyle = ConfigurationManager.AppSettings["SubtitlesStyle"];
             return string.IsNullOrWhiteSpace(cfgStyle) ? "Fontname=TiresiasScreenfont,Fontsize=16,PrimaryColour=&H00FFFFFF,OutlineColour=&HFF000000,BackColour=&H80000000,BorderStyle=4,Outline=0,Shadow=0,MarginL=10,MarginR=10,MarginV=10" : cfgStyle;
+        }
+
+        private bool calculateDvcProDuration(string formatCommercial, double frameRate, string sourceFilename, ref int calculatedDuration, ref int calculatedTotalFrames)
+        {
+            var manualCalcDuration = false;
+            if (!string.IsNullOrEmpty(formatCommercial))
+            {
+                var formatName = formatCommercial.ToUpperInvariant();
+                if (formatName.Contains("DVCPRO"))
+                {
+                    manualCalcDuration = true;
+
+                    var bytesPerFrame = 144000; // DVCPro 25
+                    if (formatName.Contains("DVCPRO 50"))
+                        bytesPerFrame = bytesPerFrame * 2; // DVCPro 50 = 288000
+                    else if (formatName.Contains("DVCPRO 100"))
+                        bytesPerFrame = bytesPerFrame * 4; // DVCPro HD/100 = 576000
+
+                    var fileSize = new FileInfo(sourceFilename).Length;
+                    calculatedTotalFrames = (int)(fileSize / bytesPerFrame);
+                    calculatedDuration = (int)(calculatedTotalFrames / frameRate);
+                }
+            }
+
+            return manualCalcDuration;
         }
     }
 }
