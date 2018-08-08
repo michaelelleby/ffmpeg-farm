@@ -65,7 +65,7 @@ namespace FFmpegFarm.Worker
                 _stereotoolPath = stereotoolPath;
 
                 if (File.Exists(stereotoolLicensePath)) //Test and dev runs Without the license, so we can leave this empty
-                    _stereotoolLicenseParameter = " -k " + File.ReadAllText(stereotoolLicensePath);
+                    _stereotoolLicenseParameter = " -k \"" + File.ReadAllText(stereotoolLicensePath) + "\"";
 
                 if (!Directory.Exists(stereotoolPresetsPath) || !Directory.GetFiles(stereotoolPresetsPath)
                         .Any(p => p.EndsWith(".sts", StringComparison.InvariantCultureIgnoreCase)))
