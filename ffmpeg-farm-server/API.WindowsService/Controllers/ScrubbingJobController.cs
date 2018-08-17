@@ -86,7 +86,7 @@ namespace API.WindowsService.Controllers
                     var offset = TimeSpan.FromSeconds(jobRequest.FirstThumbnailOffsetInSeconds);
                     while (keepGoing)
                     {
-                        var outputThumbFile = $"{jobRequest.OutputFolder}{Path.DirectorySeparatorChar}{outputBaseFilename}-{fileNumber:D3}.png";
+                        var outputThumbFile = $"{jobRequest.OutputFolder}{Path.DirectorySeparatorChar}{outputBaseFilename}-{fileNumber:D3}.jpg";
                         var arguments = $"-ss {offset} -loglevel info -i \"{sourceFilename}\" -frames 1 -y -vf \"select=not(mod(n\\,{framesBetweenDumps})),scale={resolution},tile={hTiles}x{vTiles}\" \"{outputThumbFile}\"";
 
                         var scrubbingJob = new ScrubbingJob
@@ -153,7 +153,7 @@ namespace API.WindowsService.Controllers
                 {
                     for (var h = 0; h < hTiles; h++)
                     {
-                        var outputThumbFile = $"{thumbBaseFilename}-{curFileNumber:D3}.png";
+                        var outputThumbFile = $"{thumbBaseFilename}-{curFileNumber:D3}.jpg";
 
                         if (!firstThumb)
                         {
@@ -213,16 +213,16 @@ namespace API.WindowsService.Controllers
             File.WriteAllText(webVttFile, content, Encoding.UTF8);
             /*
             WEBVTT 00:00:00.000 --> 00:00:05.000
-            thumbnails-001.png#xywh=0,0,160,90
+            thumbnails-001.jpg#xywh=0,0,160,90
 
             00:00:05.000 --> 00:00:10.000
-            thumbnails-001.png#xywh=160,0,160,90
+            thumbnails-001.jpg#xywh=160,0,160,90
 
             00:00:10.000 --> 00:00:15.000
-            thumbnails-001.png#xywh=0,90,160,90
+            thumbnails-001.jpg#xywh=0,90,160,90
 
             00:00:15.000 --> 00:00:20.000
-            thumbnails-001.png#xywh=160,90,160,90
+            thumbnails-001.jpg#xywh=160,90,160,90
             */
         }
 
