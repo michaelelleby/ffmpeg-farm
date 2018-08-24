@@ -26,5 +26,8 @@
     <Setting Name="StereoToolLicensePath" Type="System.String" Scope="Application">
       <Value Profile="(Default)">\\ondnas01.net.dr.dk\MediaCacheTest\ffmpeg-farm\stereotool\license</Value>
     </Setting>
+    <Setting Name="ForceTempFolder" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">D:\Temp</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

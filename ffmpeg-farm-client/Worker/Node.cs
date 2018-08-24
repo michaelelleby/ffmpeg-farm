@@ -22,6 +22,7 @@ namespace FFmpegFarm.Worker
         }
         private readonly object _lock = new object();
         private readonly string _logfilesPath;
+        private readonly string _tmpfilesPath;
         private readonly Timer _timeSinceLastUpdate;
         private readonly Stopwatch _timeSinceLastProgressUpdate;
         private string _ffmpegPath;
@@ -46,7 +47,7 @@ namespace FFmpegFarm.Worker
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, string tmpfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -88,6 +89,7 @@ namespace FFmpegFarm.Worker
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
+            _tmpfilesPath = string.IsNullOrEmpty(tmpfilesPath) ? Path.GetTempPath() : tmpfilesPath;
             _envorimentVars = envorimentVars;
             _timeSinceLastProgressUpdate = new Stopwatch();
         }
@@ -98,6 +100,7 @@ namespace FFmpegFarm.Worker
             string stereotoolPresetsPath,
             string apiUri, 
             string logfilesPath,
+            string tmpfilesPath,
             IDictionary<string, string> envorimentVars,
             ILogger logger,
             CancellationToken ct,
@@ -105,7 +108,7 @@ namespace FFmpegFarm.Worker
         {
 
             var t = Task.Run(() => 
-            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, tmpfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
@@ -235,7 +238,7 @@ namespace FFmpegFarm.Worker
                         if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
                         {
                             //It is important that the file extention is the correct type, ffmpeg will not like the .tmp extension for its outputs
-                            outputFullPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
+                            outputFullPath = Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
 
                             arguments = arguments.Replace(@"|TEMP|", outputFullPath);
                         }
@@ -405,7 +408,7 @@ namespace FFmpegFarm.Worker
             catch
             {
                 // Prevent this from ever crashing the worker
-                return Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + ".txt");
+                return Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + ".txt");
             }
         }
 
@@ -424,7 +427,7 @@ namespace FFmpegFarm.Worker
             catch
             {
                 // Prevent this from ever crashing the worker
-                return Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + $@"_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
+                return Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + $@"_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
             }
         }
 

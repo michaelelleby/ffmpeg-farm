@@ -49,6 +49,7 @@ namespace FFmpegFarm.WindowsService
                     Settings.Default.StereoToolPresetsPath,
                     Settings.Default.ControllerApi,
                     Settings.Default.FFmpegLogPath,
+                    Settings.Default.ForceTempFolder,
                     env,
                     _logger,
                     _cancellationTokenSource.Token);

@@ -70,7 +70,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", null, envs, mockLogger.Object, cancelSource.Token, apiWrapper);
 
             try
             {
@@ -114,7 +114,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", null, envs, mockLogger.Object, cancelSource.Token, apiWrapper);
 
             try
             {
@@ -156,7 +156,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", null, envs, mockLogger.Object, cancelSource.Token, apiWrapper);
 
             try
             {
@@ -198,7 +198,7 @@ namespace Worker.Test
             apiWrapper.Tasks.Push(dto);
 
             // Act
-            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", envs, mockLogger.Object, cancelSource.Token, apiWrapper);
+            var task = Node.GetNodeTask(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, "TEST URL NOT IMPORTANT NOT USED", "LOGFILE OUTPUT PATH NOT USED", null, envs, mockLogger.Object, cancelSource.Token, apiWrapper);
 
             try
             {
