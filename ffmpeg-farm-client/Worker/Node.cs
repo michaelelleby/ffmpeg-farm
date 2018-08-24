@@ -89,7 +89,16 @@ namespace FFmpegFarm.Worker
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
-            _tmpfilesPath = string.IsNullOrEmpty(tmpfilesPath) ? Path.GetTempPath() : tmpfilesPath;
+
+            if (string.IsNullOrEmpty(tmpfilesPath)) {
+                _tmpfilesPath = Path.GetTempPath();
+            }
+            else {
+                if (!Directory.Exists(tmpfilesPath))
+                    Directory.CreateDirectory(tmpfilesPath);
+                _tmpfilesPath = tmpfilesPath;
+             };
+
             _envorimentVars = envorimentVars;
             _timeSinceLastProgressUpdate = new Stopwatch();
         }
