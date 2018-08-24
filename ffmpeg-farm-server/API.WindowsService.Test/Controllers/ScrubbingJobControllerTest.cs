@@ -80,7 +80,7 @@ namespace API.WindowsService.Test.Controllers
                 .Callback<ScrubbingJobRequest, ICollection<ScrubbingJob>>((actualScrubbingJobRequest, actualFFmpegJobs) =>
                 {
                     Assert.AreEqual(expectedScrubbingJobRequest, actualScrubbingJobRequest);
-                    Assert.AreEqual(28, actualFFmpegJobs.Count);
+                    Assert.AreEqual(4, actualFFmpegJobs.Count);
                     foreach (var filename in expectedWebVttFiles)
                     {
                         Assert.AreEqual(true, File.Exists(filename), $"WebVTT file missing [{filename}]");

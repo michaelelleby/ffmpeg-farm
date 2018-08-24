@@ -76,31 +76,31 @@ namespace API.WindowsService.Controllers
                 int hTiles, vTiles;
                 var numberOfThumbnailsPerFile = spriteSheetSize.SpriteSheetTiles(out hTiles, out vTiles);
                 var framesBetweenDumps = calculateFramesBetweenDumps(info.Duration, numberOfThumbnailsPerFile, info.Framerate, jobRequest.MaxSecondsBetweenThumbnails, jobRequest.FirstThumbnailOffsetInSeconds);
+                string fps = (int)Math.Round(info.Framerate) + "/" + framesBetweenDumps; //ie 25/250 which is the same as 1/10
 
                 foreach (var resolution in jobRequest.ThumbnailResolutions)
                 {
                     var outputBaseFilename = $"{Path.GetFileNameWithoutExtension(sourceFilename)}-{resolution.Replace(":","x")}-{spriteSheetSize.ToString()}";
+                    var offset = TimeSpan.FromSeconds(jobRequest.FirstThumbnailOffsetInSeconds);
+
+                    var outputThumbFile = $"{jobRequest.OutputFolder}{Path.DirectorySeparatorChar}{outputBaseFilename}-%03d.jpg";
+                    var arguments = $"-ss {offset} -loglevel info -i \"{sourceFilename}\" -y -vf \"fps={fps},scale={resolution},tile={hTiles}x{vTiles}\" \"{outputThumbFile}\"";
+
+                    var scrubbingJob = new ScrubbingJob
+                    {
+                        JobCorrelationId = jobCorrelationId,
+                        SourceFilename = sourceFilename,
+                        Needed = request.Needed.DateTime,
+                        State = TranscodingJobState.Queued,
+                        DestinationFilename = outputThumbFile,
+                        Arguments = arguments,
+                    };
+                    jobs.Add(scrubbingJob);
 
                     var fileNumber = 1;
                     var keepGoing = true;
-                    var offset = TimeSpan.FromSeconds(jobRequest.FirstThumbnailOffsetInSeconds);
                     while (keepGoing)
                     {
-                        var outputThumbFile = $"{jobRequest.OutputFolder}{Path.DirectorySeparatorChar}{outputBaseFilename}-{fileNumber:D3}.jpg";
-                        var arguments = $"-ss {offset} -loglevel info -i \"{sourceFilename}\" -frames 1 -y -vf \"select=not(mod(n\\,{framesBetweenDumps})),scale={resolution},tile={hTiles}x{vTiles}\" \"{outputThumbFile}\"";
-
-                        var scrubbingJob = new ScrubbingJob
-                        {
-                            JobCorrelationId = jobCorrelationId,
-                            SourceFilename = sourceFilename,
-                            Needed = request.Needed.DateTime,
-                            State = TranscodingJobState.Queued,
-                            DestinationFilename = outputThumbFile,
-                            Arguments = arguments,
-                        };
-                        jobs.Add(scrubbingJob);
-
-
                         // Are we done?
                         if (framesBetweenDumps * numberOfThumbnailsPerFile * fileNumber >= (info.Duration - jobRequest.FirstThumbnailOffsetInSeconds) * info.Framerate)
                             keepGoing = false;
