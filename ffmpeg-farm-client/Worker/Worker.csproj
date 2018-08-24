@@ -82,6 +82,7 @@
     <Compile Include="ClientHelper.cs" />
     <Compile Include="IApiWrapper.cs" />
     <Compile Include="ILogger.cs" />
+    <Compile Include="LogFileWriter.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
