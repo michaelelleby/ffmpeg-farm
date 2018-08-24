@@ -111,11 +111,12 @@ namespace FFmpegFarm.Worker
 
         private void Run(CancellationToken ct)
         {
+            _threadId = Thread.CurrentThread.ManagedThreadId;
             using (var processLogFile = new LogFileWriter(GetProcessLogOutputFileName(_logfilesPath, Environment.MachineName)))
             {
                 try
                 {
-                    _apiWrapper.ThreadId = _threadId = Thread.CurrentThread.ManagedThreadId;
+                    _apiWrapper.ThreadId = _threadId;
                     ct.ThrowIfCancellationRequested();
                     ct.Register(() => KillProcess("Canceled"));
                     _cancellationToken = ct;
@@ -411,19 +412,19 @@ namespace FFmpegFarm.Worker
         private string GetProcessLogOutputFileName(string logFilePath, string machineName)
         {
             DateTime logStartTime = DateTime.Now;
-            string logStartTimeString = logStartTime.ToString("dd-M-yyyy_HH.mm.ss");
+            string logStartTimeString = logStartTime.ToString("yyyy-M-dd_HH.mm.ss");
             try
             {
                 var path = Path.Combine(logFilePath, logStartTime.ToString("yyyy"), logStartTime.ToString("MM"), logStartTime.ToString("dd"));
                 Directory.CreateDirectory(path);
-                var logPath = Path.Combine(path, $@"MachineLog_{machineName}_{logStartTimeString}.txt");
+                var logPath = Path.Combine(path, $@"MachineLog_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
 
                 return logPath;
             }
             catch
             {
                 // Prevent this from ever crashing the worker
-                return Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + $@"_{machineName}_{logStartTimeString}.txt");
+                return Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + $@"_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
             }
         }
 
