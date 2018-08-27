@@ -215,7 +215,8 @@ namespace API.Repository
                 connection.Open();
 
                 IEnumerable<FFmpegJobDto> existingJobs = GetActiveJobs(machineName, connection);
-                if (existingJobs.Any(x => x.Type == JobType.HardSubtitles || x.Type == JobType.StereoTool))
+                if (existingJobs.Any(x => (x.Type == JobType.HardSubtitles || x.Type == JobType.StereoTool)
+                                           && (x.Tasks?.All(t=> !t.Heartbeat.HasValue || t.Heartbeat.Value > timeout) ?? true)))
                 {
                     // If client is already working on either HardSubs or StereoTool, then don't assign new jobs to that client yet (they should finish their homework first!).
                     return null;
