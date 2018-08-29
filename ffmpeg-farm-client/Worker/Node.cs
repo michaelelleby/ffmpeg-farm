@@ -349,7 +349,7 @@ namespace FFmpegFarm.Worker
                         _commandlineProcess = null;
                     }
 
-                    if (exitCode != 0 || _taskLogFile.FfmpegDetectedError())
+                    if (exitCode != 0)// || _taskLogFile.FfmpegDetectedError())
                     {
                         _currentTask.State = FFmpegTaskDtoState.Failed;
                         _logger.Warn($"Job failed {_currentTask.Id}." +
