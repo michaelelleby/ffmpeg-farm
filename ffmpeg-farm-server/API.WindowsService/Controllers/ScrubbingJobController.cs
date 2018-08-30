@@ -146,7 +146,8 @@ namespace API.WindowsService.Controllers
             var keepGoing = true;
             var firstThumb = true;
             var curStartTimeMillisecond = 0;
-            var curEndTimeMillisecond = firstThumbnailOffsetInSeconds * 1000;
+            var millisecondsBetweenDumps = (int)Math.Round(((double)framesBetweenDumps / (double)framePerSecond) * 1000);
+            var curEndTimeMillisecond = firstThumbnailOffsetInSeconds * 1000 + millisecondsBetweenDumps;
             while (keepGoing)
             {
                 for (var v = 0; v < vTiles; v++)
@@ -158,7 +159,7 @@ namespace API.WindowsService.Controllers
                         if (!firstThumb)
                         {
                             curStartTimeMillisecond = curEndTimeMillisecond; // Start where last one ended.
-                            curEndTimeMillisecond = curEndTimeMillisecond + (framesBetweenDumps / framePerSecond * 1000); // Add time = frames between each dump.
+                            curEndTimeMillisecond = curEndTimeMillisecond + millisecondsBetweenDumps; // Add time = frames between each dump.
                         }
 
                         firstThumb=false;
@@ -180,7 +181,7 @@ namespace API.WindowsService.Controllers
                                 curFileNumber++;
                         }
 
-                        var nextEndTimeSecond = curEndTimeMillisecond + (framesBetweenDumps / framePerSecond * 1000);
+                        var nextEndTimeSecond = curEndTimeMillisecond + millisecondsBetweenDumps;
                         if (nextEndTimeSecond > videoDurationInMilliseconds)
                         {
                             // There are not enough seconds in next segment for a screendump - therefore extend current period to end-of-videofile.
