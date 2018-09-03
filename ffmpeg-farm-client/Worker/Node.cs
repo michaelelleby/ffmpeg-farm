@@ -22,6 +22,7 @@ namespace FFmpegFarm.Worker
         }
         private readonly object _lock = new object();
         private readonly string _logfilesPath;
+        private readonly string _tmpfilesPath;
         private readonly Timer _timeSinceLastUpdate;
         private readonly Stopwatch _timeSinceLastProgressUpdate;
         private string _ffmpegPath;
@@ -31,7 +32,6 @@ namespace FFmpegFarm.Worker
         private CancellationToken _cancellationToken;
         private TimeSpan _progress = TimeSpan.Zero;
         private Process _commandlineProcess;
-        private readonly StringBuilder _output;
         private FFmpegTaskDto _currentTask;
         private Step _currentStep;
         private static readonly int TimeOut = (int) TimeSpan.FromMinutes(2).TotalMilliseconds;
@@ -42,10 +42,12 @@ namespace FFmpegFarm.Worker
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private IApiWrapper _apiWrapper;
         private readonly IDictionary<string, string> _envorimentVars;
+        private LogFileWriter _taskLogFile;
+
 
         public static TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(20);
 
-        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
+        private Node(string ffmpegPath, string stereotoolPath, string stereotoolLicensePath, string stereotoolPresetsPath, string apiUri, string logfilesPath, string tmpfilesPath, IDictionary<string,string> envorimentVars, ILogger logger, IApiWrapper apiWrapper)
         {
             if (string.IsNullOrWhiteSpace(ffmpegPath))
                 throw new ArgumentNullException(nameof(ffmpegPath), "No path specified for FFmpeg binary. Missing configuration setting FfmpegPath");
@@ -82,11 +84,20 @@ namespace FFmpegFarm.Worker
             if(envorimentVars == null)
                 throw new ArgumentNullException(nameof(envorimentVars));
             _timeSinceLastUpdate = new Timer(_ => KillProcess("Timed out"), null, -1, TimeOut);
-            _output = new StringBuilder();
             _logger = logger;
             _apiWrapper = apiWrapper;
             _logger.Debug("Node started...");
             _logfilesPath = logfilesPath;
+
+            if (string.IsNullOrEmpty(tmpfilesPath)) {
+                _tmpfilesPath = Path.GetTempPath();
+            }
+            else {
+                if (!Directory.Exists(tmpfilesPath))
+                    Directory.CreateDirectory(tmpfilesPath);
+                _tmpfilesPath = tmpfilesPath;
+             };
+
             _envorimentVars = envorimentVars;
             _timeSinceLastProgressUpdate = new Stopwatch();
         }
@@ -97,6 +108,7 @@ namespace FFmpegFarm.Worker
             string stereotoolPresetsPath,
             string apiUri, 
             string logfilesPath,
+            string tmpfilesPath,
             IDictionary<string, string> envorimentVars,
             ILogger logger,
             CancellationToken ct,
@@ -104,92 +116,94 @@ namespace FFmpegFarm.Worker
         {
 
             var t = Task.Run(() => 
-            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
+            new Node(ffmpegPath, stereotoolPath, stereotoolLicensePath, stereotoolPresetsPath, apiUri, logfilesPath, tmpfilesPath, envorimentVars, logger, apiWrapper ?? new ApiWrapper(apiUri, logger, ct)).Run(ct), ct);
             return t;
         }
 
         private void Run(CancellationToken ct)
         {
-            try
+            _threadId = Thread.CurrentThread.ManagedThreadId;
+            using (var processLogFile = new LogFileWriter(GetProcessLogOutputFileName(_logfilesPath, Environment.MachineName)))
             {
-                _apiWrapper.ThreadId = _threadId = Thread.CurrentThread.ManagedThreadId;
-                ct.ThrowIfCancellationRequested();
-                ct.Register(() => KillProcess("Canceled"));
-                _cancellationToken = ct;
-                while (!_cancellationToken.IsCancellationRequested)
+                try
                 {
-                    _currentTask = null;
-                    _currentTask = _apiWrapper.GetNext(Environment.MachineName);
-                    if (_currentTask == null)
+                    _apiWrapper.ThreadId = _threadId;
+                    ct.ThrowIfCancellationRequested();
+                    ct.Register(() => KillProcess("Canceled"));
+                    _cancellationToken = ct;
+                    while (!_cancellationToken.IsCancellationRequested)
                     {
-                        Task.Delay(PollInterval, ct).WaitWithoutException(ct);
-                        continue;
-                    }
-                    try
-                    {
-                        // we let the server override default ffmpeg
-                        if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) && File.Exists(_currentTask.FfmpegExePath))
-                            _ffmpegPath = _currentTask.FfmpegExePath;
-                        ExecuteJob();
-                    }
-                    catch (Exception e)
-                    {
-                        var text = $"Job failed {_currentTask.Id}, with error: {e}" +
-                                   $"\n\tTime elapsed : {_stopwatch.Elapsed:g}" +
-                                   $"\n\tffmpeg process output:\n\n{_output}";
-
-                        _logger.Warn(text, _threadId);
-                        _output.AppendLine(text);
+                        _currentTask = null;
+                        _currentTask = _apiWrapper.GetNext(Environment.MachineName);
+                        if (_currentTask == null)
+                        {
+                            Task.Delay(PollInterval, ct).WaitWithoutException(ct);
+                            continue;
+                        }
                         try
                         {
-                            Monitor.Enter(_lock);
-                            if (_currentTask != null)
+                            // we let the server override default ffmpeg
+                            if (!string.IsNullOrEmpty(_currentTask.FfmpegExePath) && File.Exists(_currentTask.FfmpegExePath))
+                                _ffmpegPath = _currentTask.FfmpegExePath;
+                            ExecuteJob();
+                        }
+                        catch (Exception e)
+                        {
+                            var text = $"Job failed {_currentTask.Id}, with error: {e}" +
+                                       $"\n\tTime elapsed : {_stopwatch.Elapsed:g}";
+
+                            _logger.Warn(text, _threadId);
+                            processLogFile.WriteLine(DateTime.Now.ToString());
+                            processLogFile.WriteLine(text);
+                            try
                             {
-                                _currentTask.State = FFmpegTaskDtoState.Failed;
-                                UpdateTask(_currentTask);
+                                Monitor.Enter(_lock);
+                                if (_currentTask != null)
+                                {
+                                    _currentTask.State = FFmpegTaskDtoState.Failed;
+                                    UpdateTask(_currentTask);
+                                }
+                                Monitor.Exit(_lock);
                             }
-                            Monitor.Exit(_lock);
-                        }
-                        catch (Exception exception)
-                        {
-                            _output.AppendLine(exception.Message + exception.StackTrace);
-                        }
-                        finally
-                        {
-                            WriteOutputToLogfile();
+                            catch (Exception exception)
+                            {
+                                processLogFile.WriteLine(DateTime.Now.ToString());
+                                processLogFile.WriteLine(exception.Message + exception.StackTrace);
+                            }
                         }
                     }
+                    ct.ThrowIfCancellationRequested();
                 }
-                ct.ThrowIfCancellationRequested();
-            }
-            finally {
-                if (_currentTask != null)
+                finally
                 {
-                    try
+                    if (_currentTask != null)
                     {
-                        _logger.Warn($"In progress job re-queued {_currentTask.Id.GetValueOrDefault(0)}");
-                        _currentTask.State = FFmpegTaskDtoState.Queued;
-                        // ReSharper disable once MethodSupportsCancellation
-                        var model = new TaskProgressModel
+                        try
                         {
-                            MachineName = Environment.MachineName,
-                            Id = _currentTask.Id.GetValueOrDefault(0),
-                            Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
-                            Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
-                            Done = _currentTask.State == FFmpegTaskDtoState.Done
-                        };
-                        _apiWrapper.UpdateProgress(model, true);
+                            _logger.Warn($"In progress job re-queued {_currentTask.Id.GetValueOrDefault(0)}");
+                            _currentTask.State = FFmpegTaskDtoState.Queued;
+                            // ReSharper disable once MethodSupportsCancellation
+                            var model = new TaskProgressModel
+                            {
+                                MachineName = Environment.MachineName,
+                                Id = _currentTask.Id.GetValueOrDefault(0),
+                                Progress = TimeSpan.FromSeconds(_currentTask.Progress.GetValueOrDefault(0)).ToString("c"),
+                                Failed = _currentTask.State == FFmpegTaskDtoState.Failed,
+                                Done = _currentTask.State == FFmpegTaskDtoState.Done
+                            };
+                            _apiWrapper.UpdateProgress(model, true);
+                        }
+                        catch (Exception e)
+                        {
+                            // Prevent uncaught exceptions in the finally {} block
+                            // since this will bring down the entire worker service
+                            _logger.Exception(e, _threadId, "Run");
+                            processLogFile.WriteLine(DateTime.Now.ToString());
+                            processLogFile.WriteLine(e.Message + e.StackTrace);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        // Prevent uncaught exceptions in the finally {} block
-                        // since this will bring down the entire worker service
-                        _logger.Exception(e, _threadId, "Run");
-                        _output.AppendLine(e.Message + e.StackTrace);
-                        WriteOutputToLogfile();
-                    }
+                    _logger.Debug("Cancel recived shutting down...");
                 }
-                _logger.Debug("Cancel recived shutting down...");
             }
         }
 
@@ -201,114 +215,63 @@ namespace FFmpegFarm.Worker
 
             bool acquiredLock = false;
 
-            try
+            using (_taskLogFile = new LogFileWriter(GetTaskLogOutputFileName(_logfilesPath, _currentTask)))
             {
-                if (_currentTask.Arguments.Contains("{StereoToolPath}") && _stereotoolPath == null)
+                try
                 {
-                    throw new Exception("Stereo tool is unconfigured. Unable to execute current task.");
-                }
-
-                var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
-                if (!Directory.Exists(destDir))
-                    Directory.CreateDirectory(destDir);
-
-                int exitCode = -1;
-                using (_commandlineProcess = new Process())
-                {
-                    _currentStep = Step.Work;
-                    string outputFullPath = string.Empty;
-                    var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
-                    
-                    string arguments = _currentTask.Arguments
-                        .Replace("{FFMpegPath}", _ffmpegPath)
-                        .Replace("{StereoToolPath}", _stereotoolPath)
-                        .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
-                        .Replace("{StereoToolLicense}", _stereotoolLicenseParameter);
-                    
-                    // <TEMP> as output filename means we should transcode the file to the local disk
-                    // and move it to destination path after it is done transcoding
-                    if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
+                    if (_currentTask.Arguments.Contains("{StereoToolPath}") && _stereotoolPath == null)
                     {
-                        //It is important that the file extention is the correct type, ffmpeg will not like the .tmp extension for its outputs
-                        outputFullPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
-                        
-                        arguments = arguments.Replace(@"|TEMP|", outputFullPath);
-                    }
-                    else
-                    {
-                        outputFullPath = _currentTask.DestinationFilename;
-                    }
-                    
-                    _commandlineProcess.StartInfo = new ProcessStartInfo
-                    {
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        FileName = useCmdExe ? $"{Environment.SystemDirectory}{Path.DirectorySeparatorChar}cmd.exe" : _ffmpegPath,
-                        Arguments = $"{(useCmdExe ? "/c ": "")}{arguments}"
-                    };
-                    var env = _commandlineProcess.StartInfo.Environment;
-                    foreach (var e in _envorimentVars)
-                    {
-                        env[e.Key] = e.Value;
+                        throw new Exception("Stereo tool is unconfigured. Unable to execute current task.");
                     }
 
-                    string debugCmdString = $"{(useCmdExe ? "cmd.exe" : "ffmpeg")} arguments: {_commandlineProcess.StartInfo.Arguments}";
-                    _logger.Debug(debugCmdString, _threadId);
-                    _output.AppendLine(debugCmdString + Environment.NewLine);
+                    var destDir = Path.GetDirectoryName(_currentTask.DestinationFilename);
+                    if (!Directory.Exists(destDir))
+                        Directory.CreateDirectory(destDir);
 
-                    _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
-                    _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
-
-                    _commandlineProcess.Start();
-                    _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
-                    _commandlineProcess.BeginErrorReadLine();
-
-                    _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
-
-                    _commandlineProcess.WaitForExit();
-
-                    _timeSinceLastProgressUpdate.Stop();
-
-                    PostProgressUpdate();
-
-                    // Disable timer to prevet accidentally aborting the ffmpeg task
-                    // due to moving the file taking several seconds without any
-                    // status updates
-                    _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
-
-                    if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
-                    {
-                        //Alternative "move", with forced overwrite.
-                        File.Copy(outputFullPath, _currentTask.DestinationFilename, true);
-                        File.Delete(outputFullPath);
-                    }
-
-                    _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
-                    _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
-
-                    exitCode = _commandlineProcess.ExitCode;
-                }
-                _commandlineProcess = null;
-
-                // VerifyOutput is a bool? and will default to false, if it is null
-                if (_currentTask.VerifyOutput.GetValueOrDefault() && exitCode == 0)
-                {
-                    // Check that output file is not corrupt, meaning FFmpeg can read the file
-
+                    int exitCode = -1;
                     using (_commandlineProcess = new Process())
                     {
-                        _currentStep = Step.Verify;
+                        _currentStep = Step.Work;
+                        string outputFullPath = string.Empty;
+                        var useCmdExe = _currentTask.Arguments.Contains("{FFMpegPath}") || _currentTask.Arguments.Contains("{StereoToolPath}"); // Use cmd.exe if either path to ffmpeg or stereotool is present.
+
+                        string arguments = _currentTask.Arguments
+                            .Replace("{FFMpegPath}", _ffmpegPath)
+                            .Replace("{StereoToolPath}", _stereotoolPath)
+                            .Replace("{StereoToolPresetsPath}", _stereotoolPresetsPath)
+                            .Replace("{StereoToolLicense}", _stereotoolLicenseParameter);
+
+                        // <TEMP> as output filename means we should transcode the file to the local disk
+                        // and move it to destination path after it is done transcoding
+                        if (arguments.IndexOf(@"|TEMP|", StringComparison.OrdinalIgnoreCase) != -1)
+                        {
+                            //It is important that the file extention is the correct type, ffmpeg will not like the .tmp extension for its outputs
+                            outputFullPath = Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + Path.GetExtension(_currentTask.DestinationFilename));
+
+                            arguments = arguments.Replace(@"|TEMP|", outputFullPath);
+                        }
+                        else
+                        {
+                            outputFullPath = _currentTask.DestinationFilename;
+                        }
+
                         _commandlineProcess.StartInfo = new ProcessStartInfo
                         {
                             RedirectStandardError = true,
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
-                            FileName = _ffmpegPath,
-                            Arguments = $@"-xerror -i ""{_currentTask.DestinationFilename}"" -f null -"
+                            FileName = useCmdExe ? $"{Environment.SystemDirectory}{Path.DirectorySeparatorChar}cmd.exe" : _ffmpegPath,
+                            Arguments = $"{(useCmdExe ? "/c " : "")}{arguments}"
                         };
+                        var env = _commandlineProcess.StartInfo.Environment;
+                        foreach (var e in _envorimentVars)
+                        {
+                            env[e.Key] = e.Value;
+                        }
 
-                        _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+                        string debugCmdString = $"{(useCmdExe ? "cmd.exe" : "ffmpeg")} arguments: {_commandlineProcess.StartInfo.Arguments}";
+                        _logger.Debug(debugCmdString, _threadId);
+                        _taskLogFile.WriteLine(debugCmdString + Environment.NewLine);
 
                         _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
                         _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
@@ -321,102 +284,158 @@ namespace FFmpegFarm.Worker
 
                         _commandlineProcess.WaitForExit();
 
+                        _timeSinceLastProgressUpdate.Stop();
+
+                        PostProgressUpdate();
+
+                        // Disable timer to prevet accidentally aborting the ffmpeg task
+                        // due to moving the file taking several seconds without any
+                        // status updates
+                        _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
+
+                        if (string.Compare(outputFullPath, _currentTask.DestinationFilename, StringComparison.OrdinalIgnoreCase) != 0)
+                        {
+                            //Alternative "move", with forced overwrite.
+                            File.Copy(outputFullPath, _currentTask.DestinationFilename, true);
+                            File.Delete(outputFullPath);
+                        }
+
                         _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
                         _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
-
-                        // Disable timer to prevent trying to kill a process
-                        // which has already exited
-                        _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
 
                         exitCode = _commandlineProcess.ExitCode;
                     }
                     _commandlineProcess = null;
-                }
 
-                WriteOutputToLogfile();
-
-                if (exitCode != 0 || FfmpegDetectedError())
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Failed;
-                    _logger.Warn($"Job failed {_currentTask.Id}." +
-                                 $"Time elapsed : {_stopwatch.Elapsed:g}" +
-                                 $"\n\tffmpeg process output:\n\n{_output}", _threadId);
-                }
-                else
-                {
-                    _currentTask.State = FFmpegTaskDtoState.Done;
-                    _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}",
-                        _threadId);
-                }
-                UpdateTask(_currentTask);
-
-                Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
-            }
-            catch (Exception e)
-            {
-                _logger.Exception(e, _threadId, "ExecuteJob");
-                _output.AppendLine(e.Message + e.StackTrace);
-                WriteOutputToLogfile();
-                _currentTask.State = FFmpegTaskDtoState.Failed;
-                UpdateTask(_currentTask);
-            }
-            finally
-            {
-                _stopwatch.Stop();
-
-                // Cleanup when job fails
-                try
-                {
-                    if (_currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed
-                        && File.Exists(_currentTask.DestinationFilename))
+                    // VerifyOutput is a bool? and will default to false, if it is null
+                    if (_currentTask.VerifyOutput.GetValueOrDefault() && exitCode == 0)
                     {
-                        File.Delete(_currentTask.DestinationFilename);
+                        // Check that output file is not corrupt, meaning FFmpeg can read the file
+
+                        using (_commandlineProcess = new Process())
+                        {
+                            _currentStep = Step.Verify;
+                            _commandlineProcess.StartInfo = new ProcessStartInfo
+                            {
+                                RedirectStandardError = true,
+                                RedirectStandardOutput = true,
+                                UseShellExecute = false,
+                                FileName = _ffmpegPath,
+                                Arguments = $@"-xerror -i ""{_currentTask.DestinationFilename}"" -f null -"
+                            };
+
+                            _logger.Debug($"ffmpeg arguments: {_commandlineProcess.StartInfo.Arguments}", _threadId);
+
+                            _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
+                            _commandlineProcess.ErrorDataReceived += Ffmpeg_DataReceived;
+
+                            _commandlineProcess.Start();
+                            _commandlineProcess.PriorityClass = ProcessPriorityClass.BelowNormal;
+                            _commandlineProcess.BeginErrorReadLine();
+
+                            _timeSinceLastUpdate.Change(TimeOut, TimeOut); // start
+
+                            _commandlineProcess.WaitForExit();
+
+                            _commandlineProcess.OutputDataReceived -= Ffmpeg_DataReceived;
+                            _commandlineProcess.ErrorDataReceived -= Ffmpeg_DataReceived;
+
+                            // Disable timer to prevent trying to kill a process
+                            // which has already exited
+                            _timeSinceLastUpdate.Change(Timeout.Infinite, Timeout.Infinite);
+
+                            exitCode = _commandlineProcess.ExitCode;
+                        }
+                        _commandlineProcess = null;
                     }
+
+                    if (exitCode != 0)// || _taskLogFile.FfmpegDetectedError())
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Failed;
+                        _logger.Warn($"Job failed {_currentTask.Id}." +
+                                     $"Time elapsed : {_stopwatch.Elapsed:g}" +
+                                     $"\n\tffmpeg process output:\n\n{_taskLogFile.GetOutput()}", _threadId);
+                    }
+                    else
+                    {
+                        _currentTask.State = FFmpegTaskDtoState.Done;
+                        _logger.Information($"Job done {_currentTask.Id}. Time elapsed : {_stopwatch.Elapsed:g}",
+                            _threadId);
+                    }
+                    UpdateTask(_currentTask);
+
+                    Monitor.Enter(_lock, ref acquiredLock); // lock before dispose
                 }
                 catch (Exception e)
                 {
                     _logger.Exception(e, _threadId, "ExecuteJob");
-                    _output.AppendLine(e.Message + e.StackTrace);
-                    WriteOutputToLogfile();
+                    _taskLogFile.WriteLine(e.Message + e.StackTrace);
+                    _currentTask.State = FFmpegTaskDtoState.Failed;
+                    UpdateTask(_currentTask);
                 }
-
-                if (acquiredLock)
+                finally
                 {
-                    _commandlineProcess = null;
-                    _currentTask = null;
+                    _stopwatch.Stop();
 
-                    Monitor.Exit(_lock);
+                    // Cleanup when job fails
+                    try
+                    {
+                        if (_currentTask.State.GetValueOrDefault() == FFmpegTaskDtoState.Failed
+                            && File.Exists(_currentTask.DestinationFilename))
+                        {
+                            File.Delete(_currentTask.DestinationFilename);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Exception(e, _threadId, "ExecuteJob");
+                        _taskLogFile.WriteLine(e.Message + e.StackTrace);
+                    }
+
+                    if (acquiredLock)
+                    {
+                        _commandlineProcess = null;
+                        _currentTask = null;
+
+                        Monitor.Exit(_lock);
+                    }
                 }
             }
         }
 
-        private void WriteOutputToLogfile()
+        private string GetTaskLogOutputFileName(string logFilePath, FFmpegTaskDto task)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(_logfilesPath) || !Directory.Exists(_logfilesPath))
-                    return;
-
-                var path = Path.Combine(_logfilesPath, _currentTask.Started.Value.ToString("yyyy"), _currentTask.Started.Value.ToString("MM"), _currentTask.Started.Value.ToString("dd"));
-
+                var path = Path.Combine(logFilePath, task.Started.Value.ToString("yyyy"), task.Started.Value.ToString("MM"), task.Started.Value.ToString("dd"));
                 Directory.CreateDirectory(path);
-                
-                string logPath = Path.Combine(path, $@"task_{_currentTask.Id}_output.txt");
-                using (Stream file = File.Create(logPath))
-                {
-                    using (var logWriter = new StreamWriter(file))
-                    {
-                        logWriter.Write(_output.ToString());
-                    }
-                }
+                var logPath = Path.Combine(path, $@"task_{task.Id}_output.txt");
+
+                return logPath;
             }
             catch
             {
                 // Prevent this from ever crashing the worker
+                return Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + ".txt");
             }
-            finally
+        }
+
+        private string GetProcessLogOutputFileName(string logFilePath, string machineName)
+        {
+            DateTime logStartTime = DateTime.Now;
+            string logStartTimeString = logStartTime.ToString("yyyy-M-dd_HH.mm.ss");
+            try
             {
-                _output.Clear();
+                var path = Path.Combine(logFilePath, logStartTime.ToString("yyyy"), logStartTime.ToString("MM"), logStartTime.ToString("dd"));
+                Directory.CreateDirectory(path);
+                var logPath = Path.Combine(path, $@"MachineLog_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
+
+                return logPath;
+            }
+            catch
+            {
+                // Prevent this from ever crashing the worker
+                return Path.Combine(_tmpfilesPath, Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + $@"_{machineName}_{logStartTimeString}_thread_{_threadId}.txt");
             }
         }
 
@@ -432,18 +451,6 @@ namespace FFmpegFarm.Worker
                 Done = task.State == FFmpegTaskDtoState.Done
             };
             _apiWrapper.UpdateProgress(model);
-        }
-
-        private bool FfmpegDetectedError()
-        {
-            // FFmpeg will return exit code 0 even when writing to the output the following:
-            // Error while decoding stream #0:0: Invalid data found when processing input
-            // so we need to check if there is a line beginning with the word Error
-
-            return Regex.IsMatch(_output.ToString(), @"\] Error",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled)
-                || Regex.IsMatch(_output.ToString(), @"^Error",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.Multiline);
         }
         
         private void KillProcess(string reason)
@@ -470,7 +477,7 @@ namespace FFmpegFarm.Worker
             if (e.Data == null)
                 return;
 
-            _output.AppendLine(e.Data);
+            _taskLogFile.WriteLine(e.Data);
 
             var match = Regex.Match(e.Data, @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
             if (!match.Success) return;
