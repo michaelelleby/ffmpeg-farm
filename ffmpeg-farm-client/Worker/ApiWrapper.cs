@@ -19,6 +19,7 @@ namespace FFmpegFarm.Worker
         private readonly StatusClient _statusClient;
         private readonly TaskClient _taskClient;
         private static readonly HttpClient HttpClient = new HttpClient{Timeout = TimeSpan.FromSeconds(10)};
+        private static object GetNextTaskLock = new object();
 
         public ApiWrapper(string apiUri, ILogger logger, CancellationToken ct)
         {
@@ -35,7 +36,10 @@ namespace FFmpegFarm.Worker
 
         public FFmpegTaskDto GetNext(string machineName)
         {
-            return Wrap(_taskClient.GetNextAsync, machineName);
+            //We lock to avoid race conditions where we could get multiple 'heavy' jobs from the server like two stereotool jobs
+            lock (GetNextTaskLock) {
+                return Wrap(_taskClient.GetNextAsync, machineName);
+            }
         }
 
         public Response UpdateProgress(TaskProgressModel model, bool ignoreCancel = false)
