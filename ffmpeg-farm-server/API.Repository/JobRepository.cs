@@ -236,12 +236,13 @@ namespace API.Repository
                                 QueuedState = TranscodingJobState.Queued,
                                 InProgressState = TranscodingJobState.InProgress,
                                 Timeout = timeout,
-                                Timestamp = now
+                                Timestamp = now,
+                                MachineName = machineName
                             };
 
                             connection.Open();
 
-                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask", data, commandType: CommandType.StoredProcedure);
+                            var task = connection.QuerySingleOrDefault<FFmpegTaskDto>("sp_GetNextTask_v2", data, commandType: CommandType.StoredProcedure);
                             if (task == null)
                                 return null;
 

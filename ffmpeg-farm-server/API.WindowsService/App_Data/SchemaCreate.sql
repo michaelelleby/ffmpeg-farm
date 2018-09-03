@@ -434,18 +434,22 @@ REFERENCES [dbo].[FfmpegVideoRequest] ([JobCorrelationId])
 GO
 ALTER TABLE [dbo].[Mp4boxJobs] CHECK CONSTRAINT [FK_Mp4boxJobs_FfmpegRequest]
 GO
-/****** Object:  StoredProcedure [dbo].[sp_GetNextTask]    Script Date: 06-02-2018 14:49:29 ******/
+/****** Object:  StoredProcedure [dbo].[sp_GetNextTask]    Script Date: 03-09-2018 13:43:42 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE PROCEDURE [dbo].[sp_GetNextTask]
+
+
+CREATE PROCEDURE [dbo].[sp_GetNextTask_v2]
 	@Timestamp DATETIMEOFFSET,
 	@QueuedState INT,
 	@InProgressState INT,
-	@Timeout DATETIMEOFFSET
+	@Timeout DATETIMEOFFSET,
+	@MachineName VARCHAR(50)
 AS
 BEGIN
+    -- v2 Fixes missing HeartbeatMachineName when updating Task. This was causing multiple stereotool jobs to run on the same node
 	-- SET NOCOUNT ON added to prevent extra result sets from
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
@@ -461,7 +465,7 @@ BEGIN
 		ORDER BY Jobs.Needed ASC, Jobs.Id ASC
 	)
 
-	UPDATE Tasks SET TaskState = @InProgressState, Started = @Timestamp, Heartbeat = @Timestamp, @TaskId = Id, @JobId = FFmpegJobs_Id;
+	UPDATE Tasks SET TaskState = @InProgressState, Started = @Timestamp, HeartbeatMachineName = @MachineName, Heartbeat = @Timestamp, @TaskId = Id, @JobId = FFmpegJobs_Id;
 
 	-- Mark FfmpegJobs row as InProgress, if it is not already set to InProgress
 	IF @@ROWCOUNT > 0
