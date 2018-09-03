@@ -42,3 +42,6 @@ BEGIN
 	SELECT id, FfmpegJobs_id AS FfmpegJobsId, FfmpegExePath, Arguments, TaskState, Started, Heartbeat, HeartbeatMachineName, Progress, DestinationFilename, VerifyOutput FROM FfmpegTasks WHERE Id = @TaskId;
 END
 
+GO
+GRANT EXECUTE ON [dbo].[sp_GetNextTask_v2] to ffmpegtst_RW
+GO
