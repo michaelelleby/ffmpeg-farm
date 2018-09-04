@@ -463,7 +463,7 @@ namespace FFmpegFarm.Worker
                     if (_commandlineProcess == null || _commandlineProcess.HasExited)
                         return;
 
-                    KillProcessAndChildren(_commandlineProcess.Id);
+                    KillChildrenAndThenParentProcess(_commandlineProcess.Id);
                     _logger.Warn($"Process kill, {reason}.", _threadId);
                 }
                 catch (Exception e)
@@ -473,12 +473,23 @@ namespace FFmpegFarm.Worker
             }
         }
 
-        private static void KillProcessAndChildren(int pid)
+        private static void KillChildrenAndThenParentProcess(int pid)
         {
+            //Let the killing begin...
             ManagementObjectSearcher processSearcher = new ManagementObjectSearcher
               ("Select * From Win32_Process Where ParentProcessID=" + pid);
             ManagementObjectCollection processCollection = processSearcher.Get();
 
+            // We must kill child processes first or orphans will leak!
+            if (processCollection != null)
+            {
+                foreach (ManagementObject mo in processCollection)
+                {
+                    KillChildrenAndThenParentProcess(Convert.ToInt32(mo["ProcessID"])); //kill child processes(also kills childrens of childrens etc.)
+                }
+            }
+
+            // Then kill parents.
             try
             {
                 Process proc = Process.GetProcessById(pid);
@@ -487,14 +498,6 @@ namespace FFmpegFarm.Worker
             catch (ArgumentException)
             {
                 // Process already exited.
-            }
-
-            if (processCollection != null)
-            {
-                foreach (ManagementObject mo in processCollection)
-                {
-                    KillProcessAndChildren(Convert.ToInt32(mo["ProcessID"])); //kill child processes(also kills childrens of childrens etc.)
-                }
             }
         }
 
