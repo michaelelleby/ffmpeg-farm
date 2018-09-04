@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -462,12 +463,37 @@ namespace FFmpegFarm.Worker
                     if (_commandlineProcess == null || _commandlineProcess.HasExited)
                         return;
 
-                    _commandlineProcess.Kill();
+                    KillProcessAndChildren(_commandlineProcess.Id);
                     _logger.Warn($"Process kill, {reason}.", _threadId);
                 }
                 catch (Exception e)
                 {
                     _logger.Exception(e, null, "KillProcess");
+                }
+            }
+        }
+
+        private static void KillProcessAndChildren(int pid)
+        {
+            ManagementObjectSearcher processSearcher = new ManagementObjectSearcher
+              ("Select * From Win32_Process Where ParentProcessID=" + pid);
+            ManagementObjectCollection processCollection = processSearcher.Get();
+
+            try
+            {
+                Process proc = Process.GetProcessById(pid);
+                if (!proc.HasExited) proc.Kill();
+            }
+            catch (ArgumentException)
+            {
+                // Process already exited.
+            }
+
+            if (processCollection != null)
+            {
+                foreach (ManagementObject mo in processCollection)
+                {
+                    KillProcessAndChildren(Convert.ToInt32(mo["ProcessID"])); //kill child processes(also kills childrens of childrens etc.)
                 }
             }
         }
@@ -534,7 +560,7 @@ namespace FFmpegFarm.Worker
                         _currentTask.VerifyProgress.HasValue ? TimeSpan.FromSeconds(_currentTask.VerifyProgress.Value).ToString("c") : null
                 });
 
-                if (state == Response.Canceled)
+                if (state == Response.Canceled || state == Response.Failed || state == Response.Unknown)
                 {
                     KillProcess("Canceled from ffmpeg server");
                 }

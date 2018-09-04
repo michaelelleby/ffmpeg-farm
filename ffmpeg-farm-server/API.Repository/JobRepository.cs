@@ -194,7 +194,18 @@ namespace API.Repository
                     });
 
                 if (updatedRows != 1)
-                    throw new Exception($"Failed to update progress for task id {id}");
+                {
+                    var obj = connection.ExecuteScalar("Select TaskState from FfmpegTasks WHERE Id = @Id",
+                    new
+                    {
+                        Id = id
+                    });
+                    TranscodingJobState taskstate = obj != null ? (TranscodingJobState) obj : TranscodingJobState.Unknown;
+                    if (taskstate == TranscodingJobState.Unknown)
+                        throw new Exception($"Failed to update progress for task id {id}");
+                    else
+                        jobState = taskstate;
+                }
             }
             return jobState;
         }
