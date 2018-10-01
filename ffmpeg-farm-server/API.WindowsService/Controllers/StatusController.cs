@@ -113,7 +113,7 @@ namespace API.WindowsService.Controllers
                         VerifyProgres = j.VerifyProgress == null ? (decimal?) null : progress,
                         DestinationFilename = j.DestinationFilename,
                         LogPath = j.Started != null
-                            ? $@"{_logPath}{j.Started.Value.Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt"
+                            ? $@"{_logPath}{j.Started.Value.ToLocalTime().Date:yyyy\\MM\\dd}\task_{j.Id}_output.txt"
                             : string.Empty
                     };
                 }),
