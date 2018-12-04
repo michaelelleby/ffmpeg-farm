@@ -216,7 +216,7 @@ namespace FFmpegFarm.Worker
 
             bool acquiredLock = false;
 
-            using (_taskLogFile = new LogFileWriter(GetTaskLogOutputFileName(_logfilesPath, _currentTask)))
+            using (_taskLogFile = new LogFileWriter(GetTaskLogOutputFileName(_logfilesPath, Environment.MachineName, _currentTask)))
             {
                 try
                 {
@@ -272,6 +272,7 @@ namespace FFmpegFarm.Worker
 
                         string debugCmdString = $"{(useCmdExe ? "cmd.exe" : "ffmpeg")} arguments: {_commandlineProcess.StartInfo.Arguments}";
                         _logger.Debug(debugCmdString, _threadId);
+                        _taskLogFile.WriteLine("Machine: " + Environment.MachineName + Environment.NewLine);
                         _taskLogFile.WriteLine(debugCmdString + Environment.NewLine);
 
                         _commandlineProcess.OutputDataReceived += Ffmpeg_DataReceived;
@@ -404,13 +405,13 @@ namespace FFmpegFarm.Worker
             }
         }
 
-        private string GetTaskLogOutputFileName(string logFilePath, FFmpegTaskDto task)
+        private string GetTaskLogOutputFileName(string logFilePath, string machineName, FFmpegTaskDto task)
         {
             try
             {
                 var path = Path.Combine(logFilePath, task.Started.Value.ToString("yyyy"), task.Started.Value.ToString("MM"), task.Started.Value.ToString("dd"));
                 Directory.CreateDirectory(path);
-                var logPath = Path.Combine(path, $@"task_{task.Id}_output.txt");
+                var logPath = Path.Combine(path, $@"task_{task.Id}_{machineName}_output.txt");
 
                 return logPath;
             }
