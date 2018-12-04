@@ -216,7 +216,7 @@ namespace FFmpegFarm.Worker
 
             bool acquiredLock = false;
 
-            using (_taskLogFile = new LogFileWriter(GetTaskLogOutputFileName(_logfilesPath, Environment.MachineName, _currentTask)))
+            using (_taskLogFile = new LogFileWriter(GetTaskLogOutputFileName(_logfilesPath, _currentTask)))
             {
                 try
                 {
@@ -405,13 +405,13 @@ namespace FFmpegFarm.Worker
             }
         }
 
-        private string GetTaskLogOutputFileName(string logFilePath, string machineName, FFmpegTaskDto task)
+        private string GetTaskLogOutputFileName(string logFilePath, FFmpegTaskDto task)
         {
             try
             {
                 var path = Path.Combine(logFilePath, task.Started.Value.ToString("yyyy"), task.Started.Value.ToString("MM"), task.Started.Value.ToString("dd"));
                 Directory.CreateDirectory(path);
-                var logPath = Path.Combine(path, $@"task_{task.Id}_{machineName}_output.txt");
+                var logPath = Path.Combine(path, $@"task_{task.Id}_output.txt");
 
                 return logPath;
             }
