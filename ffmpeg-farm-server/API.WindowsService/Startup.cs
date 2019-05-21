@@ -137,10 +137,28 @@ namespace API.WindowsService
                         ConfigurationManager.AppSettings["FFmpegLogPath"],
                     });
 
+                if (!int.TryParse(ConfigurationManager.AppSettings["WorkerNodesHealthCheckWindowInMinutes"],
+                    out var windowInMinutes))
+                {
+                    windowInMinutes = 60;
+                }
+
+                if (!int.TryParse(ConfigurationManager.AppSettings["WorkerNodesHealthCheckMinimumErrors"],
+                    out var minimumErrors))
+                {
+                    minimumErrors = 3;
+                }
+
+                if (!float.TryParse(ConfigurationManager.AppSettings["WorkerNodesHealthCheckMinimumErrorRate"],
+                    out var minimumErrorRate))
+                {
+                    minimumErrorRate = 0.25f;
+                }
+
                 _.For<IHealthCheck>().Add<WorkerNodesHealthCheck>()
-                    .Ctor<int>("windowInMinutes").Is(60)
-                    .Ctor<int>("minimumErrors").Is(3)
-                    .Ctor<float>("minimumErrorRate").Is(0.25f);
+                    .Ctor<int>("windowInMinutes").Is(windowInMinutes)
+                    .Ctor<int>("minimumErrors").Is(minimumErrors)
+                    .Ctor<float>("minimumErrorRate").Is(minimumErrorRate);
 
                 _.For<ISystemStatus>().Add<DR.Common.Monitoring.SystemStatus>()
                     .Ctor<bool>("isPrivileged").Is(true);
