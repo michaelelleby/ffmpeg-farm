@@ -10,6 +10,7 @@ using API.Repository;
 using API.Service;
 using API.WindowsService.Filters;
 using Contract;
+using DR.Common.Monitoring.Contract;
 using FluentValidation.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -116,6 +117,33 @@ namespace API.WindowsService
                     .Ctor<string>("name")
                     .Is(ConfigurationManager.AppSettings["NLog-Appname"] ??
                         System.Reflection.Assembly.GetExecutingAssembly().FullName);
+
+                _.For<IHealthCheck>().Add<DatabaseHealthCheck>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
+                _.For<IHealthCheck>().Add<FileShareHealthCheck>()
+                    .Ctor<IEnumerable<string>>("files")
+                    .Is(new []
+                    {
+                        ConfigurationManager.AppSettings["MediaInfoPath"],
+                        ConfigurationManager.AppSettings["FFmpeg_3_2"],
+                        ConfigurationManager.AppSettings["FFmpeg_3_4_1"],
+
+                    })
+                    .Ctor<IEnumerable<string>>("folders")
+                    .Is(new []
+                    {
+                        ConfigurationManager.AppSettings["FFmpegLogPath"],
+                    });
+
+                _.For<IHealthCheck>().Add<WorkerNodesHealthCheck>()
+                    .Ctor<int>("windowInMinutes").Is(60)
+                    .Ctor<int>("minimumErrors").Is(3)
+                    .Ctor<float>("minimumErrorRate").Is(0.25f);
+
+                _.For<ISystemStatus>().Add<DR.Common.Monitoring.SystemStatus>()
+                    .Ctor<bool>("isPrivileged").Is(true);
             });
 
             config.DependencyResolver = new StructureMapDependencyResolver(container);

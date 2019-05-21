@@ -66,6 +66,12 @@
       <HintPath>..\packages\Dapper.1.50.2\lib\net451\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="DR.Common.Monitoring, Version=2.0.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DR.Common.Monitoring.2.0.2\lib\netstandard2.0\DR.Common.Monitoring.dll</HintPath>
+    </Reference>
+    <Reference Include="DR.Common.Monitoring.Web, Version=2.0.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DR.Common.Monitoring.Web.2.0.2\lib\netstandard2.0\DR.Common.Monitoring.Web.dll</HintPath>
+    </Reference>
     <Reference Include="FluentValidation, Version=6.2.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentValidation.6.2.1.0\lib\Net45\FluentValidation.dll</HintPath>
       <Private>True</Private>
@@ -162,7 +168,9 @@
     <Compile Include="Controllers\MuxJobController.cs" />
     <Compile Include="Controllers\ScreenshotJobController.cs" />
     <Compile Include="Controllers\ScrubbingJobController.cs" />
+    <Compile Include="Controllers\SystemStatusController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
+    <Compile Include="FileShareHealthCheck.cs" />
     <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
     <Compile Include="Models\AudioDemuxJobRequestModel.cs" />
     <Compile Include="Models\LoudnessJobRequestModel.cs" />

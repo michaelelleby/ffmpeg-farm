@@ -53,6 +53,9 @@
       <HintPath>..\packages\Dapper.1.50.2\lib\net451\Dapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="DR.Common.Monitoring, Version=2.0.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DR.Common.Monitoring.2.0.2\lib\netstandard2.0\DR.Common.Monitoring.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -66,6 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AudioJobRepository.cs" />
+    <Compile Include="DatabaseHealthCheck.cs" />
     <Compile Include="JobRepository.cs" />
     <Compile Include="HardSubtitlesJobRepository.cs" />
     <Compile Include="AudioDemuxJobRepository.cs" />
@@ -75,6 +79,7 @@
     <Compile Include="ScrubbingJobRepository.cs" />
     <Compile Include="TransactionUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WorkerNodesHealthCheck.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\API.Service\API.Service.csproj">
