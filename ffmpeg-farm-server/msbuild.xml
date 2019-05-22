@@ -1,12 +1,12 @@
 <Project ToolsVersion="14.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
-		<TPath>$(MSBuildExtensionsPath32)\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks</TPath>
+		<TPath>$(MSBuildProjectDirectory)\packages\MsBuild.ExtensionPack.Task.1.0.3\tools\MSBuild.ExtensionPack.tasks</TPath>
 		<ServiceName>FFmpegServerAPI</ServiceName>
 		<SourceConfigPath>$(MSBuildProjectDirectory)\API.WindowsService\App.config</SourceConfigPath>
 		<TransformFilePath>$(MSBuildProjectDirectory)\API.WindowsService\App.$(Environment).config</TransformFilePath>
 	</PropertyGroup>
-	<Import Project="$(TPath)"/>
-	<Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v14.0\Web\Microsoft.Web.Publishing.targets" Condition="!Exists('$(VSToolsPath)\Web\Microsoft.Web.Publishing.targets')" />
+		<Import Project="$(TPath)"/>
+		<Import Project="$(MSBuildProjectDirectory)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0.3\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" />
 	<ItemGroup>
 		<RemoteMachines Include="$(DeployMachines.Split(`;`))"/>
 	</ItemGroup>
