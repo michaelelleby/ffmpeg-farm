@@ -25,7 +25,7 @@ namespace API.WindowsService.Test.Controllers
 
         private readonly ScrubbingJobRequestModel _scrubbingJobRequestModel = new ScrubbingJobRequestModel
         {
-            OutputFolder = $@"\\ondnas01\MediaCacheTest\Test\marvin\scrubbing\{Guid.NewGuid()}", //Must have read/write access to this folder.
+            OutputFolder = $@"\\net\nas\odtest\Test\OD2\MediaCache\Marvin\scrubbing\{Guid.NewGuid()}", //Must have read/write access to this folder.
             SourceFilename = @"\\SomeServer\RandomShare\AndFolder\videofile.mp4",
             FirstThumbnailOffsetInSeconds = 10,
             MaxSecondsBetweenThumbnails = 10,
