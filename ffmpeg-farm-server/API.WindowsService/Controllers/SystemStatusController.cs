@@ -10,6 +10,7 @@ using DR.Common.Monitoring.Web.Models;
 
 namespace API.WindowsService.Controllers
 {
+    [RoutePrefix("SystemStatus")] //leave out /api/ to fix borked routing in startup.cs
     public class SystemStatusController : ApiController
     {
         private const string ApplicationName = "FfmpegFarm";
