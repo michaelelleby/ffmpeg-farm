@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Transactions;
 using Contract;
 using Dapper;
 using DR.Common.Monitoring.Models;
@@ -33,6 +34,7 @@ namespace API.Repository
         protected override void RunTest(StatusBuilder statusBuilder)
         {
             var filter = DateTimeOffset.UtcNow.AddMinutes(-_windowInMinutes);
+            using (var scope = TransactionUtils.CreateTransactionScope(IsolationLevel.ReadUncommitted))
             using (var connection = _helper.GetConnection())
             {
                 connection.Open();
@@ -88,9 +90,8 @@ GROUP BY [t0].[TaskState], [t0].[HeartbeatMachineName]",
                             $" Warning for {failingNode.HeartbeatMachineName} , error count {failingNode.Count} , error ratio {ratio * 100:F1}% ");
                     }
                 }
+                scope.Complete();
             }
-
-            
         }
 
         public class WorkerNodeStatus

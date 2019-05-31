@@ -509,3 +509,10 @@ END
 
 
 GO
+
+
+CREATE NONCLUSTERED INDEX IX_WorkerNodeHealthCheck
+ON [dbo].[FfmpegTasks] ([Heartbeat])
+INCLUDE ([TaskState],[HeartbeatMachineName])
+GO
+
