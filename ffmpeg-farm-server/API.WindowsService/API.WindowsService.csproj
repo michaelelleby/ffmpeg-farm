@@ -249,6 +249,7 @@
     <Content Include="App_Data\SchemaChanges_180903_GetNext_fix.sql" />
     <Content Include="App_Data\SchemaChanges_180806_scrubbing.sql" />
     <Content Include="App_Data\SchemaChanges_190529_WorkerHealthCheck.sql" />
+    <Content Include="App_Data\SchemaChanges_190531_Janitor_index.sql" />
     <Content Include="App_Data\SchemaCreate.sql" />
     <Content Include="App_Data\SchemaChanges.sql" />
     <Content Include="App_Data\WindowsService.XML">
