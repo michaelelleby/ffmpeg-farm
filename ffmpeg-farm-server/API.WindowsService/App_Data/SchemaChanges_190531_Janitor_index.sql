@@ -8,3 +8,8 @@ CREATE NONCLUSTERED INDEX IX_Janitor_2
 ON [dbo].[FfmpegJobs] ([JobCorrelationId],[Created])
 
 GO
+
+CREATE NONCLUSTERED INDEX IX_Logged
+ON [dbo].[Log] ([Logged])
+
+GO

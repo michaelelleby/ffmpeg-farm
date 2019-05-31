@@ -79,9 +79,18 @@ FROM FfmpegVideoRequestTargets Targets
 INNER JOIN FFmpegjobs Jobs ON Targets.JobCorrelationId = Jobs.JobCorrelationId 
 WHERE Jobs.[Created] < @filter
 
+DELETE Mp4boxJobs
+FROM Mp4boxJobs Mp4boxJobs
+INNER JOIN FFmpegjobs Jobs ON Mp4boxJobs.JobCorrelationId = Jobs.JobCorrelationId
+WHERE Jobs.[Created] < @filter
+
 DELETE
 FROM FFmpegjobs 
 WHERE [Created] < @filter
+
+DELETE
+FROM Log 
+WHERE [Logged] < @filter
 
 ", new {filter = DateTimeOffset.UtcNow.AddMonths(-2)});
 
