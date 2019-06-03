@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Configuration;
 using System.ServiceProcess;
 using System.Timers;
+using API.Logging;
 using API.Repository;
 using API.Service;
 using Microsoft.Owin.Hosting;
@@ -30,8 +32,8 @@ namespace API.WindowsService
             var url = Environment.UserInteractive ? $"http://localhost:{port}/" : $"http://+:{port}/";
             var readableUrl = url.Replace("+", Environment.MachineName);
             _server = WebApp.Start<Startup>(url);
-            _janitor = new Janitor(new Helper());
             _timer = new Timer(TimeSpan.FromDays(1).TotalMilliseconds) { AutoReset = true, Enabled = true };
+            _janitor = new Janitor(new Helper(), new NLogWrapper(ConfigurationManager.AppSettings["NLog-Appname"] ?? System.Reflection.Assembly.GetExecutingAssembly().FullName));
             _timer.Elapsed += (sender, args) =>
             {
                 if (!System.Threading.Monitor.TryEnter(_janitor)) return;
