@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="AudioJobRepository.cs" />
     <Compile Include="DatabaseHealthCheck.cs" />
+    <Compile Include="DeinterlacingJobJobRepository.cs" />
     <Compile Include="Janitor.cs" />
     <Compile Include="JobRepository.cs" />
     <Compile Include="HardSubtitlesJobRepository.cs" />

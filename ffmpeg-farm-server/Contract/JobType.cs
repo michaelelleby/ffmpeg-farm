@@ -12,6 +12,7 @@ namespace Contract
         AudioDemux,
         Screenshot,
         StereoTool,
-        Scrubbing
+        Scrubbing,
+        Deinterlacing
     }
 }

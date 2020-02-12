@@ -105,6 +105,11 @@ namespace API.WindowsService
                     .Ctor<string>("connectionString")
                     .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
 
+                _.For<IDeinterlacingJobRepository>()
+                    .Use<DeinterlacingJobJobRepository>()
+                    .Ctor<string>("connectionString")
+                    .Is(ConfigurationManager.ConnectionStrings["mssql"].ConnectionString);
+
                 _.For<IJobRepository>()
                     .Use<JobRepository>();
 

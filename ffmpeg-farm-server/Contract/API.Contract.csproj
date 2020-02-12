@@ -114,6 +114,8 @@
     <Compile Include="ClientHeartbeat.cs" />
     <Compile Include="Channels.cs" />
     <Compile Include="ContainerFormat.cs" />
+    <Compile Include="DeinterlacingJob.cs" />
+    <Compile Include="DeinterlacingJobRequest.cs" />
     <Compile Include="DestinationFormat.cs" />
     <Compile Include="Dto\FFmpegJobDto.cs" />
     <Compile Include="Dto\FFmpegTaskDto.cs" />
@@ -123,6 +125,7 @@
     <Compile Include="FfmpegTask.cs" />
     <Compile Include="H264Profile.cs" />
     <Compile Include="IAudioJobRepository.cs" />
+    <Compile Include="IDeinterlacingJobRepository.cs" />
     <Compile Include="IHelper.cs" />
     <Compile Include="IJobRepository.cs" />
     <Compile Include="IHardSubtitlesJobRepository.cs" />

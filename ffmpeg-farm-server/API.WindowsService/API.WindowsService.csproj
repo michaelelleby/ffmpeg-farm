@@ -161,6 +161,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Controllers\ConfigurationWrapper.cs" />
+    <Compile Include="Controllers\DeinterlacingJobController.cs" />
     <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\HardSubtilesJobController.cs" />
@@ -172,11 +173,13 @@
     <Compile Include="Controllers\SystemStatusController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="FileShareHealthCheck.cs" />
+    <Compile Include="Models\DeinterlacingJobRequestModel.cs" />
     <Compile Include="Models\HardSubtitlesJobRequestModel.cs" />
     <Compile Include="Models\AudioDemuxJobRequestModel.cs" />
     <Compile Include="Models\LoudnessJobRequestModel.cs" />
     <Compile Include="Models\ScreenshotJobRequestModel.cs" />
     <Compile Include="Models\ScrubbingJobRequestModel.cs" />
+    <Compile Include="Validators\DeinterlacingJobRequestValidator.cs" />
     <Compile Include="Validators\HardSubtitlesJobRequestValidator.cs" />
     <Compile Include="Models\Command.cs" />
     <Compile Include="Models\MuxJobRequestModel.cs" />
